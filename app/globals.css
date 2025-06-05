@@ -114,9 +114,21 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring/50 select-none cursor-default;
+    -webkit-user-drag: none;
   }
+
+  html,
+  body {
+    @apply overflow-hidden;
+  }
+
   body {
     @apply bg-background text-foreground;
+
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
