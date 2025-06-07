@@ -39,7 +39,7 @@ export default function Home() {
           await invoke("cancel_download", { url: downloadUrl });
         }
       } catch (e) {
-        console.error(e);
+        console.log(e);
       }
     })();
   }, [downloadUrl]);
