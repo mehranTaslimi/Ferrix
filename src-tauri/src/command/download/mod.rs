@@ -1,7 +1,10 @@
 use futures_util::{future::try_join_all, StreamExt};
 use serde::{Deserialize, Serialize};
-use tauri::{async_runtime::spawn, http::header::RANGE, AppHandle, Emitter};
+use tauri::{async_runtime::spawn, http::header::RANGE, AppHandle, Emitter, State};
 use tauri_plugin_http::reqwest::Client;
+use tokio::sync::broadcast::Sender;
+
+use crate::utils::{AppEvent, AppState};
 
 #[derive(Serialize, Deserialize, Clone)]
 struct Progress {
@@ -10,20 +13,31 @@ struct Progress {
 }
 
 #[tauri::command]
+pub async fn cancel_download(state: State<'_, AppState>, url: String) -> Result<(), String> {
+    state
+        .tx
+        .send(AppEvent::CancelDownload(url))
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn download_file(
+    state: State<'_, AppState>,
     app_handle: AppHandle,
     url: String,
     chunk_count: Option<u8>,
 ) -> Result<(), String> {
     let chunk_count = chunk_count.unwrap_or(5).clamp(1, 5);
-
     let ranges = get_ranges(&url, chunk_count).await?;
 
     let tasks = ranges.into_iter().enumerate().map(|(i, range)| {
         let url = url.clone();
         let app_handle_clone = app_handle.clone();
+        let tx = state.tx.clone();
         spawn(async move {
-            download_chunk(&url, range, |progress| {
+            download_chunk(tx, &url, range, |progress| {
                 let _ = app_handle_clone.emit(
                     "download_progress",
                     Progress {
@@ -68,7 +82,12 @@ async fn get_ranges(url: &String, chunk_count: u8) -> Result<Vec<(u64, u64)>, St
     Ok(ranges)
 }
 
-async fn download_chunk<T>(url: &String, range: (u64, u64), on_progress: T) -> Result<(), String>
+async fn download_chunk<T>(
+    tx: Sender<AppEvent>,
+    url: &String,
+    range: (u64, u64),
+    on_progress: T,
+) -> Result<(), String>
 where
     T: Fn(f64) + Send + Sync,
 {
@@ -88,15 +107,41 @@ where
     let mut downloaded = 0f64;
     let mut progress = 0f64;
 
+    let mut rx = tx.subscribe();
     let mut stream = response.bytes_stream();
 
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| e.to_string())?;
-        downloaded += chunk.len() as f64;
-        calc_progress(&downloaded, &total_size, &mut progress, |prog| {
-            on_progress(prog);
-        });
+    loop {
+        tokio::select! {
+            chunk = stream.next()=>{
+                match chunk {
+                    Some(Ok(data))=>{
+                        downloaded += data.len() as f64;
+                         calc_progress(&downloaded, &total_size, &mut progress, |prog| {
+                            on_progress(prog);
+                        });
+                    },
+                    Some(Err(e)) => return Err(e.to_string()),
+                    None => break,
+                }
+            },
+            msg = rx.recv() => {
+                match msg {
+                    Ok(AppEvent::CancelDownload(_)) => {
+                        return Err("Download canceled".into());
+                    }
+                    _ => {}
+                }
+            }
+        }
     }
+
+    // while let Some(chunk) = stream.next().await {
+    //     let chunk = chunk.map_err(|e| e.to_string())?;
+    //     downloaded += chunk.len() as f64;
+    //     calc_progress(&downloaded, &total_size, &mut progress, |prog| {
+    //         on_progress(prog);
+    //     });
+    // }
 
     Ok(())
 }
