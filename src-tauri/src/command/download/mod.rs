@@ -112,9 +112,9 @@ where
 
     loop {
         tokio::select! {
-            chunk = stream.next()=>{
+            chunk = stream.next()=> {
                 match chunk {
-                    Some(Ok(data))=>{
+                    Some(Ok(data))=> {
                         downloaded += data.len() as f64;
                          calc_progress(&downloaded, &total_size, &mut progress, |prog| {
                             on_progress(prog);
@@ -126,8 +126,10 @@ where
             },
             msg = rx.recv() => {
                 match msg {
-                    Ok(AppEvent::CancelDownload(_)) => {
-                        return Err("Download canceled".into());
+                    Ok(AppEvent::CancelDownload(msg_url)) => {
+                        if msg_url == *url {
+                            return Err("Download canceled".to_string());
+                        }
                     }
                     _ => {}
                 }
@@ -155,7 +157,7 @@ fn calc_progress<T>(downloaded: &f64, total_size: &f64, progress: &mut f64, call
 where
     T: Fn(f64) + Send + Sync,
 {
-    let new_progress = to_fixed((downloaded / total_size) * 100.0, 2);
+    let new_progress = ((downloaded / total_size) * 100.0).round();
     if *progress < new_progress {
         *progress = new_progress;
         callback(*progress)
