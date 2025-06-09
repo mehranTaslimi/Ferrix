@@ -58,3 +58,10 @@
 - 🔵 Cloud Sync (settings and queues)
 - 🔵 Remote Management (web or mobile access)
 - 🔵 Auto Backup (history and settings)
+
+
+## ! Notes
+
+```1. user maybe change streamed file, i should check before start downloading, maybe with md5sum and others think ```
+
+```2. i should write and update my db every 1 sec to update "start and end" -> i have two idea, send event to handler to queued task to manage```

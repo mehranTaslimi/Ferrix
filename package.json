@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "dev:all": "concurrently -k -n \"FRONTEND,TAURI\" -c \"cyan,magenta\" \"pnpm run dev\" \"cd src-tauri && cargo watch -c -q -x run\""
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -54,6 +55,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.1.2",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
     "tailwindcss": "^4",
