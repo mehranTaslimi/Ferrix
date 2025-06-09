@@ -67,14 +67,14 @@ async fn download_chunk(tx: &Sender<AppEvent>, chunk: DownloadChunk) -> Result<(
         downloaded_bytes: _,
         chunk_index,
         download_id,
-        end,
-        start,
+        end_byte,
+        start_byte,
         url,
     } = chunk;
     let download_id = download_id.parse::<i64>().map_err(|e| e.to_string())?;
     let client = Client::new();
 
-    let range_header = format!("bytes={}-{}", start, end);
+    let range_header = format!("bytes={}-{}", start_byte, end_byte);
 
     let response = client
         .get(url)
@@ -86,12 +86,31 @@ async fn download_chunk(tx: &Sender<AppEvent>, chunk: DownloadChunk) -> Result<(
     let mut last_send_event = Instant::now();
     let mut stream = response.bytes_stream();
     let mut downloaded = 0u64;
+    let mut received_bytes = 0u64;
+    let mut last_downloaded_chunk = Instant::now();
+    let mut speed_kbps = 0f64;
 
     while let Some(bytes) = stream.next().await {
         let bytes = bytes.map_err(|e| e.to_string())?;
-        downloaded += bytes.len() as u64;
+        let now = Instant::now();
+        let chunk_len = bytes.len() as u64;
+        downloaded += chunk_len;
+        received_bytes += chunk_len;
+
+        let elapsed = now.duration_since(last_downloaded_chunk).as_secs_f64();
+        speed_kbps = if elapsed >= 0.001 {
+            (received_bytes as f64 / elapsed) / 1024.0
+        } else {
+            speed_kbps
+        };
+        last_downloaded_chunk = Instant::now();
+        received_bytes = 0;
 
         if last_send_event.elapsed() >= Duration::from_secs(1) {
+            dispatch(
+                &tx,
+                AppEvent::SendDownloadSpeed(download_id, chunk_index, speed_kbps),
+            )?;
             dispatch(
                 &tx,
                 AppEvent::UpdateDownloadedChunk(download_id, chunk_index, downloaded),

@@ -18,19 +18,19 @@ import { listen } from '@tauri-apps/api/event';
 export default function DownloadForm() {
   const form = useForm({
     defaultValues: {
-      downloadUrl: "https://dl3.soft98.ir/win/Windows.11.v24H2.Build.26100.4061.x64-VL.part1.rar?1749473936",
+      downloadUrl: "https://releases.ubuntu.com/24.04.2/ubuntu-24.04.2-desktop-amd64.iso"
     },
   });
 
   useEffect(() => {
-    listen("process", (ev) => {
-      console.log(ev);
+    listen("download_speed_tracker", (ev) => {
+      console.log(ev.payload);
     });
-    listen("data", (ev) => {
-      console.log(ev);
+    listen("downloads_tracker", (ev) => {
+      console.log(ev.payload);
     });
     listen("download_list", (ev) => {
-      console.log(ev);
+      console.log(ev.payload);
     });
     (async () => {
       try {

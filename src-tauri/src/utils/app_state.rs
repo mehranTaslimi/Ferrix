@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use sqlx::SqlitePool;
 use tokio::sync::broadcast;
 
@@ -34,7 +36,8 @@ pub enum AppEvent {
     GetFileContentLength(DownloadData),
     CreateDownloadChunk(i64, u64, u8),
     UpdateDownloadedChunk(i64, i64, u64),
+    SendDownloadSpeed(i64, i64, f64),
     StartDownload(i64),
     SendDownloadList,
-    SendDownloadItemUpdate(i64, i64, u64),
+    SendDownloadItemUpdate(i64, Vec<i64>),
 }

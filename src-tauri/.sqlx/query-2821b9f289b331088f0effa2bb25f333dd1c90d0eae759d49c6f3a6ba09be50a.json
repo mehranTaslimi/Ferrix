@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n        SELECT\n            dc.download_id,\n            dc.chunk_index,\n            dc.start,\n            dc.end,\n            dc.downloaded_bytes,\n            d.url\n        FROM download_chunks dc\n        JOIN downloads d ON d.id = dc.download_id\n        WHERE dc.download_id = ?;\n    ",
+  "query": "SELECT dc.download_id,\n            dc.chunk_index,\n            dc.start_byte,\n            dc.end_byte,\n            dc.downloaded_bytes,\n            d.url\n            FROM download_chunks dc\n        JOIN downloads d ON d.id = dc.download_id\n        WHERE dc.download_id = ?;",
   "describe": {
     "columns": [
       {
@@ -14,12 +14,12 @@
         "type_info": "Integer"
       },
       {
-        "name": "start",
+        "name": "start_byte",
         "ordinal": 2,
         "type_info": "Integer"
       },
       {
-        "name": "end",
+        "name": "end_byte",
         "ordinal": 3,
         "type_info": "Integer"
       },
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "48745a927df00ce089e5191ba9a6d50a988ce786a06b1e6279cfb9687b4f4de0"
+  "hash": "2821b9f289b331088f0effa2bb25f333dd1c90d0eae759d49c6f3a6ba09be50a"
 }

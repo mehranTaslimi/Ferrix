@@ -1,10 +1,7 @@
-use std::{
-    collections::HashMap,
-    time::{Duration, Instant},
-};
-
+use once_cell::sync::Lazy;
 use serde::Serialize;
 use sqlx::SqlitePool;
+use std::{collections::HashMap, sync::Mutex};
 use tauri::{AppHandle, Emitter};
 use tokio::{spawn, sync::broadcast::Sender};
 
@@ -14,9 +11,69 @@ use crate::{
         update_chunk_downloaded, update_download_status,
     },
     downloader::{download_chunks, get_chunk_ranges, get_file_content_length},
-    models::{Download, DownloadChunk, DownloadWithDownloadedBytes},
+    models::{Download, DownloadReport, DownloadSpeed},
     utils::app_state::AppEvent,
 };
+
+type ChunkCount = i64;
+type DownloadId = i64;
+type ChunkIndex = i64;
+type DownloadedBytes = i64;
+type SpeedKbps = f64;
+type DownloadTracker = HashMap<DownloadId, HashMap<ChunkIndex, DownloadedBytes>>;
+type SpeedTracker = HashMap<DownloadId, HashMap<ChunkIndex, SpeedKbps>>;
+
+static DOWNLOAD_TRACKER: Lazy<Mutex<DownloadTracker>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static SPEED_TRACKER: Lazy<Mutex<SpeedTracker>> = Lazy::new(|| Mutex::new(HashMap::new()));
+
+fn download_tracker_report(
+    chunk_count: ChunkCount,
+    download_id: DownloadId,
+    chunk_index: ChunkIndex,
+    downloaded_bytes: DownloadedBytes,
+) -> Option<Vec<i64>> {
+    let mut tracker = DOWNLOAD_TRACKER.lock().unwrap();
+    let downloaded_bytes_chunks = tracker.entry(download_id).or_insert_with(HashMap::new);
+
+    downloaded_bytes_chunks.insert(chunk_index, downloaded_bytes);
+
+    let is_all_chunk_reported = downloaded_bytes_chunks.len() as i64 == chunk_count;
+
+    let aggregate_downloaded_bytes = downloaded_bytes_chunks
+        .values()
+        .cloned()
+        .collect::<Vec<i64>>();
+
+    if is_all_chunk_reported {
+        tracker.remove(&download_id);
+        Some(aggregate_downloaded_bytes)
+    } else {
+        None
+    }
+}
+
+fn speed_tracker_report(
+    chunk_count: ChunkCount,
+    download_id: DownloadId,
+    chunk_index: ChunkIndex,
+    speed_kbps: SpeedKbps,
+) -> Option<f64> {
+    let mut tracker = SPEED_TRACKER.lock().unwrap();
+    let download_speed_chunks = tracker.entry(download_id).or_insert_with(HashMap::new);
+
+    download_speed_chunks.insert(chunk_index, speed_kbps);
+
+    let is_all_chunk_reported = download_speed_chunks.len() as i64 == chunk_count;
+
+    let aggregate_speed: f64 = download_speed_chunks.values().sum();
+
+    if is_all_chunk_reported {
+        tracker.remove(&download_id);
+        Some(aggregate_speed)
+    } else {
+        None
+    }
+}
 
 pub fn dispatch(tx: &Sender<AppEvent>, app_event: AppEvent) -> Result<(), String> {
     tx.send(app_event).map(|_| ()).map_err(|e| e.to_string())
@@ -55,7 +112,8 @@ pub async fn handle(
             dispatch(
                 &tx,
                 AppEvent::CreateDownloadChunk(id, content_length, download_data.chunk),
-            )
+            )?;
+            dispatch(&tx, AppEvent::SendDownloadList)
         }
         AppEvent::CreateDownloadChunk(id, content_length, chunk) => {
             let ranges = get_chunk_ranges(content_length, chunk)?;
@@ -71,13 +129,29 @@ pub async fn handle(
         }
         AppEvent::UpdateDownloadedChunk(download_id, chunk_index, downloaded) => {
             update_chunk_downloaded(&pool, download_id, chunk_index, downloaded as i64).await?;
-            dispatch(
-                &tx,
-                AppEvent::SendDownloadItemUpdate(download_id, chunk_index, downloaded),
+            let downloaded_bytes_chunks =
+                download_tracker_report(5, download_id, chunk_index, downloaded as i64);
+            if let Some(downloaded_bytes_chunks) = downloaded_bytes_chunks {
+                dispatch(
+                    &tx,
+                    AppEvent::SendDownloadItemUpdate(download_id, downloaded_bytes_chunks),
+                )?;
+            }
+
+            Ok(())
+        }
+        AppEvent::SendDownloadItemUpdate(download_id, downloaded_bytes_chunks) => {
+            dispatch_client_event(
+                &app_handle,
+                "downloads_tracker",
+                DownloadReport {
+                    id: download_id,
+                    downloaded_bytes_chunks,
+                },
             )
         }
         AppEvent::SendDownloadList => {
-            let list: HashMap<i64, DownloadWithDownloadedBytes> = get_downloads_list(&pool)
+            let list: HashMap<i64, Download> = get_downloads_list(&pool)
                 .await?
                 .into_iter()
                 .map(|f| (f.id, f))
@@ -85,19 +159,19 @@ pub async fn handle(
 
             dispatch_client_event(&app_handle, "download_list", &list)
         }
-        AppEvent::SendDownloadItemUpdate(download_id, chunk_index, downloaded_bytes) => {
-            dispatch_client_event(
-                &app_handle,
-                "process",
-                DownloadChunk {
-                    chunk_index,
-                    download_id: download_id.to_string(),
-                    downloaded_bytes: downloaded_bytes as i64,
-                    end: 0,
-                    start: 0,
-                    url: "".to_string(),
-                },
-            )
+        AppEvent::SendDownloadSpeed(download_id, chunk_index, speed_kbps) => {
+            let speed = speed_tracker_report(5, download_id, chunk_index, speed_kbps);
+            if let Some(speed) = speed {
+                dispatch_client_event(
+                    &app_handle,
+                    "download_speed_tracker",
+                    DownloadSpeed {
+                        id: download_id,
+                        speed_kbps: speed,
+                    },
+                )?;
+            }
+            Ok(())
         }
     }
 }

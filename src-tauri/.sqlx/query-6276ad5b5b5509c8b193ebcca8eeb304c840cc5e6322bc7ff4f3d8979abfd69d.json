@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO downloads (url, total_bytes, status) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "6276ad5b5b5509c8b193ebcca8eeb304c840cc5e6322bc7ff4f3d8979abfd69d"
+}

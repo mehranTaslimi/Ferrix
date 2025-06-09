@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT d.id,\n        d.url,\n        d.created_at,\n    d.total_bytes,\n    (\n        SELECT SUM(dc.downloaded_bytes)\n        FROM download_chunks dc\n        WHERE dc.download_id = d.id\n    ) AS downloaded_bytes,\n    d.status\nFROM downloads d;",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "url",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "total_bytes",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "downloaded_bytes",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "status",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "8a195054f543b22c345a680c77f8afc0f157e6b53dbbfaa24a742e41bdae3fa1"
+}
