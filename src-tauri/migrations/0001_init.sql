@@ -4,7 +4,9 @@ CREATE TABLE IF NOT EXISTS downloads (
     total_bytes INTEGER NOT NULL DEFAULT 0,
     -- "queued", "downloading", "completed", "failed"
     status TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    chunk_count INTEGER NOT NULL DEFAULT 5,
+    file_path TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS download_chunks (

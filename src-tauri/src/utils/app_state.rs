@@ -1,9 +1,13 @@
-use std::collections::HashMap;
-
 use sqlx::SqlitePool;
 use tokio::sync::broadcast;
 
-use crate::db::init_db;
+use crate::{
+    db::init_db,
+    models::{
+        ChunkCount, ChunkIndex, Download, DownloadId, DownloadUrl, DownloadedBytes, SpeedKbps,
+        TotalBytes,
+    },
+};
 
 pub struct AppState {
     pub broadcast_tx: broadcast::Sender<AppEvent>,
@@ -23,21 +27,18 @@ impl AppState {
 }
 
 #[derive(Clone, Debug)]
-pub struct DownloadData {
-    pub url: String,
-    pub chunk: u8,
-}
-
-#[derive(Clone, Debug)]
 pub enum AppEvent {
-    StartNewDownloadProcess(DownloadData),
-    ValidateUrl(DownloadData),
-    CreateNewDownloadRecord(DownloadData, u64),
-    GetFileContentLength(DownloadData),
-    CreateDownloadChunk(i64, u64, u8),
-    UpdateDownloadedChunk(i64, i64, u64),
-    SendDownloadSpeed(i64, i64, f64),
-    StartDownload(i64),
+    StartNewDownloadProcess(DownloadUrl, ChunkCount),
+    ValidateLink(DownloadUrl, ChunkCount),
+    GetFileTotalBytes(DownloadUrl, ChunkCount),
+    CreateNewDownloadRecordInDB(DownloadUrl, ChunkCount, TotalBytes),
+    InsertDownloadFromDBToDownloadingList(DownloadId),
+    CreateDownloadChunkInDB(DownloadId, TotalBytes, ChunkCount),
+    StartDownload(DownloadId, Download),
     SendDownloadList,
-    SendDownloadItemUpdate(i64, Vec<i64>),
+    ReportChunkDownloadedBytes(DownloadId, ChunkIndex, DownloadedBytes),
+    ReportChunksDownloadedBytes(DownloadId, DownloadedBytes),
+    ReportChunkSpeed(DownloadId, ChunkIndex, SpeedKbps),
+    ReportChunksSpeed(DownloadId, SpeedKbps),
+    UpdateChunkDownloadedBytes(DownloadId, ChunkIndex, DownloadedBytes),
 }

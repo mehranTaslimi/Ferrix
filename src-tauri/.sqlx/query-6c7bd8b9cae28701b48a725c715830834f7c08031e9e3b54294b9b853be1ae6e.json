@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT\n\td.id,\n\td.url,\n\td.created_at,\n\td.total_bytes,\n\td.chunk_count,\n\td.status,\n    d.file_path,\n\tCOALESCE(\n\t\t(\n\t\t\tSELECT\n\t\t\t\tSUM(dc.downloaded_bytes)\n\t\t\tFROM\n\t\t\t\tdownload_chunks dc\n\t\t\tWHERE\n\t\t\t\tdc.download_id = d.id\n\t\t),\n\t\t0\n\t) AS downloaded_bytes\nFROM\n\tdownloads d\nWHERE\n\td.id = ?\n    ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "url",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "total_bytes",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "chunk_count",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "status",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "file_path",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "downloaded_bytes",
+        "ordinal": 7,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6c7bd8b9cae28701b48a725c715830834f7c08031e9e3b54294b9b853be1ae6e"
+}

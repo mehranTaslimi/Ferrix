@@ -5,9 +5,12 @@ mod models;
 mod utils;
 
 use command::add_download_queue;
-use tokio::sync::broadcast;
+use tokio::{spawn, sync::broadcast};
 
-use crate::{command::get_download_list, utils::app_state::AppState};
+use crate::{
+    command::get_download_list,
+    utils::{app_state::AppState, broadcast_event::EventHandler},
+};
 
 #[tokio::main]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -28,13 +31,15 @@ pub async fn run() {
             get_download_list
         ])
         .setup(move |app| {
-            let app_handle = app.handle().clone();
+            let event_handler = EventHandler {
+                app_handle: app.handle().clone(),
+                pool,
+                tx,
+            };
 
-            tokio::spawn(async move {
+            spawn(async move {
                 while let Ok(app_event) = rx.recv().await {
-                    let result =
-                        utils::event_handler::handle(app_event, &tx, &pool, &app_handle).await;
-
+                    let result = event_handler.event_reducer(app_event).await;
                     if let Err(err) = result {
                         println!("Error: {}", err);
                     }

@@ -1,19 +1,30 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Download {
-    pub id: i64,
-    pub url: String,
-    pub total_bytes: i64,
-    pub status: String,
-    pub created_at: Option<NaiveDateTime>,
-    pub downloaded_bytes: Option<i64>,
-    pub progress_percent: f64,
-}
+pub type ChunkCount = i64;
+pub type DownloadId = i64;
+pub type ChunkIndex = i64;
+pub type DownloadedBytes = i64;
+pub type TotalBytes = i64;
+pub type SpeedKbps = f64;
+pub type DownloadUrl = String;
+pub type DownloadStatus = String;
+pub type CreatedAt = NaiveDateTime;
+pub type FilePath = String;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct DownloadChunk {
+pub struct Download {
+    pub id: DownloadId,
+    pub url: DownloadUrl,
+    pub total_bytes: TotalBytes,
+    pub status: DownloadStatus,
+    pub created_at: Option<CreatedAt>,
+    pub downloaded_bytes: DownloadedBytes,
+    pub chunk_count: ChunkCount,
+    pub file_path: FilePath,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Chunk {
     pub download_id: String,
     pub chunk_index: i64,
     pub start_byte: i64,

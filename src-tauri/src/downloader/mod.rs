@@ -1,12 +1,19 @@
 use futures_util::{future::join_all, StreamExt};
-use std::time::{Duration, Instant};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tauri::http::header::RANGE;
 use tauri_plugin_http::reqwest::Client;
-use tokio::sync::broadcast::Sender;
+use tokio::{
+    fs::{File, OpenOptions},
+    io::{AsyncSeekExt, AsyncWriteExt},
+    sync::{broadcast::Sender, Mutex},
+};
 
 use crate::{
-    models::DownloadChunk,
-    utils::{app_state::AppEvent, event_handler::dispatch},
+    models::{Chunk, Download},
+    utils::{app_state::AppEvent, broadcast_event::dispatch},
 };
 
 pub async fn get_file_content_length(url: &str) -> Result<u64, String> {
@@ -25,35 +32,48 @@ pub async fn get_file_content_length(url: &str) -> Result<u64, String> {
 }
 
 pub fn get_chunk_ranges(content_length: u64, chunk: u8) -> Result<Vec<(u64, u64)>, String> {
-    let chunk_size: u64 = content_length / chunk as u64;
+    let chunk = chunk as u64;
+    let mut ranges = Vec::with_capacity(chunk as usize);
 
-    let ranges: Vec<(u64, u64)> = (0..chunk)
-        .map(|i| {
-            let start = i as u64 * chunk_size;
+    let base_chunk_size = content_length / chunk;
+    let remainder = content_length % chunk;
 
-            let end_index = (i + 1) as u64;
-            let mut end = end_index * chunk_size;
+    let mut start = 0;
 
-            if (end_index as u8) == chunk {
-                end += 1;
-            } else {
-                end -= 1;
-            }
+    for i in 0..chunk {
+        let extra = if i < remainder { 1 } else { 0 };
+        let end = start + base_chunk_size + extra - 1;
 
-            (start, end)
-        })
-        .collect();
+        ranges.push((start, end));
+        start = end + 1;
+    }
 
     Ok(ranges)
 }
 
 pub async fn download_chunks(
-    tx: &Sender<AppEvent>,
-    chunks: Vec<DownloadChunk>,
+    tx: Sender<AppEvent>,
+    chunks: Vec<Chunk>,
+    download: Download,
 ) -> Result<(), String> {
-    let futures = chunks
-        .into_iter()
-        .map(|chunk| async move { download_chunk(&tx, chunk).await });
+    let file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(&download.file_path)
+        .await
+        .map_err(|e| format!("file creation failed: {}", e))?;
+
+    file.set_len(download.total_bytes as u64)
+        .await
+        .map_err(|e| format!("file allocation failed: {}", e))?;
+
+    let shared_file = Arc::new(Mutex::new(file));
+
+    let futures = chunks.into_iter().map(|chunk| {
+        let tx = tx.clone();
+        let file_clone = Arc::clone(&shared_file);
+        async move { download_chunk(tx, chunk, file_clone).await }
+    });
 
     let results = join_all(futures).await;
 
@@ -62,8 +82,14 @@ pub async fn download_chunks(
     Ok(())
 }
 
-async fn download_chunk(tx: &Sender<AppEvent>, chunk: DownloadChunk) -> Result<(), String> {
-    let DownloadChunk {
+pub async fn validate_url() {}
+
+async fn download_chunk(
+    tx: Sender<AppEvent>,
+    chunk: Chunk,
+    file: Arc<Mutex<File>>,
+) -> Result<(), String> {
+    let Chunk {
         downloaded_bytes: _,
         chunk_index,
         download_id,
@@ -89,11 +115,25 @@ async fn download_chunk(tx: &Sender<AppEvent>, chunk: DownloadChunk) -> Result<(
     let mut received_bytes = 0u64;
     let mut last_downloaded_chunk = Instant::now();
     let mut speed_kbps = 0f64;
+    let mut file_guard = file.lock().await;
 
     while let Some(bytes) = stream.next().await {
         let bytes = bytes.map_err(|e| e.to_string())?;
         let now = Instant::now();
         let chunk_len = bytes.len() as u64;
+
+        file_guard
+            .seek(std::io::SeekFrom::Start(
+                chunk.start_byte as u64 + downloaded,
+            ))
+            .await
+            .map_err(|e| e.to_string())?;
+
+        file_guard
+            .write_all(&bytes)
+            .await
+            .map_err(|e| e.to_string())?;
+
         downloaded += chunk_len;
         received_bytes += chunk_len;
 
@@ -109,11 +149,11 @@ async fn download_chunk(tx: &Sender<AppEvent>, chunk: DownloadChunk) -> Result<(
         if last_send_event.elapsed() >= Duration::from_secs(1) {
             dispatch(
                 &tx,
-                AppEvent::SendDownloadSpeed(download_id, chunk_index, speed_kbps),
+                AppEvent::ReportChunkSpeed(download_id, chunk_index, speed_kbps),
             )?;
             dispatch(
                 &tx,
-                AppEvent::UpdateDownloadedChunk(download_id, chunk_index, downloaded),
+                AppEvent::ReportChunkDownloadedBytes(download_id, chunk_index, downloaded as i64),
             )?;
             last_send_event = Instant::now();
         }

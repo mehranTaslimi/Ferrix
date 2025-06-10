@@ -1,8 +1,8 @@
 use tauri::State;
 
 use crate::utils::{
-    app_state::{AppEvent, AppState, DownloadData},
-    event_handler::dispatch,
+    app_state::{AppEvent, AppState},
+    broadcast_event::dispatch,
 };
 
 #[tauri::command]
@@ -11,10 +11,10 @@ pub fn add_download_queue(
     url: String,
     chunk: Option<u8>,
 ) -> Result<(), String> {
-    let chunk = chunk.unwrap_or(5).clamp(1, 5);
+    let chunk = chunk.unwrap_or(6).clamp(1, 6);
     dispatch(
         &state.broadcast_tx,
-        AppEvent::StartNewDownloadProcess(DownloadData { chunk, url }),
+        AppEvent::StartNewDownloadProcess(url, chunk as i64),
     )
 }
 

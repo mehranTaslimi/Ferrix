@@ -59,9 +59,16 @@
 - 🔵 Remote Management (web or mobile access)
 - 🔵 Auto Backup (history and settings)
 
+## Todos
 
-## ! Notes
+1. Create better error handling using the `thiserror` crate
 
-```1. user maybe change streamed file, i should check before start downloading, maybe with md5sum and others think ```
+2. Fix streamed file behavior so the filesystem shows it's being downloaded (e.g. circular progress on macOS)
 
-```2. i should write and update my db every 1 sec to update "start and end" -> i have two idea, send event to handler to queued task to manage```
+3. Parse URL and file extension to save metadata and file info
+
+4. Implement pause and resume functionality for downloads
+
+5. Fix progress updates and internet speed reporting for small files (currently not sent)
+
+6. Show download start time and end time

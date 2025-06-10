@@ -23,10 +23,10 @@ export default function DownloadForm() {
   });
 
   useEffect(() => {
-    listen("download_speed_tracker", (ev) => {
+    listen("download_speed", (ev) => {
       console.log(ev.payload);
     });
-    listen("downloads_tracker", (ev) => {
+    listen("downloaded_bytes", (ev) => {
       console.log(ev.payload);
     });
     listen("download_list", (ev) => {
