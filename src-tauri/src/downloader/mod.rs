@@ -8,7 +8,7 @@ pub use utils::get_chunk_ranges;
 mod file;
 use file::setup_file_write;
 
-use futures_util::{future::join_all, stream, FutureExt, StreamExt};
+use futures_util::{future::join_all, StreamExt};
 use std::time::{Duration, Instant};
 use tauri::http::header::RANGE;
 use tauri_plugin_http::reqwest::Client;

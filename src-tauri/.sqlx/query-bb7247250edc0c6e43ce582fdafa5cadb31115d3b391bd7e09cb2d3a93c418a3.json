@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n        SELECT\n\td.id,\n\td.url,\n\td.created_at,\n\td.total_bytes,\n\td.chunk_count,\n\td.status,\n    d.file_path,\n    d.file_name,\n    d.content_type,\n    d.extension,\n\tCOALESCE(\n\t\t(\n\t\t\tSELECT\n\t\t\t\tSUM(dc.downloaded_bytes)\n\t\t\tFROM\n\t\t\t\tdownload_chunks dc\n\t\t\tWHERE\n\t\t\t\tdc.download_id = d.id\n\t\t),\n\t\t0\n\t) AS downloaded_bytes\nFROM\n\tdownloads d\n    ",
+  "query": "\n        SELECT\n\td.id,\n\td.url,\n\td.created_at,\n\td.total_bytes,\n\td.chunk_count,\n\td.status,\n    d.file_path,\n    d.file_name,\n    d.content_type,\n    d.extension,\n\tCOALESCE(\n\t\t(\n\t\t\tSELECT\n\t\t\t\tSUM(dc.downloaded_bytes)\n\t\t\tFROM\n\t\t\t\tdownload_chunks dc\n\t\t\tWHERE\n\t\t\t\tdc.download_id = d.id\n\t\t),\n\t\t0\n\t) AS downloaded_bytes\nFROM\n\tdownloads d\nORDER BY\n\td.created_at DESC;\n\n    ",
   "describe": {
     "columns": [
       {
@@ -76,5 +76,5 @@
       false
     ]
   },
-  "hash": "5bd3c826135d5629dc8ba19cb5cb6b719e281b86e9d3f1f9054c6d8e89a36bdc"
+  "hash": "bb7247250edc0c6e43ce582fdafa5cadb31115d3b391bd7e09cb2d3a93c418a3"
 }
