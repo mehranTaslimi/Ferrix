@@ -78,7 +78,7 @@ impl EventHandler {
             download.meta.chunk_downloaded_bytes.clear();
             dispatch(
                 &self.tx,
-                AppEvent::ReportChunksDownloadedBytes(download_id, downloaded_bytes),
+                AppEvent::FullReportChunksDownloadedBytes(download_id, downloaded_bytes),
             )?;
         }
 
@@ -107,9 +107,16 @@ impl EventHandler {
             download.meta.chunk_speed.clear();
             dispatch(
                 &self.tx,
-                AppEvent::ReportChunksSpeed(download_id, chunk_speeds),
+                AppEvent::FullReportChunksSpeed(download_id, chunk_speeds),
             )?;
         }
+
+        Ok(())
+    }
+
+    async fn flush_report(&self, download_id: DownloadId) -> Result<(), String> {
+        let mut downloading_list = DOWNLOADING_LIST.lock().await;
+        downloading_list.remove(&download_id);
 
         Ok(())
     }
@@ -174,6 +181,7 @@ impl EventHandler {
 
                 dispatch(&self.tx, AppEvent::SendDownloadList)
             }
+
             AppEvent::ReportChunkSpeed(download_id, chunk_index, speed_kbps) => {
                 self.speed_reporter(download_id, chunk_index, speed_kbps)
                     .await
@@ -190,23 +198,35 @@ impl EventHandler {
                 self.download_reporter(download_id, chunk_index, downloaded_bytes)
                     .await
             }
-            AppEvent::ReportChunksSpeed(download_id, speed_kbps) => {
+
+            AppEvent::FullReportChunksSpeed(download_id, speed_kbps) => {
                 let mut payload: HashMap<DownloadId, SpeedKbps> = HashMap::new();
                 payload.insert(download_id, speed_kbps);
                 emit_app_event(&self.app_handle, "download_speed", payload)
             }
-            AppEvent::ReportChunksDownloadedBytes(download_id, downloaded_bytes) => {
+            AppEvent::FullReportChunksDownloadedBytes(download_id, downloaded_bytes) => {
                 let mut payload: HashMap<DownloadId, DownloadedBytes> = HashMap::new();
                 payload.insert(download_id, downloaded_bytes);
                 emit_app_event(&self.app_handle, "downloaded_bytes", payload)
             }
+
+            AppEvent::UpdateChunkDownloadedBytes(download_id, chunk_index, downloaded_bytes) => {
+                update_chunk_downloaded(&self.pool, download_id, chunk_index, downloaded_bytes)
+                    .await
+            }
+
             AppEvent::SendDownloadList => {
                 let results = get_downloads_list(&self.pool).await?;
                 emit_app_event(&self.app_handle, "download_list", results)
             }
-            AppEvent::UpdateChunkDownloadedBytes(download_id, chunk_index, downloaded_bytes) => {
-                update_chunk_downloaded(&self.pool, download_id, chunk_index, downloaded_bytes)
-                    .await
+
+            AppEvent::DownloadFinished(download_id) => {
+                update_download_status(&self.pool, download_id, "completed").await?;
+                self.flush_report(download_id).await?;
+
+                dispatch(&self.tx, AppEvent::SendDownloadList)?;
+
+                Ok(())
             }
         }
     }

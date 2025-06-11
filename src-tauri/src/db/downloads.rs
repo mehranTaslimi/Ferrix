@@ -111,6 +111,9 @@ pub async fn get_downloads_list(pool: &SqlitePool) -> Result<Vec<Download>, Stri
 	) AS downloaded_bytes
 FROM
 	downloads d
+ORDER BY
+	d.created_at DESC;
+
     "#
     )
     .fetch_all(pool)

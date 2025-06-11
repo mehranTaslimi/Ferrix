@@ -28,16 +28,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`antialiased`}>
+      <body className="antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <div className="flex flex-1 flex-col">
-            <div className="@container/main flex flex-1 flex-col gap-2">
-              {children}
+          <div className="h-screen overflow-hidden">
+            <div className="h-full overflow-y-auto">
+              <div className="fixed w-full h-8 bg-transparent left-0 top-0 z-auto" data-tauri-drag-region />
+              <div className="flex flex-1 flex-col pt-8">
+                <div className="@container/main flex flex-1 flex-col gap-2">
+                  {children}
+                </div>
+              </div>
             </div>
           </div>
         </ThemeProvider>

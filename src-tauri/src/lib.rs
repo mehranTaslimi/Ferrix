@@ -3,7 +3,6 @@ mod db;
 mod downloader;
 mod models;
 mod utils;
-
 use command::add_download_queue;
 use tokio::{spawn, sync::broadcast};
 
@@ -39,7 +38,6 @@ pub async fn run() {
 
             spawn(async move {
                 while let Ok(app_event) = rx.recv().await {
-                    println!("{:?}", app_event);
                     let result = event_handler.event_reducer(app_event).await;
                     if let Err(err) = result {
                         println!("Error: {}", err);

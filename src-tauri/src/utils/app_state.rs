@@ -35,9 +35,13 @@ pub enum AppEvent {
     CreateDownloadChunkInDB(DownloadId, TotalBytes, ChunkCount),
     StartDownload(DownloadId, Download),
     SendDownloadList,
+
     ReportChunkDownloadedBytes(DownloadId, ChunkIndex, DownloadedBytes),
-    ReportChunksDownloadedBytes(DownloadId, DownloadedBytes),
     ReportChunkSpeed(DownloadId, ChunkIndex, SpeedKbps),
-    ReportChunksSpeed(DownloadId, SpeedKbps),
+
+    FullReportChunksSpeed(DownloadId, SpeedKbps),
+    FullReportChunksDownloadedBytes(DownloadId, DownloadedBytes),
+
     UpdateChunkDownloadedBytes(DownloadId, ChunkIndex, DownloadedBytes),
+    DownloadFinished(DownloadId),
 }
