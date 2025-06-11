@@ -6,7 +6,10 @@ CREATE TABLE IF NOT EXISTS downloads (
     status TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     chunk_count INTEGER NOT NULL DEFAULT 5,
-    file_path TEXT NOT NULL
+    file_path TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    extension TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS download_chunks (

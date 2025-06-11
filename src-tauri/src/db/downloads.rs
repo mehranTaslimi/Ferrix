@@ -1,22 +1,24 @@
 use sqlx::SqlitePool;
 
-use crate::models::{Chunk, ChunkCount, Download, TotalBytes};
+use crate::models::{Chunk, ChunkCount, Download, FileInfo};
 
 pub async fn insert_new_download(
     pool: &SqlitePool,
-    url: &str,
+    file_info: FileInfo,
     chunk_count: ChunkCount,
-    total_bytes: TotalBytes,
     file_path: &str,
 ) -> Result<i64, String> {
     let status = "queued";
     sqlx::query!(
-        "INSERT INTO downloads (url, total_bytes, chunk_count, status, file_path) VALUES (?, ?, ?, ?, ?)",
-        url,
-        total_bytes,
-        chunk_count,
+        "INSERT INTO downloads (status, file_path, chunk_count, url, total_bytes, file_name, extension, content_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         status,
-        file_path
+        file_path,
+        chunk_count,
+        file_info.url,
+        file_info.total_bytes,
+        file_info.file_name,
+        file_info.extension,
+        file_info.content_type,
     )
     .execute(pool)
     .await
@@ -55,6 +57,9 @@ pub async fn get_downloads_by_id(pool: &SqlitePool, id: i64) -> Result<Download,
 	d.chunk_count,
 	d.status,
     d.file_path,
+    d.file_name,
+    d.content_type,
+    d.extension,
 	COALESCE(
 		(
 			SELECT
@@ -90,6 +95,9 @@ pub async fn get_downloads_list(pool: &SqlitePool) -> Result<Vec<Download>, Stri
 	d.chunk_count,
 	d.status,
     d.file_path,
+    d.file_name,
+    d.content_type,
+    d.extension,
 	COALESCE(
 		(
 			SELECT

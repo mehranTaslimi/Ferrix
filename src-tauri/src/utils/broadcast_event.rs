@@ -14,7 +14,7 @@ use crate::{
         insert_download_chunks, insert_new_download, update_chunk_downloaded,
         update_download_status,
     },
-    downloader::{download_chunks, get_chunk_ranges, get_file_content_length},
+    downloader::{download_chunks, get_chunk_ranges, validate_and_inspect_url},
     models::{ChunkIndex, Download, DownloadId, DownloadedBytes, SpeedKbps},
     utils::app_state::AppEvent,
 };
@@ -117,33 +117,25 @@ impl EventHandler {
     pub async fn event_reducer(&self, app_event: AppEvent) -> Result<(), String> {
         match app_event {
             AppEvent::StartNewDownloadProcess(download_url, chunk_count) => {
-                dispatch(&self.tx, AppEvent::ValidateLink(download_url, chunk_count))
-            }
-            AppEvent::ValidateLink(download_url, chunk_count) => dispatch(
-                &self.tx,
-                AppEvent::GetFileTotalBytes(download_url, chunk_count),
-            ),
-            AppEvent::GetFileTotalBytes(download_url, chunk_count) => {
-                let total_bytes = get_file_content_length(&download_url).await?;
+                println!("Start new download process");
                 dispatch(
                     &self.tx,
-                    AppEvent::CreateNewDownloadRecordInDB(
-                        download_url,
-                        chunk_count,
-                        total_bytes as i64,
-                    ),
+                    AppEvent::ValidateAndInspectLink(download_url, chunk_count),
                 )
             }
-            AppEvent::CreateNewDownloadRecordInDB(download_url, chunk_count, total_bytes) => {
-                let file_path = "/Users/mehrantaslimi/Downloads/download.jpg";
-                let id = insert_new_download(
-                    &self.pool,
-                    &download_url,
-                    chunk_count,
-                    total_bytes,
-                    file_path,
+            AppEvent::ValidateAndInspectLink(download_url, chunk_count) => {
+                let file_info = validate_and_inspect_url(&download_url).await?;
+                dispatch(
+                    &self.tx,
+                    AppEvent::CreateNewDownloadRecordInDB(file_info, chunk_count),
                 )
-                .await?;
+            }
+            AppEvent::CreateNewDownloadRecordInDB(file_info, chunk_count) => {
+                let total_bytes = file_info.total_bytes;
+                let file_name = file_info.file_name.clone();
+                let file_path = format!("/Users/mehrantaslimi/Downloads/{}", file_name);
+                let id =
+                    insert_new_download(&self.pool, file_info, chunk_count, &file_path).await?;
 
                 dispatch(
                     &self.tx,
@@ -177,8 +169,10 @@ impl EventHandler {
             AppEvent::StartDownload(id, download) => {
                 let chunks = get_download_chunks_by_download_id(&self.pool, id).await?;
                 let tx = self.tx.clone();
+
                 spawn(async move { download_chunks(tx, chunks, download).await });
-                Ok(())
+
+                dispatch(&self.tx, AppEvent::SendDownloadList)
             }
             AppEvent::ReportChunkSpeed(download_id, chunk_index, speed_kbps) => {
                 self.speed_reporter(download_id, chunk_index, speed_kbps)

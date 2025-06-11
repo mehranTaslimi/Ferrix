@@ -15,7 +15,7 @@ use crate::{
 #[tokio::main]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
-    let (tx, _) = broadcast::channel(100);
+    let (tx, _) = broadcast::channel(1000);
     let app_state = AppState::new(tx.clone()).await;
 
     let pool = app_state.pool.clone();
@@ -39,6 +39,7 @@ pub async fn run() {
 
             spawn(async move {
                 while let Ok(app_event) = rx.recv().await {
+                    println!("{:?}", app_event);
                     let result = event_handler.event_reducer(app_event).await;
                     if let Err(err) = result {
                         println!("Error: {}", err);

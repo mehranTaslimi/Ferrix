@@ -11,6 +11,18 @@ pub type DownloadUrl = String;
 pub type DownloadStatus = String;
 pub type CreatedAt = NaiveDateTime;
 pub type FilePath = String;
+pub type FileName = String;
+pub type ContentType = String;
+pub type Extension = String;
+
+#[derive(Debug, Clone)]
+pub struct FileInfo {
+    pub url: DownloadUrl,
+    pub file_name: FileName,
+    pub content_type: ContentType,
+    pub total_bytes: TotalBytes,
+    pub extension: Extension,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Download {
@@ -22,6 +34,9 @@ pub struct Download {
     pub downloaded_bytes: DownloadedBytes,
     pub chunk_count: ChunkCount,
     pub file_path: FilePath,
+    pub file_name: FileName,
+    pub content_type: ContentType,
+    pub extension: Extension,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Chunk {
