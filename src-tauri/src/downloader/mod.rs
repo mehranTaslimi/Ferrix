@@ -53,7 +53,7 @@ pub async fn download_chunks(
         .all(|f| matches!(f, Ok(DownloadChunkStatus::Paused)));
 
     if all_finished {
-        dispatch(&tx, AppEvent::DownloadFinished(download.id))?;
+        dispatch(&tx, AppEvent::DownloadFinished(download.id));
         Ok(())
     } else if all_paused {
         return Ok(());
@@ -113,7 +113,7 @@ async fn download_chunk(
                         dispatch(
                             &tx,
                             AppEvent::MakeChunkHash(downloaded, chunk.clone()),
-                        )?;
+                        );
                         return Ok(DownloadChunkStatus::Paused);
                     },
                     _ => {}

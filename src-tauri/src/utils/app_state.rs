@@ -5,7 +5,7 @@ use crate::{
     db::init_db,
     models::{
         Chunk, ChunkCount, ChunkIndex, Download, DownloadId, DownloadUrl, DownloadedBytes,
-        ExpectedHash, FileInfo, FilePath, SpeedKbps, TotalBytes,
+        FileInfo, SpeedKbps, TotalBytes,
     },
 };
 

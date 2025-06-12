@@ -22,18 +22,6 @@ use crate::{
     utils::app_state::AppEvent,
 };
 
-pub fn dispatch(tx: &Sender<AppEvent>, app_event: AppEvent) -> Result<(), String> {
-    tx.send(app_event).map(|_| ()).map_err(|e| e.to_string())
-}
-
-pub fn emit_app_event<S: Serialize + Clone>(
-    app_handle: &AppHandle,
-    event: &str,
-    payload: S,
-) -> Result<(), String> {
-    app_handle.emit(event, payload).map_err(|e| e.to_string())
-}
-
 #[derive(Debug, Clone)]
 struct DownloadMeta {
     chunk_speed: HashMap<ChunkIndex, SpeedKbps>,
@@ -44,6 +32,18 @@ struct DownloadMeta {
 struct Downloading {
     download: Download,
     meta: DownloadMeta,
+}
+
+pub fn dispatch(tx: &Sender<AppEvent>, app_event: AppEvent) {
+    let _ = tx.send(app_event).map(|_| ());
+}
+
+pub fn emit_app_event<S: Serialize + Clone>(
+    app_handle: &AppHandle,
+    event: &str,
+    payload: S,
+) -> Result<(), String> {
+    app_handle.emit(event, payload).map_err(|e| e.to_string())
 }
 
 static DOWNLOADING_LIST: Lazy<Mutex<HashMap<DownloadId, Downloading>>> =
@@ -82,7 +82,7 @@ impl EventHandler {
             dispatch(
                 &self.tx,
                 AppEvent::FullReportChunksDownloadedBytes(download_id, downloaded_bytes),
-            )?;
+            );
         }
 
         Ok(())
@@ -111,27 +111,25 @@ impl EventHandler {
             dispatch(
                 &self.tx,
                 AppEvent::FullReportChunksSpeed(download_id, chunk_speeds),
-            )?;
+            );
         }
 
         Ok(())
     }
 
-    async fn flush_report(&self, download_id: DownloadId) -> Result<(), String> {
+    async fn flush_report(&self, download_id: DownloadId) {
         let mut downloading_list = DOWNLOADING_LIST.lock().await;
         downloading_list.remove(&download_id);
-
-        Ok(())
     }
 
     pub async fn event_reducer(&self, app_event: AppEvent) -> Result<(), String> {
         match app_event {
             AppEvent::StartNewDownloadProcess(download_url, chunk_count) => {
-                println!("Start new download process");
                 dispatch(
                     &self.tx,
                     AppEvent::ValidateAndInspectLink(download_url, chunk_count),
-                )
+                );
+                Ok(())
             }
 
             AppEvent::ValidateAndInspectLink(download_url, chunk_count) => {
@@ -139,7 +137,8 @@ impl EventHandler {
                 dispatch(
                     &self.tx,
                     AppEvent::CreateNewDownloadRecordInDB(file_info, chunk_count),
-                )
+                );
+                Ok(())
             }
 
             AppEvent::CreateNewDownloadRecordInDB(file_info, chunk_count) => {
@@ -152,7 +151,8 @@ impl EventHandler {
                 dispatch(
                     &self.tx,
                     AppEvent::CreateDownloadChunkInDB(id, total_bytes, chunk_count),
-                )
+                );
+                Ok(())
             }
 
             AppEvent::CreateDownloadChunkInDB(download_id, total_bytes, chunk_count) => {
@@ -161,7 +161,8 @@ impl EventHandler {
                 dispatch(
                     &self.tx,
                     AppEvent::InsertDownloadFromDBToDownloadingList(download_id),
-                )
+                );
+                Ok(())
             }
 
             AppEvent::InsertDownloadFromDBToDownloadingList(id) => {
@@ -178,7 +179,8 @@ impl EventHandler {
                         },
                     },
                 );
-                dispatch(&self.tx, AppEvent::StartDownload(id, download))
+                dispatch(&self.tx, AppEvent::StartDownload(id, download));
+                Ok(())
             }
 
             AppEvent::ReportChunkSpeed(download_id, chunk_index, speed_kbps) => {
@@ -187,14 +189,6 @@ impl EventHandler {
             }
 
             AppEvent::ReportChunkDownloadedBytes(download_id, chunk_index, downloaded_bytes) => {
-                // dispatch(
-                //     &self.tx,
-                //     AppEvent::UpdateChunkDownloadedBytes(
-                //         download_id,
-                //         chunk_index,
-                //         downloaded_bytes,
-                //     ),
-                // )?;
                 self.download_reporter(download_id, chunk_index, downloaded_bytes)
                     .await
             }
@@ -229,9 +223,9 @@ impl EventHandler {
 
             AppEvent::DownloadFinished(download_id) => {
                 update_download_status(&self.pool, download_id, "completed").await?;
-                self.flush_report(download_id).await?;
+                self.flush_report(download_id).await;
 
-                dispatch(&self.tx, AppEvent::SendDownloadList)?;
+                dispatch(&self.tx, AppEvent::SendDownloadList);
 
                 Ok(())
             }
@@ -242,7 +236,9 @@ impl EventHandler {
 
                 spawn(async move { download_chunks(tx, chunks, download).await });
 
-                dispatch(&self.tx, AppEvent::SendDownloadList)
+                dispatch(&self.tx, AppEvent::SendDownloadList);
+
+                Ok(())
             }
 
             AppEvent::MakeChunkHash(downloaded_bytes, chunk) => {
@@ -266,12 +262,14 @@ impl EventHandler {
                         downloaded_bytes as i64,
                         hash,
                     ),
-                )
+                );
+                Ok(())
             }
 
             AppEvent::PauseDownload(download_id) => {
                 update_download_status(&self.pool, download_id, "paused").await?;
-                dispatch(&self.tx, AppEvent::SendDownloadList)
+                dispatch(&self.tx, AppEvent::SendDownloadList);
+                Ok(())
             }
 
             AppEvent::ResumeDownload(download_id) => {
@@ -279,7 +277,8 @@ impl EventHandler {
                 dispatch(
                     &self.tx,
                     AppEvent::ValidateExistingFile(download_id, chunks),
-                )
+                );
+                Ok(())
             }
 
             AppEvent::ValidateExistingFile(download_id, chunks) => {
@@ -306,7 +305,8 @@ impl EventHandler {
                     dispatch(
                         &self.tx,
                         AppEvent::InsertDownloadFromDBToDownloadingList(download_id),
-                    )
+                    );
+                    Ok(())
                 } else {
                     Err("file not match".to_string())
                 }
