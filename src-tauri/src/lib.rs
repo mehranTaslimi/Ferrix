@@ -7,7 +7,7 @@ use command::add_download_queue;
 use tokio::{spawn, sync::broadcast};
 
 use crate::{
-    command::get_download_list,
+    command::{get_download_list, pause_download, resume_download},
     utils::{app_state::AppState, broadcast_event::EventHandler},
 };
 
@@ -27,7 +27,9 @@ pub async fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             add_download_queue,
-            get_download_list
+            get_download_list,
+            resume_download,
+            pause_download
         ])
         .setup(move |app| {
             let event_handler = EventHandler {
@@ -37,10 +39,17 @@ pub async fn run() {
             };
 
             spawn(async move {
-                while let Ok(app_event) = rx.recv().await {
-                    let result = event_handler.event_reducer(app_event).await;
-                    if let Err(err) = result {
-                        println!("Error: {}", err);
+                loop {
+                    match rx.recv().await {
+                        Ok(app_event) => {
+                            let result = event_handler.event_reducer(app_event).await;
+                            if let Err(err) = result {
+                                println!("Error: {}", err);
+                            }
+                        }
+                        Err(e) => {
+                            println!("Error Error Error Error {}", e);
+                        }
                     }
                 }
             });

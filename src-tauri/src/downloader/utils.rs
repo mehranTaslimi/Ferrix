@@ -1,4 +1,4 @@
-use std::time::Instant;
+use tokio::time::Instant;
 
 pub fn calc_download_speed(last: &mut Instant, received_bytes: &mut u64, speed: &mut f64) {
     let now = Instant::now();

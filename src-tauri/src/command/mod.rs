@@ -22,3 +22,13 @@ pub fn add_download_queue(
 pub fn get_download_list(state: State<'_, AppState>) -> Result<(), String> {
     dispatch(&state.broadcast_tx, AppEvent::SendDownloadList)
 }
+
+#[tauri::command]
+pub fn pause_download(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    dispatch(&state.broadcast_tx, AppEvent::PauseDownload(id))
+}
+
+#[tauri::command]
+pub fn resume_download(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    dispatch(&state.broadcast_tx, AppEvent::ResumeDownload(id))
+}

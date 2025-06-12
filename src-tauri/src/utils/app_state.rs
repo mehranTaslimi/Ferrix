@@ -4,8 +4,8 @@ use tokio::sync::broadcast;
 use crate::{
     db::init_db,
     models::{
-        ChunkCount, ChunkIndex, Download, DownloadId, DownloadUrl, DownloadedBytes, FileInfo,
-        SpeedKbps, TotalBytes,
+        Chunk, ChunkCount, ChunkIndex, Download, DownloadId, DownloadUrl, DownloadedBytes,
+        ExpectedHash, FileInfo, FilePath, SpeedKbps, TotalBytes,
     },
 };
 
@@ -42,6 +42,13 @@ pub enum AppEvent {
     FullReportChunksSpeed(DownloadId, SpeedKbps),
     FullReportChunksDownloadedBytes(DownloadId, DownloadedBytes),
 
-    UpdateChunkDownloadedBytes(DownloadId, ChunkIndex, DownloadedBytes),
+    UpdateChunk(DownloadId, ChunkIndex, DownloadedBytes, String),
     DownloadFinished(DownloadId),
+
+    PauseDownload(DownloadId),
+    ResumeDownload(DownloadId),
+
+    ValidateExistingFile(DownloadId, Vec<Chunk>),
+
+    MakeChunkHash(u64, Chunk),
 }

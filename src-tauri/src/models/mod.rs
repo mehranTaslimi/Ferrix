@@ -14,6 +14,7 @@ pub type FilePath = String;
 pub type FileName = String;
 pub type ContentType = String;
 pub type Extension = String;
+pub type ExpectedHash = Option<String>;
 
 #[derive(Debug, Clone)]
 pub struct FileInfo {
@@ -46,6 +47,8 @@ pub struct Chunk {
     pub end_byte: i64,
     pub downloaded_bytes: i64,
     pub url: String,
+    pub expected_hash: ExpectedHash,
+    pub file_path: FilePath,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
