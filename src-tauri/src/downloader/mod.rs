@@ -15,8 +15,9 @@ use tokio::sync::{broadcast::Sender, mpsc};
 
 use crate::{
     downloader::file::WriteMessage,
+    events::dispatch,
     models::{Chunk, Download},
-    utils::{app_state::AppEvent, broadcast_event::dispatch},
+    utils::app_state::AppEvent,
 };
 
 enum DownloadChunkStatus {
@@ -108,6 +109,7 @@ async fn download_chunk(
             maybe_bytes = stream.next() => {
                 match maybe_bytes {
                     Some(Ok(bytes)) => {
+                        // println!("{:?}", "downloading...");
                         let chunk_len = bytes.len() as u64;
 
                         file_tx

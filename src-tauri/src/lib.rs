@@ -1,6 +1,7 @@
 mod command;
 mod db;
 mod downloader;
+mod events;
 mod models;
 mod utils;
 use command::add_download_queue;

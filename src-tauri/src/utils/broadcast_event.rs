@@ -1,14 +1,7 @@
 use futures_util::future::try_join_all;
-use once_cell::sync::Lazy;
-use serde::Serialize;
 use sqlx::SqlitePool;
-use std::{collections::HashMap, time::Duration};
-use tauri::{AppHandle, Emitter};
-use tokio::{
-    spawn,
-    sync::{broadcast::Sender, Mutex},
-    time::sleep,
-};
+use tauri::AppHandle;
+use tokio::{spawn, sync::broadcast::Sender};
 
 use crate::{
     db::downloads::{
@@ -19,7 +12,7 @@ use crate::{
     downloader::{
         compute_partial_hash, download_chunks, get_chunk_ranges, validate_and_inspect_url,
     },
-    models::DownloadId,
+    events::{dispatch, emit_app_event, Reporter},
     utils::app_state::AppEvent,
 };
 
@@ -27,85 +20,19 @@ pub struct EventHandler {
     tx: Sender<AppEvent>,
     pool: SqlitePool,
     app_handle: AppHandle,
-}
-
-#[derive(Clone, Debug)]
-struct Report {
-    downloaded_bytes: u64,
-    received_bytes: f64,
-}
-
-static REPORTER: Lazy<Mutex<HashMap<DownloadId, Report>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
-
-pub fn dispatch(tx: &Sender<AppEvent>, app_event: AppEvent) {
-    let _ = tx.send(app_event).map(|_| ());
-}
-
-pub fn emit_app_event<S: Serialize + Clone>(app_handle: &AppHandle, event: &str, payload: S) {
-    let _ = app_handle.emit(event, payload);
-}
-
-fn downloading_meta_reporter(app_handle: &AppHandle) {
-    let app_handle_1 = app_handle.clone();
-    let app_handle_2 = app_handle.clone();
-    spawn(async move {
-        loop {
-            sleep(Duration::from_millis(100)).await;
-
-            let reporter = REPORTER.lock().await;
-            let clone = reporter.clone();
-
-            if clone.len() == 0 {
-                continue;
-            }
-
-            let mut report_map: HashMap<DownloadId, u64> = HashMap::new();
-
-            for (&id, report) in clone.iter() {
-                report_map.insert(id, report.downloaded_bytes);
-            }
-
-            emit_app_event(&app_handle_1, "downloaded_bytes", report_map);
-        }
-    });
-    spawn(async move {
-        loop {
-            sleep(Duration::from_secs(1)).await;
-
-            let mut reporter = REPORTER.lock().await;
-
-            if reporter.len() == 0 {
-                continue;
-            }
-
-            println!("reporter: {:?}", reporter);
-
-            let mut report_map: HashMap<DownloadId, f64> = HashMap::new();
-
-            for (&id, report) in reporter.iter_mut() {
-                let speed_kbps = report.received_bytes as f64 / 1024.0;
-                report_map.insert(id, speed_kbps);
-                report.received_bytes = 0.0;
-            }
-
-            emit_app_event(&app_handle_2, "download_speed", report_map);
-        }
-    });
-}
-
-async fn flush_report(download_id: DownloadId) {
-    let mut reporter = REPORTER.lock().await;
-    reporter.remove(&download_id);
+    reporter: Reporter,
 }
 
 impl EventHandler {
     pub fn new(tx: Sender<AppEvent>, pool: SqlitePool, app_handle: AppHandle) -> Self {
-        downloading_meta_reporter(&app_handle);
+        let reporter = Reporter::new(app_handle.clone());
+        reporter.listen_to_report();
+
         Self {
             app_handle,
             pool,
             tx,
+            reporter,
         }
     }
 
@@ -178,8 +105,7 @@ impl EventHandler {
 
             AppEvent::DownloadFinished(download_id) => {
                 update_download_status(&self.pool, download_id, "completed").await?;
-                flush_report(download_id).await;
-
+                self.reporter.flush_report(download_id).await;
                 dispatch(&self.tx, AppEvent::SendDownloadList);
 
                 Ok(())
@@ -221,12 +147,11 @@ impl EventHandler {
                 Ok(())
             }
 
-            AppEvent::PauseDownload(download_id) => {
-                update_download_status(&self.pool, download_id, "paused").await?;
-                dispatch(&self.tx, AppEvent::SendDownloadList);
-                Ok(())
-            }
-
+            // AppEvent::PauseDownload(download_id) => {
+            //     update_download_status(&self.pool, download_id, "paused").await?;
+            //     dispatch(&self.tx, AppEvent::SendDownloadList);
+            //     Ok(())
+            // }
             AppEvent::ResumeDownload(download_id) => {
                 let chunks = get_download_chunks_by_download_id(&self.pool, download_id).await?;
                 dispatch(
@@ -268,19 +193,11 @@ impl EventHandler {
             }
 
             AppEvent::ReportChunkReceivedBytes(download_id, received_bytes) => {
-                let mut reporter = REPORTER.lock().await;
-                reporter
-                    .entry(download_id)
-                    .and_modify(|report| {
-                        report.downloaded_bytes += received_bytes;
-                        report.received_bytes += received_bytes as f64;
-                    })
-                    .or_insert(Report {
-                        received_bytes: received_bytes as f64,
-                        downloaded_bytes: received_bytes,
-                    });
+                self.reporter.add_report(download_id, received_bytes).await;
                 Ok(())
             }
+
+            _ => Ok(()),
         }
     }
 }

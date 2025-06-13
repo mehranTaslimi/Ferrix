@@ -1,8 +1,8 @@
 use tauri::State;
 
-use crate::utils::{
-    app_state::{AppEvent, AppState},
-    broadcast_event::dispatch,
+use crate::{
+    events::dispatch,
+    utils::app_state::{AppEvent, AppState},
 };
 
 #[tauri::command]
@@ -21,6 +21,7 @@ pub fn get_download_list(state: State<'_, AppState>) {
 
 #[tauri::command]
 pub fn pause_download(state: State<'_, AppState>, id: i64) {
+    println!("ok ok ok");
     dispatch(&state.broadcast_tx, AppEvent::PauseDownload(id));
 }
 
