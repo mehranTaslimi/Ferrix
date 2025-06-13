@@ -32,11 +32,7 @@ pub async fn run() {
             pause_download
         ])
         .setup(move |app| {
-            let event_handler = EventHandler {
-                app_handle: app.handle().clone(),
-                pool,
-                tx,
-            };
+            let event_handler = EventHandler::new(tx, pool, app.handle().clone());
 
             spawn(async move {
                 loop {

@@ -2,11 +2,12 @@ use futures_util::future::try_join_all;
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use sqlx::SqlitePool;
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 use tauri::{AppHandle, Emitter};
 use tokio::{
     spawn,
     sync::{broadcast::Sender, Mutex},
+    time::sleep,
 };
 
 use crate::{
@@ -18,108 +19,94 @@ use crate::{
     downloader::{
         compute_partial_hash, download_chunks, get_chunk_ranges, validate_and_inspect_url,
     },
-    models::{ChunkIndex, Download, DownloadId, DownloadedBytes, SpeedKbps},
+    models::DownloadId,
     utils::app_state::AppEvent,
 };
 
-#[derive(Debug, Clone)]
-struct DownloadMeta {
-    chunk_speed: HashMap<ChunkIndex, SpeedKbps>,
-    chunk_downloaded_bytes: HashMap<ChunkIndex, DownloadedBytes>,
+pub struct EventHandler {
+    tx: Sender<AppEvent>,
+    pool: SqlitePool,
+    app_handle: AppHandle,
 }
 
-#[derive(Debug, Clone)]
-struct Downloading {
-    download: Download,
-    meta: DownloadMeta,
+#[derive(Clone, Debug)]
+struct Report {
+    downloaded_bytes: u64,
+    received_bytes: f64,
 }
+
+static REPORTER: Lazy<Mutex<HashMap<DownloadId, Report>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub fn dispatch(tx: &Sender<AppEvent>, app_event: AppEvent) {
     let _ = tx.send(app_event).map(|_| ());
 }
 
-pub fn emit_app_event<S: Serialize + Clone>(
-    app_handle: &AppHandle,
-    event: &str,
-    payload: S,
-) -> Result<(), String> {
-    app_handle.emit(event, payload).map_err(|e| e.to_string())
+pub fn emit_app_event<S: Serialize + Clone>(app_handle: &AppHandle, event: &str, payload: S) {
+    let _ = app_handle.emit(event, payload);
 }
 
-static DOWNLOADING_LIST: Lazy<Mutex<HashMap<DownloadId, Downloading>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+fn downloading_meta_reporter(app_handle: &AppHandle) {
+    let app_handle_1 = app_handle.clone();
+    let app_handle_2 = app_handle.clone();
+    spawn(async move {
+        loop {
+            sleep(Duration::from_millis(100)).await;
 
-pub struct EventHandler {
-    pub tx: Sender<AppEvent>,
-    pub pool: SqlitePool,
-    pub app_handle: AppHandle,
+            let reporter = REPORTER.lock().await;
+            let clone = reporter.clone();
+
+            if clone.len() == 0 {
+                continue;
+            }
+
+            let mut report_map: HashMap<DownloadId, u64> = HashMap::new();
+
+            for (&id, report) in clone.iter() {
+                report_map.insert(id, report.downloaded_bytes);
+            }
+
+            emit_app_event(&app_handle_1, "downloaded_bytes", report_map);
+        }
+    });
+    spawn(async move {
+        loop {
+            sleep(Duration::from_secs(1)).await;
+
+            let mut reporter = REPORTER.lock().await;
+
+            if reporter.len() == 0 {
+                continue;
+            }
+
+            println!("reporter: {:?}", reporter);
+
+            let mut report_map: HashMap<DownloadId, f64> = HashMap::new();
+
+            for (&id, report) in reporter.iter_mut() {
+                let speed_kbps = report.received_bytes as f64 / 1024.0;
+                report_map.insert(id, speed_kbps);
+                report.received_bytes = 0.0;
+            }
+
+            emit_app_event(&app_handle_2, "download_speed", report_map);
+        }
+    });
+}
+
+async fn flush_report(download_id: DownloadId) {
+    let mut reporter = REPORTER.lock().await;
+    reporter.remove(&download_id);
 }
 
 impl EventHandler {
-    async fn download_reporter(
-        &self,
-        download_id: DownloadId,
-        chunk_index: ChunkIndex,
-        downloaded_bytes: DownloadedBytes,
-    ) -> Result<(), String> {
-        let mut downloading_list = DOWNLOADING_LIST.lock().await;
-
-        let download = downloading_list
-            .get_mut(&download_id)
-            .ok_or("cannot defined downloading list to report".to_string())?;
-
-        download
-            .meta
-            .chunk_downloaded_bytes
-            .insert(chunk_index, downloaded_bytes);
-
-        let is_all_chunk_reported =
-            download.meta.chunk_downloaded_bytes.len() as i64 == download.download.chunk_count;
-
-        if is_all_chunk_reported {
-            let downloaded_bytes = download.meta.chunk_downloaded_bytes.values().sum::<i64>();
-            download.meta.chunk_downloaded_bytes.clear();
-            dispatch(
-                &self.tx,
-                AppEvent::FullReportChunksDownloadedBytes(download_id, downloaded_bytes),
-            );
+    pub fn new(tx: Sender<AppEvent>, pool: SqlitePool, app_handle: AppHandle) -> Self {
+        downloading_meta_reporter(&app_handle);
+        Self {
+            app_handle,
+            pool,
+            tx,
         }
-
-        Ok(())
-    }
-
-    async fn speed_reporter(
-        &self,
-        download_id: DownloadId,
-        chunk_index: ChunkIndex,
-        speed_kbps: SpeedKbps,
-    ) -> Result<(), String> {
-        let mut downloading_list = DOWNLOADING_LIST.lock().await;
-
-        let download = downloading_list
-            .get_mut(&download_id)
-            .ok_or("cannot defined downloading list to report".to_string())?;
-
-        download.meta.chunk_speed.insert(chunk_index, speed_kbps);
-
-        let is_all_chunk_reported =
-            download.meta.chunk_speed.len() as i64 == download.download.chunk_count;
-
-        if is_all_chunk_reported {
-            let chunk_speeds = download.meta.chunk_speed.values().sum::<f64>();
-            download.meta.chunk_speed.clear();
-            dispatch(
-                &self.tx,
-                AppEvent::FullReportChunksSpeed(download_id, chunk_speeds),
-            );
-        }
-
-        Ok(())
-    }
-
-    async fn flush_report(&self, download_id: DownloadId) {
-        let mut downloading_list = DOWNLOADING_LIST.lock().await;
-        downloading_list.remove(&download_id);
     }
 
     pub async fn event_reducer(&self, app_event: AppEvent) -> Result<(), String> {
@@ -166,43 +153,10 @@ impl EventHandler {
             }
 
             AppEvent::InsertDownloadFromDBToDownloadingList(id) => {
-                let mut downloading_list = DOWNLOADING_LIST.lock().await;
                 let download = get_downloads_by_id(&self.pool, id).await?;
                 update_download_status(&self.pool, id, "downloading").await?;
-                downloading_list.insert(
-                    download.id,
-                    Downloading {
-                        download: download.clone(),
-                        meta: DownloadMeta {
-                            chunk_downloaded_bytes: HashMap::new(),
-                            chunk_speed: HashMap::new(),
-                        },
-                    },
-                );
                 dispatch(&self.tx, AppEvent::StartDownload(id, download));
                 Ok(())
-            }
-
-            AppEvent::ReportChunkSpeed(download_id, chunk_index, speed_kbps) => {
-                self.speed_reporter(download_id, chunk_index, speed_kbps)
-                    .await
-            }
-
-            AppEvent::ReportChunkDownloadedBytes(download_id, chunk_index, downloaded_bytes) => {
-                self.download_reporter(download_id, chunk_index, downloaded_bytes)
-                    .await
-            }
-
-            AppEvent::FullReportChunksSpeed(download_id, speed_kbps) => {
-                let mut payload: HashMap<DownloadId, SpeedKbps> = HashMap::new();
-                payload.insert(download_id, speed_kbps);
-                emit_app_event(&self.app_handle, "download_speed", payload)
-            }
-
-            AppEvent::FullReportChunksDownloadedBytes(download_id, downloaded_bytes) => {
-                let mut payload: HashMap<DownloadId, DownloadedBytes> = HashMap::new();
-                payload.insert(download_id, downloaded_bytes);
-                emit_app_event(&self.app_handle, "downloaded_bytes", payload)
             }
 
             AppEvent::UpdateChunk(download_id, chunk_index, downloaded_bytes, expected_hash) => {
@@ -218,12 +172,13 @@ impl EventHandler {
 
             AppEvent::SendDownloadList => {
                 let results = get_downloads_list(&self.pool).await?;
-                emit_app_event(&self.app_handle, "download_list", results)
+                emit_app_event(&self.app_handle, "download_list", results);
+                Ok(())
             }
 
             AppEvent::DownloadFinished(download_id) => {
                 update_download_status(&self.pool, download_id, "completed").await?;
-                self.flush_report(download_id).await;
+                flush_report(download_id).await;
 
                 dispatch(&self.tx, AppEvent::SendDownloadList);
 
@@ -310,6 +265,21 @@ impl EventHandler {
                 } else {
                     Err("file not match".to_string())
                 }
+            }
+
+            AppEvent::ReportChunkReceivedBytes(download_id, received_bytes) => {
+                let mut reporter = REPORTER.lock().await;
+                reporter
+                    .entry(download_id)
+                    .and_modify(|report| {
+                        report.downloaded_bytes += received_bytes;
+                        report.received_bytes += received_bytes as f64;
+                    })
+                    .or_insert(Report {
+                        received_bytes: received_bytes as f64,
+                        downloaded_bytes: received_bytes,
+                    });
+                Ok(())
             }
         }
     }

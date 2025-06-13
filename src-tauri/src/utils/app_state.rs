@@ -5,7 +5,7 @@ use crate::{
     db::init_db,
     models::{
         Chunk, ChunkCount, ChunkIndex, Download, DownloadId, DownloadUrl, DownloadedBytes,
-        FileInfo, SpeedKbps, TotalBytes,
+        FileInfo, TotalBytes,
     },
 };
 
@@ -36,12 +36,6 @@ pub enum AppEvent {
     StartDownload(DownloadId, Download),
     SendDownloadList,
 
-    ReportChunkDownloadedBytes(DownloadId, ChunkIndex, DownloadedBytes),
-    ReportChunkSpeed(DownloadId, ChunkIndex, SpeedKbps),
-
-    FullReportChunksSpeed(DownloadId, SpeedKbps),
-    FullReportChunksDownloadedBytes(DownloadId, DownloadedBytes),
-
     UpdateChunk(DownloadId, ChunkIndex, DownloadedBytes, String),
     DownloadFinished(DownloadId),
 
@@ -51,4 +45,6 @@ pub enum AppEvent {
     ValidateExistingFile(DownloadId, Vec<Chunk>),
 
     MakeChunkHash(u64, Chunk),
+
+    ReportChunkReceivedBytes(DownloadId, u64),
 }
