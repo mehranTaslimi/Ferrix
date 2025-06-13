@@ -1,17 +1,25 @@
 use tauri::State;
 
 use crate::{
+    downloader::validate_and_inspect_url,
     events::dispatch,
     utils::app_state::{AppEvent, AppState},
 };
 
 #[tauri::command]
-pub fn add_download_queue(state: State<'_, AppState>, url: String, chunk: Option<u8>) {
-    let chunk = chunk.unwrap_or(6).clamp(1, 6);
+pub async fn add_download_queue(
+    state: State<'_, AppState>,
+    url: String,
+    chunk: Option<u8>,
+) -> Result<(), String> {
+    let chunk = chunk.unwrap_or(100).clamp(1, 100);
+    let file_info = validate_and_inspect_url(&url).await?;
     dispatch(
         &state.broadcast_tx,
-        AppEvent::StartNewDownloadProcess(url, chunk as i64),
+        AppEvent::StartNewDownloadProcess(file_info, chunk as i64),
     );
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -21,7 +29,6 @@ pub fn get_download_list(state: State<'_, AppState>) {
 
 #[tauri::command]
 pub fn pause_download(state: State<'_, AppState>, id: i64) {
-    println!("ok ok ok");
     dispatch(&state.broadcast_tx, AppEvent::PauseDownload(id));
 }
 

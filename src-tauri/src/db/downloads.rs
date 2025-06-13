@@ -146,7 +146,8 @@ pub async fn get_download_chunks_by_download_id(
             dc.downloaded_bytes,
             dc.expected_hash,
             d.url,
-            d.file_path
+            d.file_path,
+            d.total_bytes
             FROM download_chunks dc
         JOIN downloads d ON d.id = dc.download_id
         WHERE dc.download_id = ?;"#,

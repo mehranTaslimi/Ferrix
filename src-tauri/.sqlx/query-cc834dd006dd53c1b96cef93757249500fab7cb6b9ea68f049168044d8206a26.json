@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE download_chunks SET (downloaded_bytes, expected_hash) = (?, ?) WHERE download_id = ? AND chunk_index = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "cc834dd006dd53c1b96cef93757249500fab7cb6b9ea68f049168044d8206a26"
+}

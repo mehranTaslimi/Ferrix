@@ -9,9 +9,7 @@ use crate::{
         insert_download_chunks, insert_new_download, update_chunk_downloaded,
         update_download_status,
     },
-    downloader::{
-        compute_partial_hash, download_chunks, get_chunk_ranges, validate_and_inspect_url,
-    },
+    downloader::{compute_partial_hash, download_chunks, get_chunk_ranges},
     events::{dispatch, emit_app_event, Reporter},
     utils::app_state::AppEvent,
 };
@@ -38,16 +36,7 @@ impl EventHandler {
 
     pub async fn event_reducer(&self, app_event: AppEvent) -> Result<(), String> {
         match app_event {
-            AppEvent::StartNewDownloadProcess(download_url, chunk_count) => {
-                dispatch(
-                    &self.tx,
-                    AppEvent::ValidateAndInspectLink(download_url, chunk_count),
-                );
-                Ok(())
-            }
-
-            AppEvent::ValidateAndInspectLink(download_url, chunk_count) => {
-                let file_info = validate_and_inspect_url(&download_url).await?;
+            AppEvent::StartNewDownloadProcess(file_info, chunk_count) => {
                 dispatch(
                     &self.tx,
                     AppEvent::CreateNewDownloadRecordInDB(file_info, chunk_count),
@@ -192,8 +181,10 @@ impl EventHandler {
                 }
             }
 
-            AppEvent::ReportChunkReceivedBytes(download_id, received_bytes) => {
-                self.reporter.add_report(download_id, received_bytes).await;
+            AppEvent::ReportChunkReceivedBytes(download_id, received_bytes, total_bytes) => {
+                self.reporter
+                    .add_report(download_id, received_bytes, total_bytes)
+                    .await;
                 Ok(())
             }
 

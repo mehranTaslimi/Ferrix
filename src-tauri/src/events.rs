@@ -13,6 +13,7 @@ use crate::{models::DownloadId, utils::app_state::AppEvent};
 
 #[derive(Clone, Debug)]
 struct Report {
+    total_bytes: u64,
     downloaded_bytes: u64,
     received_bytes: f64,
 }
@@ -44,7 +45,7 @@ impl Reporter {
         });
     }
 
-    pub async fn add_report(&self, download_id: DownloadId, received_bytes: u64) {
+    pub async fn add_report(&self, download_id: DownloadId, received_bytes: u64, total_bytes: u64) {
         spawn(async move {
             let mut reporter = REPORTER.lock().await;
             reporter
@@ -54,6 +55,7 @@ impl Reporter {
                     report.received_bytes += received_bytes as f64;
                 })
                 .or_insert(Report {
+                    total_bytes,
                     received_bytes: received_bytes as f64,
                     downloaded_bytes: received_bytes,
                 });
@@ -94,14 +96,23 @@ impl Reporter {
                 }
 
                 let mut report_map: HashMap<DownloadId, f64> = HashMap::new();
+                let mut report_map_remaining: HashMap<DownloadId, f64> = HashMap::new();
 
                 for (&id, report) in reporter.iter_mut() {
                     let speed_kbps = report.received_bytes as f64 / 1024.0;
+
+                    let remaining_bytes =
+                        report.total_bytes.saturating_sub(report.downloaded_bytes);
+                    let eta_seconds = remaining_bytes as f64 / (speed_kbps * 1024.0);
+
+                    report_map_remaining.insert(id, eta_seconds);
                     report_map.insert(id, speed_kbps);
+
                     report.received_bytes = 0.0;
                 }
 
                 emit_app_event(&speed_handle, "download_speed", report_map);
+                emit_app_event(&speed_handle, "remaining_time", report_map_remaining);
             }
         });
     }

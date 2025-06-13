@@ -72,6 +72,7 @@ async fn download_chunk(
         url,
         file_path: _,
         expected_hash: _,
+        total_bytes,
     } = chunk.clone();
 
     let start_byte = start_byte + downloaded_bytes;
@@ -119,7 +120,7 @@ async fn download_chunk(
 
                         downloaded += chunk_len;
 
-                        dispatch(&tx, AppEvent::ReportChunkReceivedBytes(download_id, chunk_len));
+                        dispatch(&tx, AppEvent::ReportChunkReceivedBytes(download_id, chunk_len, total_bytes as u64));
 
                     },
                     Some(Err(e)) => {

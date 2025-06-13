@@ -6,7 +6,6 @@ pub type DownloadId = i64;
 pub type ChunkIndex = i64;
 pub type DownloadedBytes = i64;
 pub type TotalBytes = i64;
-pub type SpeedKbps = f64;
 pub type DownloadUrl = String;
 pub type DownloadStatus = String;
 pub type CreatedAt = NaiveDateTime;
@@ -49,6 +48,7 @@ pub struct Chunk {
     pub url: String,
     pub expected_hash: ExpectedHash,
     pub file_path: FilePath,
+    pub total_bytes: TotalBytes,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
