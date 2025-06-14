@@ -29,6 +29,7 @@ pub fn emit_app_event<S: Serialize + Clone>(app_handle: &AppHandle, event: &str,
     let _ = app_handle.emit(event, payload);
 }
 
+#[derive(Clone)]
 pub struct Reporter {
     app_handle: AppHandle,
 }

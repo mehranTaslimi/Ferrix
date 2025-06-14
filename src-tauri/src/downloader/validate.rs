@@ -6,7 +6,10 @@ use tauri::{
 };
 use tauri_plugin_http::reqwest::Client;
 
-use crate::models::FileInfo;
+use crate::{
+    models::FileInfo,
+    utils::path::{create_download_dir, get_available_filename},
+};
 
 pub async fn validate_and_inspect_url(url: &str) -> Result<FileInfo, String> {
     let parsed_url = Url::parse(url).map_err(|e| e.to_string())?;
@@ -56,6 +59,15 @@ pub async fn validate_and_inspect_url(url: &str) -> Result<FileInfo, String> {
         })
         .ok_or("invalid file name".to_string())?;
 
+    let download_path = create_download_dir().await?;
+    let joined_path = Path::new(&download_path).join(file_name);
+
+    let file_path = joined_path
+        .to_str()
+        .ok_or("cannot join filename to download path")?;
+
+    let available_path = get_available_filename(file_path).await?;
+
     let file_extension = Path::new(file_name)
         .extension()
         .and_then(|f| f.to_str())
@@ -63,9 +75,10 @@ pub async fn validate_and_inspect_url(url: &str) -> Result<FileInfo, String> {
 
     Ok(FileInfo {
         url: parsed_url.to_string(),
-        file_name: file_name.to_string(),
+        file_name: available_path.file_name,
         content_type: content_type.to_string(),
         total_bytes: content_length as i64,
         extension: file_extension.to_string(),
+        file_path: available_path.full_path,
     })
 }

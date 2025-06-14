@@ -6,13 +6,12 @@ pub async fn insert_new_download(
     pool: &SqlitePool,
     file_info: FileInfo,
     chunk_count: ChunkCount,
-    file_path: &str,
 ) -> Result<i64, String> {
     let status = "queued";
     sqlx::query!(
         "INSERT INTO downloads (status, file_path, chunk_count, url, total_bytes, file_name, extension, content_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         status,
-        file_path,
+        file_info.file_path,
         chunk_count,
         file_info.url,
         file_info.total_bytes,
