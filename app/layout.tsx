@@ -1,8 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -37,8 +33,11 @@ export default function RootLayout({
         >
           <div className="h-screen overflow-hidden">
             <div className="h-full overflow-y-auto">
-              <div className="fixed w-full h-8 bg-transparent left-0 top-0 z-auto" data-tauri-drag-region />
-              <div className="flex flex-1 flex-col pt-8">
+              <div
+                className="fixed w-full h-8 bg-transparent left-0 top-0 z-auto"
+                data-tauri-drag-region
+              />
+              <div className="flex flex-1 flex-col">
                 <div className="@container/main flex flex-1 flex-col gap-2">
                   {children}
                 </div>
