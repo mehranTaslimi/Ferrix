@@ -12,7 +12,7 @@ pub async fn add_download_queue(
     url: String,
     chunk: Option<u8>,
 ) -> Result<(), String> {
-    let chunk = chunk.unwrap_or(100).clamp(1, 100);
+    let chunk = chunk.unwrap_or(5).clamp(1, 5);
     let file_info = validate_and_inspect_url(&url).await?;
     dispatch(
         &state.broadcast_tx,

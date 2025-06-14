@@ -46,10 +46,7 @@ impl EventHandler {
 
             AppEvent::CreateNewDownloadRecordInDB(file_info, chunk_count) => {
                 let total_bytes = file_info.total_bytes;
-                let file_name = file_info.file_name.clone();
-                let file_path = format!("/Users/mehrantaslimi/Downloads/{}", file_name);
-                let id =
-                    insert_new_download(&self.pool, file_info, chunk_count, &file_path).await?;
+                let id = insert_new_download(&self.pool, file_info, chunk_count).await?;
 
                 dispatch(
                     &self.tx,
@@ -136,11 +133,6 @@ impl EventHandler {
                 Ok(())
             }
 
-            // AppEvent::PauseDownload(download_id) => {
-            //     update_download_status(&self.pool, download_id, "paused").await?;
-            //     dispatch(&self.tx, AppEvent::SendDownloadList);
-            //     Ok(())
-            // }
             AppEvent::ResumeDownload(download_id) => {
                 let chunks = get_download_chunks_by_download_id(&self.pool, download_id).await?;
                 dispatch(

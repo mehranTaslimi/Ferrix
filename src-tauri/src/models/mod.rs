@@ -22,6 +22,7 @@ pub struct FileInfo {
     pub content_type: ContentType,
     pub total_bytes: TotalBytes,
     pub extension: Extension,
+    pub file_path: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
