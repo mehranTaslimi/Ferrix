@@ -202,11 +202,7 @@ export function DownloadDashboard({
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredDownloads.map((item) => (
-                <DownloadCard
-                  key={item.id}
-                  item={item}
-                  onAction={onAddDownload}
-                />
+                <DownloadCard key={item.id} item={item} />
               ))}
             </div>
           )}

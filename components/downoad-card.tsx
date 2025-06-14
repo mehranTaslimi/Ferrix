@@ -16,7 +16,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 
+type Action = "delete" | "pause" | "resume";
 export interface DownloadItem {
   id: number;
   file_name: string;
@@ -34,7 +36,6 @@ export interface DownloadItem {
 
 interface DownloadCardProps {
   item: DownloadItem;
-  onAction: (action: string, id: number) => void;
 }
 
 const getFileIcon = (contentType: string, extension: string) => {
@@ -110,7 +111,7 @@ const calculateTimeRemaining = (
   }
 };
 
-export function DownloadCard({ item, onAction }: DownloadCardProps) {
+export function DownloadCard({ item }: DownloadCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const FileIcon = getFileIcon(item.content_type, item.extension);
   const statusIndicator = getStatusIndicator(item.status);
@@ -139,6 +140,16 @@ export function DownloadCard({ item, onAction }: DownloadCardProps) {
     });
   };
 
+  async function handlePause(action: Action, id: number) {
+    try {
+      await invoke("pause_download", { id });
+    } catch (e) {
+      console.log(e);
+    }
+  }
+  const handleDelete = (action: Action, id: number) => {};
+  const handleResume = (action: Action, id: number) => {};
+  console.log(item);
   return (
     <Card className="group relative overflow-hidden card-glass glass-morphism-hover transition-all duration-300">
       {/* Enhanced status indicator */}
@@ -304,7 +315,7 @@ export function DownloadCard({ item, onAction }: DownloadCardProps) {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => onAction("pause", item.id)}
+                onClick={() => handlePause("pause", item.id)}
                 className="h-7 px-3 glass-morphism-hover rounded-lg text-gray-900 dark:text-foreground/90 font-medium"
               >
                 <Pause className="h-3 w-3 mr-1" />
@@ -315,7 +326,7 @@ export function DownloadCard({ item, onAction }: DownloadCardProps) {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => onAction("resume", item.id)}
+                onClick={() => handleResume("resume", item.id)}
                 className="h-7 px-3 glass-morphism-hover rounded-lg text-gray-900 dark:text-foreground/90 font-medium"
               >
                 <Play className="h-3 w-3 mr-1" />
@@ -326,7 +337,7 @@ export function DownloadCard({ item, onAction }: DownloadCardProps) {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => onAction("open", item.id)}
+                onClick={() => {}}
                 className="h-7 px-3 glass-morphism-hover rounded-lg text-gray-900 dark:text-foreground/90 font-medium"
               >
                 <Download className="h-3 w-3 mr-1" />
@@ -336,7 +347,7 @@ export function DownloadCard({ item, onAction }: DownloadCardProps) {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => onAction("delete", item.id)}
+              onClick={() => handleDelete("delete", item.id)}
               className="h-7 px-3 glass-morphism-hover rounded-lg text-red-700 hover:text-red-800 hover:bg-red-500/15 border border-red-500/25 hover:border-red-500/40 transition-all duration-200 font-medium"
             >
               <Trash2 className="h-3 w-3 mr-1" />

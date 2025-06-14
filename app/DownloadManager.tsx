@@ -31,38 +31,39 @@ export default function DownloadManager() {
   >({});
 
   useEffect(() => {
-    // Listen for download speed updates
-    const unlistenSpeed = listen("download_speed", (ev) => {
-      const payload = ev.payload as Record<number, number>;
-      setDownloadSpeeds((prev) => ({ ...prev, ...payload }));
-    });
+    // // Listen for download speed updates
+    // const unlistenSpeed = listen("download_speed", (ev) => {
+    //   const payload = ev.payload as Record<number, number>;
+    //   setDownloadSpeeds((prev) => ({ ...prev, ...payload }));
+    // });
 
-    // Listen for downloaded bytes updates
-    const unlistenBytes = listen("downloaded_bytes", (ev) => {
-      const payload = ev.payload as Record<number, number>;
-      setDownloadedBytes((prev) => ({ ...prev, ...payload }));
+    // // Listen for downloaded bytes updates
+    // const unlistenBytes = listen("downloaded_bytes", (ev) => {
+    //   const payload = ev.payload as Record<number, number>;
+    //   setDownloadedBytes((prev) => ({ ...prev, ...payload }));
 
-      // Update the download list with the new downloaded bytes
-      setDownloadList((prev) =>
-        prev.map((item) => {
-          if (payload[item.id] !== undefined) {
-            return { ...item, downloaded_bytes: payload[item.id] };
-          }
-          return item;
-        })
-      );
-    });
+    //   // Update the download list with the new downloaded bytes
+    //   setDownloadList((prev) =>
+    //     prev.map((item) => {
+    //       if (payload[item.id] !== undefined) {
+    //         return { ...item, downloaded_bytes: payload[item.id] };
+    //       }
+    //       return item;
+    //     })
+    //   );
+    // });
 
     // Listen for download list updates
     const unlistenList = listen("download_list", (ev) => {
+      console.log("okok", ev.payload);
       const payload = ev.payload as DownloadItem[];
       setDownloadList(payload);
     });
 
     // Cleanup listeners on component unmount
     return () => {
-      unlistenSpeed.then((unlisten) => unlisten());
-      unlistenBytes.then((unlisten) => unlisten());
+      // unlistenSpeed.then((unlisten) => unlisten());
+      // unlistenBytes.then((unlisten) => unlisten());
       unlistenList.then((unlisten) => unlisten());
     };
   }, []);
