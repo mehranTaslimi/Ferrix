@@ -1,7 +1,7 @@
 use std::{collections::HashMap, time::Duration};
 
 use once_cell::sync::Lazy;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 use tokio::{
     spawn,
@@ -32,6 +32,12 @@ pub fn emit_app_event<S: Serialize + Clone>(app_handle: &AppHandle, event: &str,
 #[derive(Clone)]
 pub struct Reporter {
     app_handle: AppHandle,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SpeedAndRemaining {
+    speed: f64,
+    remaining_time: f64,
 }
 
 impl Reporter {
@@ -77,13 +83,10 @@ impl Reporter {
                     continue;
                 }
 
-                let mut report_map: HashMap<DownloadId, u64> = HashMap::new();
-
                 for (&id, report) in clone.iter() {
-                    report_map.insert(id, report.downloaded_bytes);
+                    let event = format!("downloaded_bytes_{}", id);
+                    emit_app_event(&downloaded_bytes_handle, &event, report.downloaded_bytes);
                 }
-
-                emit_app_event(&downloaded_bytes_handle, "downloaded_bytes", report_map);
             }
         });
         spawn(async move {
@@ -96,24 +99,25 @@ impl Reporter {
                     continue;
                 }
 
-                let mut report_map: HashMap<DownloadId, f64> = HashMap::new();
-                let mut report_map_remaining: HashMap<DownloadId, f64> = HashMap::new();
-
                 for (&id, report) in reporter.iter_mut() {
-                    let speed_kbps = report.received_bytes as f64 / 1024.0;
+                    let speed = report.received_bytes as f64 / 1024.0;
+                    let remaining_time = report.total_bytes.saturating_sub(report.downloaded_bytes)
+                        as f64
+                        / (speed * 1024.0);
 
-                    let remaining_bytes =
-                        report.total_bytes.saturating_sub(report.downloaded_bytes);
-                    let eta_seconds = remaining_bytes as f64 / (speed_kbps * 1024.0);
+                    let event = format!("speed_and_remaining_{}", id);
 
-                    report_map_remaining.insert(id, eta_seconds);
-                    report_map.insert(id, speed_kbps);
+                    emit_app_event(
+                        &speed_handle,
+                        &event,
+                        SpeedAndRemaining {
+                            speed,
+                            remaining_time,
+                        },
+                    );
 
                     report.received_bytes = 0.0;
                 }
-
-                emit_app_event(&speed_handle, "download_speed", report_map);
-                emit_app_event(&speed_handle, "remaining_time", report_map_remaining);
             }
         });
     }

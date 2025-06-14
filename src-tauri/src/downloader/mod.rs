@@ -1,4 +1,9 @@
 mod validate;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+
 pub use validate::validate_and_inspect_url;
 
 mod utils;
@@ -90,27 +95,32 @@ async fn download_chunk(
         .map_err(|e| e.to_string())?;
 
     let mut rx = tx.subscribe();
-    let mut stream = response.bytes_stream();
+    let stream = response.bytes_stream();
+    let mut stream_fuse: futures_util::stream::Fuse<_> = stream.fuse();
     let mut downloaded = downloaded_bytes as u64;
+    let paused = Arc::new(AtomicBool::new(false));
 
     loop {
         tokio::select! {
+            biased;
+
             Ok(app_event) = rx.recv() => {
                 match app_event {
                     AppEvent::PauseDownload(id) if id == download_id => {
-                        dispatch(
-                            &tx,
-                            AppEvent::MakeChunkHash(downloaded, chunk.clone()),
-                        );
+                        paused.store(true, Ordering::Relaxed);
                         return Ok(DownloadChunkStatus::Paused);
                     },
                     _ => {}
                 }
             }
-            maybe_bytes = stream.next() => {
+
+            maybe_bytes = stream_fuse.next() => {
                 match maybe_bytes {
                     Some(Ok(bytes)) => {
-                        // println!("{:?}", "downloading...");
+                        if paused.load(Ordering::Relaxed) {
+                            return Ok(DownloadChunkStatus::Paused);
+                        }
+
                         let chunk_len = bytes.len() as u64;
 
                         file_tx
@@ -131,6 +141,7 @@ async fn download_chunk(
                     }
                 }
             }
+
         }
     }
 }
