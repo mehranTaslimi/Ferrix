@@ -42,7 +42,9 @@ pub enum AppEvent {
 
     ValidateExistingFile(DownloadId, Vec<Chunk>),
 
-    MakeChunkHash(u64, Chunk),
-
+    // MakeChunkHash(u64, Chunk),
     ReportChunkReceivedBytes(DownloadId, u64, u64),
+
+    WorkerFinished(DownloadId),
+    WorkerPaused(DownloadId),
 }

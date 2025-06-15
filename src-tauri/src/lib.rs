@@ -1,15 +1,17 @@
+use tokio::{spawn, sync::broadcast};
+
 mod command;
 mod db;
 mod downloader;
 mod events;
+mod manager;
 mod models;
 mod utils;
-use command::add_download_queue;
-use tokio::{spawn, sync::broadcast};
 
 use crate::{
-    command::{get_download_list, pause_download, resume_download},
-    utils::{app_state::AppState, broadcast_event::EventHandler},
+    command::{add_download_queue, get_download_list, pause_download, resume_download},
+    manager::downloads_manager::DownloadsManager,
+    utils::app_state::AppState,
 };
 
 #[tokio::main]
@@ -33,20 +35,13 @@ pub async fn run() {
             pause_download
         ])
         .setup(move |app| {
-            let event_handler = EventHandler::new(tx, pool, app.handle().clone());
+            let manager = DownloadsManager::new(tx, pool, app.handle().clone());
 
             spawn(async move {
-                loop {
-                    match rx.recv().await {
-                        Ok(app_event) => {
-                            let result = event_handler.event_reducer(app_event).await;
-                            if let Err(err) = result {
-                                println!("Error: {}", err);
-                            }
-                        }
-                        Err(e) => {
-                            println!("Error Error Error Error {}", e);
-                        }
+                while let Ok(app_event) = rx.recv().await {
+                    let result = manager.manage(app_event).await;
+                    if let Err(err) = result {
+                        println!("Broadcast error: {}", err);
                     }
                 }
             });

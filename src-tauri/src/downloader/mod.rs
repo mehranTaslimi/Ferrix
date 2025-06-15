@@ -96,7 +96,7 @@ async fn download_chunk(
 
     let mut rx = tx.subscribe();
     let stream = response.bytes_stream();
-    let mut stream_fuse: futures_util::stream::Fuse<_> = stream.fuse();
+    let mut stream_fuse = stream.fuse();
     let mut downloaded = downloaded_bytes as u64;
     let paused = Arc::new(AtomicBool::new(false));
 
