@@ -1,18 +1,10 @@
 "use client";
 
 import * as React from "react";
-import {
-  KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  type UniqueIdentifier,
-} from "@dnd-kit/core";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useForm } from "react-hook-form";
 import { Plus, Search } from "lucide-react";
 
 import { ActiveCategoryType, AppSidebar } from "@/components/app-sidebar";
@@ -29,7 +21,7 @@ interface DownloadItem {
   file_name: string;
   file_path: string;
   url: string;
-  status: "queued" | "downloading" | "completed" | "failed";
+  status: "queued" | "downloading" | "completed" | "failed" | "paused";
   total_bytes: number;
   downloaded_bytes: number;
   extension: string;
@@ -86,29 +78,13 @@ export function DownloadDashboard({
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = React.useState(false);
 
-  const sensors = useSensors(
-    useSensor(MouseSensor, {}),
-    useSensor(TouchSensor, {}),
-    useSensor(KeyboardSensor, {})
-  );
 
-  const form = useForm({
-    defaultValues: {
-      downloadUrl:
-        "https://wallpaperswide.com/download/most_beautiful_mountain_scenery-wallpaper-3840x2160.jpg",
-      chunkCount: 6,
-    },
-  });
 
   // Update data when initialData changes
   React.useEffect(() => {
     setData(initialData);
   }, [initialData]);
 
-  const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ id }) => id) || [],
-    [data]
-  );
 
   const filteredDownloads = data.filter((item) => {
     const matchesSearch = item.file_name
