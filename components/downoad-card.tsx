@@ -18,13 +18,12 @@ import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
-type Action = "delete" | "pause" | "resume";
 export interface DownloadItem {
   id: number;
   file_name: string;
   file_path: string;
   url: string;
-  status: "queued" | "downloading" | "completed" | "failed";
+  status: "queued" | "downloading" | "completed" | "failed" | "paused";
   total_bytes: number;
   downloaded_bytes: number;
   extension: string;
@@ -140,15 +139,21 @@ export function DownloadCard({ item }: DownloadCardProps) {
     });
   };
 
-  async function handlePause(action: Action, id: number) {
+  async function handlePause(id: number) {
     try {
       await invoke("pause_download", { id });
     } catch (e) {
       console.log(e);
     }
   }
-  const handleDelete = (action: Action, id: number) => {};
-  const handleResume = (action: Action, id: number) => {};
+  const handleDelete = () => {};
+  async function handleResume(id: number) {
+    try {
+      await invoke("resume_download", { id });
+    } catch (e) {
+      console.log(e);
+    }
+  }
   console.log(item);
   return (
     <Card className="group relative overflow-hidden card-glass glass-morphism-hover transition-all duration-300">
@@ -315,22 +320,22 @@ export function DownloadCard({ item }: DownloadCardProps) {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => handlePause("pause", item.id)}
+                onClick={() => handlePause(item.id)}
                 className="h-7 px-3 glass-morphism-hover rounded-lg text-gray-900 dark:text-foreground/90 font-medium"
               >
                 <Pause className="h-3 w-3 mr-1" />
                 Pause
               </Button>
             )}
-            {(item.status === "queued" || item.status === "failed") && (
+            {(item.status === "queued" || item.status === "failed" || item.status === "paused") && (
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => handleResume("resume", item.id)}
+                onClick={() => handleResume(item.id)}
                 className="h-7 px-3 glass-morphism-hover rounded-lg text-gray-900 dark:text-foreground/90 font-medium"
               >
                 <Play className="h-3 w-3 mr-1" />
-                {item.status === "failed" ? "Retry" : "Start"}
+                {item.status === "failed" ? "Retry" : item.status === "paused" ? "Resume" : "Start"}
               </Button>
             )}
             {item.status === "completed" && (
@@ -347,7 +352,7 @@ export function DownloadCard({ item }: DownloadCardProps) {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => handleDelete("delete", item.id)}
+              onClick={() => handleDelete()}
               className="h-7 px-3 glass-morphism-hover rounded-lg text-red-700 hover:text-red-800 hover:bg-red-500/15 border border-red-500/25 hover:border-red-500/40 transition-all duration-200 font-medium"
             >
               <Trash2 className="h-3 w-3 mr-1" />

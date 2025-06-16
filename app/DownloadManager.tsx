@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { DownloadDashboard } from "@/components/download-dashboard";
 
 // Download item type definition
@@ -11,7 +11,7 @@ interface DownloadItem {
   file_name: string;
   file_path: string;
   url: string;
-  status: "queued" | "downloading" | "completed" | "failed";
+  status: "queued" | "downloading" | "completed" | "failed" | "paused";
   total_bytes: number;
   downloaded_bytes: number;
   extension: string;
@@ -23,36 +23,9 @@ interface DownloadItem {
 
 export default function DownloadManager() {
   const [downloadList, setDownloadList] = useState<DownloadItem[]>([]);
-  const [downloadSpeeds, setDownloadSpeeds] = useState<Record<number, number>>(
-    {}
-  );
-  const [downloadedBytes, setDownloadedBytes] = useState<
-    Record<number, number>
-  >({});
+  const unlistenRefs = useRef<UnlistenFn[]>([]);
 
   useEffect(() => {
-    // // Listen for download speed updates
-    // const unlistenSpeed = listen("download_speed", (ev) => {
-    //   const payload = ev.payload as Record<number, number>;
-    //   setDownloadSpeeds((prev) => ({ ...prev, ...payload }));
-    // });
-
-    // // Listen for downloaded bytes updates
-    // const unlistenBytes = listen("downloaded_bytes", (ev) => {
-    //   const payload = ev.payload as Record<number, number>;
-    //   setDownloadedBytes((prev) => ({ ...prev, ...payload }));
-
-    //   // Update the download list with the new downloaded bytes
-    //   setDownloadList((prev) =>
-    //     prev.map((item) => {
-    //       if (payload[item.id] !== undefined) {
-    //         return { ...item, downloaded_bytes: payload[item.id] };
-    //       }
-    //       return item;
-    //     })
-    //   );
-    // });
-
     // Listen for download list updates
     const unlistenList = listen("download_list", (ev) => {
       console.log("okok", ev.payload);
@@ -62,9 +35,9 @@ export default function DownloadManager() {
 
     // Cleanup listeners on component unmount
     return () => {
-      // unlistenSpeed.then((unlisten) => unlisten());
-      // unlistenBytes.then((unlisten) => unlisten());
       unlistenList.then((unlisten) => unlisten());
+      unlistenRefs.current.forEach((un) => un());
+      unlistenRefs.current = [];
     };
   }, []);
 
@@ -79,6 +52,32 @@ export default function DownloadManager() {
     })();
   }, []);
 
+  // Listen for per download progress and speed updates
+  useEffect(() => {
+    // clear previous listeners
+    unlistenRefs.current.forEach((un) => un());
+    unlistenRefs.current = [];
+
+    downloadList.forEach((item) => {
+      listen<number>(`downloaded_bytes_${item.id}`, (ev) => {
+        const bytes = ev.payload as number;
+        setDownloadList((prev) =>
+          prev.map((d) => (d.id === item.id ? { ...d, downloaded_bytes: bytes } : d))
+        );
+      }).then((un) => unlistenRefs.current.push(un));
+
+      listen<{ speed: number; remaining_time: number }>(
+        `speed_and_remaining_${item.id}`,
+        (ev) => {
+          const payload = ev.payload as { speed: number; remaining_time: number };
+          setDownloadList((prev) =>
+            prev.map((d) => (d.id === item.id ? { ...d, speed: payload.speed } : d))
+          );
+        }
+      ).then((un) => unlistenRefs.current.push(un));
+    });
+  }, [downloadList.map((d) => d.id).join(",")]);
+
   // Add download with URL and chunk count
   async function addDownload(url: string, chunkCount: number) {
     try {
@@ -91,12 +90,7 @@ export default function DownloadManager() {
     }
   }
 
-  // Combine download list with speeds
-  const downloadsWithSpeeds = downloadList.map((item) => ({
-    ...item,
-    speed: downloadSpeeds[item.id] || 0,
-  }));
   return (
-    <DownloadDashboard data={downloadsWithSpeeds} onAddDownload={addDownload} />
+    <DownloadDashboard data={downloadList} onAddDownload={addDownload} />
   );
 }
