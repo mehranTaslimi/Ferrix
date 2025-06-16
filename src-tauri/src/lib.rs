@@ -2,7 +2,6 @@ use tokio::{spawn, sync::broadcast};
 
 mod command;
 mod db;
-mod downloader;
 mod events;
 mod manager;
 mod models;

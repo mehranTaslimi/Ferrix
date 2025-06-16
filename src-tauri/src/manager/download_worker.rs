@@ -15,11 +15,14 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     db::downloads::{
         get_download_chunks_by_download_id, get_downloads_by_id, insert_download_chunks,
-        insert_new_download,
+        insert_new_download, update_chunk_downloaded, update_download_status,
     },
-    downloader::get_chunk_ranges,
     events::{dispatch, emit_app_event},
-    manager::file_writer::{file_writer, WriteMessage},
+    manager::{
+        compute_partial_hash::compute_partial_hash,
+        file_writer::{file_writer, WriteMessage},
+        get_chunk_ranges::get_chunk_ranges,
+    },
     models::{Chunk, ChunkCount, Download, DownloadId, FileInfo},
     utils::app_state::AppEvent,
 };
@@ -151,7 +154,7 @@ impl DownloadWorker {
                     break;
                 }
                 WorkerOutcome::Paused => {
-                    dispatch(&self.app_event, AppEvent::WorkerPaused(self.download_id));
+                    dispatch(&self.app_event, AppEvent::WorkerPaused);
                     self.cancellation_token.cancel();
                     break;
                 }
@@ -198,6 +201,12 @@ impl DownloadWorker {
                 biased;
 
                 _ = cancellation_token.cancelled() => {
+                    let _ = self.update_chunk_and_download_status(
+                        chunk.chunk_index,
+                        chunk.start_byte,
+                        downloaded,
+                        "paused",
+                    ).await?;
                     return Ok(DownloadStatus::Paused);
                 }
 
@@ -219,9 +228,21 @@ impl DownloadWorker {
 
                         },
                         Some(Err(e)) => {
+                            let _ = self.update_chunk_and_download_status(
+                                chunk.chunk_index,
+                                chunk.start_byte,
+                                downloaded,
+                                "failed",
+                            ).await?;
                             return Err(e.to_string());
                         },
                         None => {
+                            let _ = self.update_chunk_and_download_status(
+                                chunk.chunk_index,
+                                chunk.start_byte,
+                                downloaded,
+                                "completed",
+                            ).await?;
                             return Ok(DownloadStatus::Finished);
                         }
                     }
@@ -229,6 +250,32 @@ impl DownloadWorker {
 
             }
         }
+    }
+
+    pub async fn update_chunk_and_download_status(
+        &self,
+        chunk_index: i64,
+        start_byte: i64,
+        downloaded_bytes: u64,
+        status: &str,
+    ) -> Result<(), String> {
+        let hash = compute_partial_hash(
+            &self.download.file_path,
+            start_byte as u64,
+            downloaded_bytes,
+        )
+        .await?;
+        let _ = update_chunk_downloaded(
+            &self.pool,
+            self.download_id,
+            chunk_index,
+            downloaded_bytes as i64,
+            hash,
+        )
+        .await?;
+        let _ = update_download_status(&self.pool, self.download_id, status).await?;
+
+        Ok(())
     }
 
     pub fn pause_download(&self) {

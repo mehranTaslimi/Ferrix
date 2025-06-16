@@ -1,8 +1,8 @@
 use tauri::State;
 
 use crate::{
-    downloader::validate_and_inspect_url,
     events::dispatch,
+    manager::validation::validate_and_inspect_url,
     utils::app_state::{AppEvent, AppState},
 };
 

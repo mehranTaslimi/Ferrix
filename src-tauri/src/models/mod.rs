@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 
 pub type ChunkCount = i64;
 pub type DownloadId = i64;
-pub type ChunkIndex = i64;
 pub type DownloadedBytes = i64;
 pub type TotalBytes = i64;
 pub type DownloadUrl = String;
