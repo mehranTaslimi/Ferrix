@@ -6,8 +6,11 @@ use tauri::AppHandle;
 use tokio::sync::{broadcast::Sender, Mutex};
 
 use crate::{
-    db::downloads::get_downloads_list, events::emit_app_event,
-    manager::download_worker::DownloadWorker, models::DownloadId, utils::app_state::AppEvent,
+    db::downloads::get_downloads_list,
+    events::emit_app_event,
+    manager::download_worker::DownloadWorker,
+    models::{Download, DownloadId},
+    utils::app_state::AppEvent,
 };
 
 static WORKERS: Lazy<Mutex<HashMap<DownloadId, Arc<Mutex<DownloadWorker>>>>> =
@@ -92,7 +95,11 @@ impl DownloadsManager {
             }
 
             AppEvent::SendDownloadList => {
-                let results = get_downloads_list(&self.pool).await?;
+                let results: HashMap<i64, Download> = get_downloads_list(&self.pool)
+                    .await?
+                    .into_iter()
+                    .map(|f| (f.id, f))
+                    .collect();
                 emit_app_event(&self.app_handle, "download_list", results);
                 Ok(())
             }

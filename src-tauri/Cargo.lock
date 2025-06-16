@@ -920,27 +920,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
-name = "download-manager"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "dirs-next",
- "futures-util",
- "md-5",
- "once_cell",
- "serde",
- "serde_json",
- "sqlformat",
- "sqlx",
- "tauri",
- "tauri-build",
- "tauri-plugin-http",
- "tauri-plugin-opener",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
 name = "dpi"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1112,6 +1091,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e6853b52649d4ac5c0bd02320cddc5ba956bdb407c4b75a2c6b75bf51500f8c"
 dependencies = [
  "simd-adler32",
+]
+
+[[package]]
+name = "ferrix"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "dirs-next",
+ "futures-util",
+ "md-5",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "sqlformat",
+ "sqlx",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-http",
+ "tauri-plugin-opener",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]

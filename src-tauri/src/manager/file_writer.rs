@@ -1,3 +1,4 @@
+use tokio::fs;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt, SeekFrom};
 use tokio::{fs::OpenOptions, spawn, sync::mpsc};
 
@@ -7,6 +8,8 @@ pub async fn file_writer(
     file_path: &str,
     total_bytes: u64,
 ) -> Result<mpsc::Sender<WriteMessage>, String> {
+    let file_exists = fs::metadata(file_path).await.is_ok();
+
     let mut file = OpenOptions::new()
         .write(true)
         .create(true)
@@ -14,9 +17,11 @@ pub async fn file_writer(
         .await
         .map_err(|e| e.to_string())?;
 
-    file.set_len(total_bytes as u64)
-        .await
-        .map_err(|e| e.to_string())?;
+    if !file_exists {
+        file.set_len(total_bytes as u64)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
 
     let (tx, mut rx) = mpsc::channel::<WriteMessage>(100);
 

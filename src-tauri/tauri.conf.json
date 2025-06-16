@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "download-manager",
+  "productName": "ferrix",
   "version": "0.1.0",
-  "identifier": "com.download-manager.app",
+  "identifier": "com.ferrix.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "beforeBuildCommand": "pnpm build",

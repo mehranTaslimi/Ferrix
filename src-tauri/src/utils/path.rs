@@ -12,7 +12,7 @@ pub async fn create_download_dir() -> Result<String, String> {
     let home_dir = dirs_next::home_dir().ok_or("Cannot find home directory".to_string())?;
     let download_dir = home_dir
         .join("Downloads".to_string())
-        .join("download-manager".to_string());
+        .join("ferrix".to_string());
 
     if fs::metadata(&download_dir).await.is_err() {
         fs::create_dir_all(&download_dir)

@@ -82,3 +82,5 @@ pub async fn validate_and_inspect_url(url: &str) -> Result<FileInfo, String> {
         file_path: available_path.full_path,
     })
 }
+
+// pub async fn validate_chunks_hash() -> Result<(), String> {}
