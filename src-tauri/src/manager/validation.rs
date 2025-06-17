@@ -7,7 +7,8 @@ use tauri::{
 use tauri_plugin_http::reqwest::Client;
 
 use crate::{
-    models::FileInfo,
+    manager::compute_partial_hash::compute_partial_hash,
+    models::{Chunk, FileInfo},
     utils::path::{create_download_dir, get_available_filename},
 };
 
@@ -83,4 +84,20 @@ pub async fn validate_and_inspect_url(url: &str) -> Result<FileInfo, String> {
     })
 }
 
-// pub async fn validate_chunks_hash() -> Result<(), String> {}
+pub fn invalid_chunks_hash(file_path: &str, chunks: Vec<Chunk>) -> Vec<i64> {
+    chunks
+        .into_iter()
+        .filter(|chunk| chunk.downloaded_bytes > 0)
+        .filter(|chunk| {
+            let hash = compute_partial_hash(
+                file_path,
+                chunk.start_byte as u64,
+                chunk.downloaded_bytes as u64,
+            )
+            .ok();
+
+            Some(hash) != Some(chunk.expected_hash.clone())
+        })
+        .map(|chunk| chunk.chunk_index)
+        .collect::<Vec<i64>>()
+}

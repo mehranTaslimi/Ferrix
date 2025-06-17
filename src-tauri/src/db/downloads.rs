@@ -176,3 +176,26 @@ pub async fn update_chunk_downloaded(
     .map(|_| ())
     .map_err(|e| e.to_string())
 }
+
+pub async fn reset_downloaded_chunks(
+    pool: &SqlitePool,
+    download_id: i64,
+    chunk_indexes: Vec<i64>,
+) -> Result<(), String> {
+    let query = format!(
+        "UPDATE download_chunks SET downloaded_bytes = 0, expected_hash = NULL WHERE download_id = ? AND chunk_index IN ({})",
+        chunk_indexes.iter().map(|_| "?").collect::<Vec<_>>().join(", ")
+    );
+
+    let mut query_builder = sqlx::query(&query).bind(download_id);
+
+    for idx in &chunk_indexes {
+        query_builder = query_builder.bind(idx);
+    }
+
+    query_builder
+        .execute(pool)
+        .await
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}

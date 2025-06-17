@@ -30,10 +30,9 @@ export default function DownloadManager() {
     const unlistenList = listen("download_list", (ev) => {
       console.log("okok", ev.payload);
       const payload = ev.payload as DownloadItem[];
-      setDownloadList(payload);
+      setDownloadList(Object.values(payload));
     });
 
-    // Cleanup listeners on component unmount
     return () => {
       unlistenList.then((unlisten) => unlisten());
       unlistenRefs.current.forEach((un) => un());

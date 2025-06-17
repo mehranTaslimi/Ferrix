@@ -15,13 +15,15 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     db::downloads::{
         get_download_chunks_by_download_id, get_downloads_by_id, insert_download_chunks,
-        insert_new_download, update_chunk_downloaded, update_download_status,
+        insert_new_download, reset_downloaded_chunks, update_chunk_downloaded,
+        update_download_status,
     },
     events::{dispatch, emit_app_event},
     manager::{
         compute_partial_hash::compute_partial_hash,
         file_writer::{file_writer, WriteMessage},
         get_chunk_ranges::get_chunk_ranges,
+        validation::invalid_chunks_hash,
     },
     models::{Chunk, ChunkCount, Download, DownloadId, FileInfo},
     utils::app_state::AppEvent,
@@ -126,11 +128,15 @@ impl DownloadWorker {
         let download = get_downloads_by_id(&pool, download_id).await?;
         let chunks = get_download_chunks_by_download_id(&pool, download_id).await?;
 
+        let invalid_chunks_index = invalid_chunks_hash(&download.file_path, chunks.clone());
+
+        reset_downloaded_chunks(&pool, download_id, invalid_chunks_index).await?;
+
         Ok((download, chunks))
     }
 
     pub async fn start_download(&self) {
-        let max_retries = 3;
+        let max_retries = 5;
         let mut retries = 0;
 
         self.listen_to_report();
@@ -263,8 +269,7 @@ impl DownloadWorker {
             &self.download.file_path,
             start_byte as u64,
             downloaded_bytes,
-        )
-        .await?;
+        )?;
         let _ = update_chunk_downloaded(
             &self.pool,
             self.download_id,

@@ -1,15 +1,18 @@
-use md5::{Digest, Md5};
-use tokio::fs::File;
-use tokio::io::{AsyncReadExt, AsyncSeekExt, SeekFrom};
+use std::{
+    fs::File,
+    io::{Read, Seek, SeekFrom},
+};
 
-pub async fn compute_partial_hash(
+use md5::{Digest, Md5};
+
+pub fn compute_partial_hash(
     file_path: &str,
     start_byte: u64,
     downloaded_bytes: u64,
 ) -> Result<String, String> {
-    let mut file = File::open(file_path).await.map_err(|e| e.to_string())?;
+    let mut file = File::open(file_path).map_err(|e| e.to_string())?;
+
     file.seek(SeekFrom::Start(start_byte))
-        .await
         .map_err(|e| e.to_string())?;
 
     let mut hasher = Md5::new();
@@ -20,7 +23,6 @@ pub async fn compute_partial_hash(
         let read_size = std::cmp::min(buffer.len(), remaining);
         let n = file
             .read(&mut buffer[..read_size])
-            .await
             .map_err(|e| e.to_string())?;
         if n == 0 {
             break;
