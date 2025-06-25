@@ -69,7 +69,7 @@ export function DownloadDashboard({
   data: initialData,
   onAddDownload,
 }: {
-  data: DownloadItem[];
+  data: Record<number, DownloadItem>;
   onAddDownload: (url: string, chunkCount: number) => Promise<void>;
 }) {
   const [data, setData] = React.useState(() => initialData);
@@ -86,7 +86,7 @@ export function DownloadDashboard({
   }, [initialData]);
 
 
-  const filteredDownloads = data.filter((item) => {
+  const filteredDownloads = Object.values(data).filter((item) => {
     const matchesSearch = item.file_name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());

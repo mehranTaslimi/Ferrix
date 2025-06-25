@@ -25,10 +25,9 @@ impl AppState {
 
 #[derive(Clone, Debug)]
 pub enum AppEvent {
-    StartNewDownloadProcess(FileInfo, ChunkCount),
-    SendDownloadList,
+    StartNewDownload(FileInfo, ChunkCount),
     PauseDownload(DownloadId),
     ResumeDownload(DownloadId),
-    WorkerFinished(DownloadId),
-    WorkerPaused,
+    DownloadFinished(DownloadId),
+    DownloadPaused(DownloadId),
 }

@@ -1,13 +1,19 @@
+use std::sync::Arc;
+
 use tokio::fs;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt, SeekFrom};
-use tokio::{fs::OpenOptions, spawn, sync::mpsc};
+use tokio::sync::{mpsc, Mutex};
+use tokio::{fs::OpenOptions, spawn};
 
-pub type WriteMessage = (u64, Vec<u8>);
+use crate::manager::download_worker::DiskReport;
+
+pub type WriteMessage = (u64, u64, u64, Vec<u8>);
 
 pub async fn file_writer(
     file_path: &str,
     total_bytes: u64,
-) -> Result<mpsc::Sender<WriteMessage>, String> {
+    report: Arc<Mutex<DiskReport>>,
+) -> Result<mpsc::UnboundedSender<WriteMessage>, String> {
     let file_exists = fs::metadata(file_path).await.is_ok();
 
     let mut file = OpenOptions::new()
@@ -23,19 +29,19 @@ pub async fn file_writer(
             .map_err(|e| e.to_string())?;
     }
 
-    let (tx, mut rx) = mpsc::channel::<WriteMessage>(100);
+    let (tx, mut rx) = mpsc::unbounded_channel::<WriteMessage>();
 
     spawn(async move {
-        while let Some((start, bytes)) = rx.recv().await {
-            if let Err(e) = file.seek(SeekFrom::Start(start)).await {
-                eprintln!("file seek error: {}", e);
-                break;
-            };
-
-            if let Err(e) = file.write_all(&bytes).await {
-                eprintln!("file write error: {}", e);
-                break;
-            }
+        while let Some((chunk_index, start_byte, downloaded_bytes, bytes)) = rx.recv().await {
+            file.seek(SeekFrom::Start(start_byte)).await.unwrap();
+            file.write_all(&bytes).await.unwrap();
+            let mut report = report.lock().await;
+            report.total += downloaded_bytes;
+            report
+                .chunks
+                .entry(chunk_index)
+                .and_modify(|f| *f += downloaded_bytes)
+                .or_insert(downloaded_bytes);
         }
     });
 

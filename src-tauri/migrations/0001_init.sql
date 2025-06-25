@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS downloads (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     url TEXT NOT NULL,
     total_bytes INTEGER NOT NULL DEFAULT 0,
-    -- "queued", "downloading", "completed", "failed"
+    -- "queued", "downloading", "completed", "failed", "paused"
     status TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     chunk_count INTEGER NOT NULL DEFAULT 5,

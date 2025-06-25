@@ -1,7 +1,7 @@
 ## Core Download Features
 
 - 🟢 Multi-threaded Downloads
-- 🔵 Pause / Resume Support
+- 🟢 Pause / Resume Support
 - 🔵 Download Scheduling
 - 🔵 Batch Downloads
 - 🔵 Clipboard Monitoring

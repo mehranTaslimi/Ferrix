@@ -37,10 +37,8 @@ export default function RootLayout({
                 className="fixed w-full h-8 bg-transparent left-0 top-0 z-auto"
                 data-tauri-drag-region
               />
-              <div className="flex flex-1 flex-col">
-                <div className="@container/main flex flex-1 flex-col gap-2">
-                  {children}
-                </div>
+              <div className="w-screen h-screen overflow-x-hidden overflow-y-auto pt-8">
+                {children}
               </div>
             </div>
           </div>

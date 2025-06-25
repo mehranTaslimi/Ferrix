@@ -36,7 +36,7 @@ interface DownloadItem {
 interface AppSidebarProps {
   activeCategory: ActiveCategoryType;
   onCategoryChange: (category: ActiveCategoryType) => void;
-  downloads: DownloadItem[];
+  downloads: Record<number, DownloadItem>
 }
 
 export function AppSidebar({
@@ -67,15 +67,15 @@ export function AppSidebar({
   const getCategoryCount = (categoryId: ActiveCategoryType): number => {
     switch (categoryId) {
       case "all":
-        return downloads.length;
+        return Object.values(downloads).length;
       case "video":
-        return downloads.filter((item) => getFileTypeFromItem(item) === "video")
+        return Object.values(downloads).filter((item) => getFileTypeFromItem(item) === "video")
           .length;
       case "image":
-        return downloads.filter((item) => getFileTypeFromItem(item) === "image")
+        return Object.values(downloads).filter((item) => getFileTypeFromItem(item) === "image")
           .length;
       case "personal":
-        return downloads.filter((item) =>
+        return Object.values(downloads).filter((item) =>
           item.file_name.toLowerCase().includes("personal")
         ).length;
       default:
@@ -144,9 +144,8 @@ export function AppSidebar({
                   <SidebarMenuButton
                     onClick={() => onCategoryChange(item.id)}
                     isActive={activeCategory === item.id}
-                    className={`group relative overflow-hidden rounded-xl transition-all duration-300 glass-morphism-hover ${
-                      activeCategory === item.id ? "glass-morphism-active" : ""
-                    }`}
+                    className={`group relative overflow-hidden rounded-xl transition-all duration-300 glass-morphism-hover ${activeCategory === item.id ? "glass-morphism-active" : ""
+                      }`}
                   >
                     <item.icon className="h-4 w-4 text-gray-900 dark:text-foreground/70" />
                     <span className="flex-1 text-gray-900 dark:text-foreground/90">
@@ -180,9 +179,8 @@ export function AppSidebar({
                   <SidebarMenuButton
                     onClick={() => onCategoryChange(item.id)}
                     isActive={activeCategory === item.id}
-                    className={`group relative overflow-hidden rounded-xl transition-all duration-300 glass-morphism-hover ${
-                      activeCategory === item.id ? "glass-morphism-active" : ""
-                    }`}
+                    className={`group relative overflow-hidden rounded-xl transition-all duration-300 glass-morphism-hover ${activeCategory === item.id ? "glass-morphism-active" : ""
+                      }`}
                   >
                     <item.icon className="h-4 w-4 text-gray-900 dark:text-foreground/70" />
                     <span className="flex-1 text-gray-900 dark:text-foreground/90">

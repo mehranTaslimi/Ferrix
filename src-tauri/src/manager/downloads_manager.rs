@@ -1,25 +1,19 @@
 use std::{collections::HashMap, sync::Arc};
 
-use once_cell::sync::Lazy;
 use sqlx::SqlitePool;
 use tauri::AppHandle;
 use tokio::sync::{broadcast::Sender, Mutex};
+use tokio_util::sync::CancellationToken;
 
 use crate::{
-    db::downloads::get_downloads_list,
-    events::emit_app_event,
-    manager::download_worker::DownloadWorker,
-    models::{Download, DownloadId},
-    utils::app_state::AppEvent,
+    manager::download_worker::DownloadWorker, models::DownloadId, utils::app_state::AppEvent,
 };
-
-static WORKERS: Lazy<Mutex<HashMap<DownloadId, Arc<Mutex<DownloadWorker>>>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub struct DownloadsManager {
     pool: SqlitePool,
     app_handle: AppHandle,
     app_event: Sender<AppEvent>,
+    workers: Arc<Mutex<HashMap<DownloadId, CancellationToken>>>,
 }
 
 impl DownloadsManager {
@@ -28,84 +22,65 @@ impl DownloadsManager {
             app_handle,
             pool,
             app_event,
+            workers: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     pub async fn manage(&self, app_event: AppEvent) -> Result<(), String> {
         match app_event {
-            AppEvent::StartNewDownloadProcess(file_info, chunk_count) => {
-                let worker = Arc::new(Mutex::new(
-                    DownloadWorker::new(
-                        self.pool.clone(),
-                        self.app_handle.clone(),
-                        self.app_event.clone(),
-                        None,
-                        Some(file_info),
-                        Some(chunk_count),
-                    )
-                    .await?,
-                ));
+            AppEvent::StartNewDownload(file_info, chunk_count) => {
+                let worker = DownloadWorker::new(
+                    self.pool.clone(),
+                    self.app_handle.clone(),
+                    self.app_event.clone(),
+                    None,
+                    Some(file_info),
+                    Some(chunk_count),
+                )
+                .await?;
 
-                WORKERS
+                self.workers
                     .lock()
                     .await
-                    .insert(worker.lock().await.download_id, Arc::clone(&worker));
+                    .insert(worker.download_id, worker.cancellation_token.clone());
 
                 tokio::spawn(async move {
-                    worker.lock().await.start_download().await;
+                    worker.start_download().await;
+                });
+
+                Ok(())
+            }
+
+            AppEvent::ResumeDownload(download_id) => {
+                let worker = DownloadWorker::new(
+                    self.pool.clone(),
+                    self.app_handle.clone(),
+                    self.app_event.clone(),
+                    Some(download_id),
+                    None,
+                    None,
+                )
+                .await?;
+
+                self.workers
+                    .lock()
+                    .await
+                    .insert(worker.download_id, worker.cancellation_token.clone());
+
+                tokio::spawn(async move {
+                    worker.start_download().await;
                 });
 
                 Ok(())
             }
 
             AppEvent::PauseDownload(download_id) => {
-                if let Some(worker_arc) = WORKERS.lock().await.get(&download_id).cloned() {
-                    let worker = worker_arc.lock().await;
-                    worker.pause_download();
-                }
+                if let Some(cancellation_token) = self.workers.lock().await.get(&download_id) {
+                    cancellation_token.cancel();
+                };
 
-                WORKERS.lock().await.remove(&download_id);
+                self.workers.lock().await.remove(&download_id);
 
-                Ok(())
-            }
-
-            AppEvent::ResumeDownload(download_id) => {
-                let worker = Arc::new(Mutex::new(
-                    DownloadWorker::new(
-                        self.pool.clone(),
-                        self.app_handle.clone(),
-                        self.app_event.clone(),
-                        Some(download_id),
-                        None,
-                        None,
-                    )
-                    .await?,
-                ));
-
-                WORKERS
-                    .lock()
-                    .await
-                    .insert(worker.lock().await.download_id, Arc::clone(&worker));
-
-                tokio::spawn(async move {
-                    worker.lock().await.start_download().await;
-                });
-
-                Ok(())
-            }
-
-            AppEvent::SendDownloadList => {
-                let results: HashMap<i64, Download> = get_downloads_list(&self.pool)
-                    .await?
-                    .into_iter()
-                    .map(|f| (f.id, f))
-                    .collect();
-                emit_app_event(&self.app_handle, "download_list", results);
-                Ok(())
-            }
-
-            AppEvent::WorkerFinished(download_id) => {
-                WORKERS.lock().await.remove(&download_id);
                 Ok(())
             }
 

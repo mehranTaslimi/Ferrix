@@ -3,6 +3,7 @@ use tauri::State;
 use crate::{
     events::dispatch,
     manager::validation::validate_and_inspect_url,
+    models::Download,
     utils::app_state::{AppEvent, AppState},
 };
 
@@ -16,15 +17,15 @@ pub async fn add_download_queue(
     let file_info = validate_and_inspect_url(&url).await?;
     dispatch(
         &state.broadcast_tx,
-        AppEvent::StartNewDownloadProcess(file_info, chunk as i64),
+        AppEvent::StartNewDownload(file_info, chunk as i64),
     );
 
     Ok(())
 }
 
 #[tauri::command]
-pub fn get_download_list(state: State<'_, AppState>) {
-    dispatch(&state.broadcast_tx, AppEvent::SendDownloadList);
+pub async fn get_download_list(state: State<'_, AppState>) -> Result<Vec<Download>, String> {
+    crate::db::downloads::get_downloads_list(&state.pool).await
 }
 
 #[tauri::command]

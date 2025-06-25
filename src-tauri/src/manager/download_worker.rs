@@ -1,17 +1,3 @@
-use std::{sync::Arc, time::Duration};
-
-use futures_util::{future::join_all, StreamExt};
-use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
-use tauri::{http::header::RANGE, AppHandle};
-use tauri_plugin_http::reqwest::Client;
-use tokio::{
-    spawn,
-    sync::{broadcast::Sender, mpsc, Mutex},
-    time::sleep,
-};
-use tokio_util::sync::CancellationToken;
-
 use crate::{
     db::downloads::{
         get_download_chunks_by_download_id, get_downloads_by_id, insert_download_chunks,
@@ -28,6 +14,18 @@ use crate::{
     models::{Chunk, ChunkCount, Download, DownloadId, FileInfo},
     utils::app_state::AppEvent,
 };
+use futures_util::{future::join_all, StreamExt};
+use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
+use std::{collections::HashMap, sync::Arc, time::Duration};
+use tauri::{http::header::RANGE, AppHandle};
+use tauri_plugin_http::reqwest::Client;
+use tokio::{
+    spawn,
+    sync::{broadcast::Sender, mpsc, Mutex},
+    time::sleep,
+};
+use tokio_util::sync::CancellationToken;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SpeedAndRemaining {
@@ -50,9 +48,15 @@ enum WorkerOutcome {
 }
 
 #[derive(Debug, Clone)]
-struct Report {
+struct InternetReport {
     downloaded_bytes: u64,
     received_bytes: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct DiskReport {
+    pub total: u64,
+    pub chunks: HashMap<u64, u64>,
 }
 
 #[derive(Clone, Debug)]
@@ -61,10 +65,11 @@ pub struct DownloadWorker {
     app_handle: AppHandle,
     chunks: Vec<Chunk>,
     download: Download,
-    file_writer_tx: mpsc::Sender<WriteMessage>,
-    cancellation_token: CancellationToken,
-    report: Arc<Mutex<Report>>,
+    file_writer: mpsc::UnboundedSender<WriteMessage>,
+    internet_report: Arc<Mutex<InternetReport>>,
+    disk_report: Arc<Mutex<DiskReport>>,
     app_event: Sender<AppEvent>,
+    pub cancellation_token: CancellationToken,
     pub download_id: DownloadId,
 }
 
@@ -91,7 +96,29 @@ impl DownloadWorker {
 
         let downloaded_bytes = download.downloaded_bytes as u64;
         let download_id = download.id;
-        let file_writer_tx = file_writer(&download.file_path, download.total_bytes as u64).await?;
+
+        let internet_report = Arc::new(Mutex::new(InternetReport {
+            downloaded_bytes,
+            received_bytes: 0.0,
+        }));
+
+        let disk_report = Arc::new(Mutex::new(DiskReport {
+            total: 0,
+            chunks: chunks
+                .clone()
+                .into_iter()
+                .map(|f| (f.chunk_index as u64, f.downloaded_bytes as u64))
+                .collect(),
+        }));
+
+        let file_writer = file_writer(
+            &download.file_path,
+            download.total_bytes as u64,
+            Arc::clone(&disk_report),
+        )
+        .await?;
+
+        let cancellation_token = CancellationToken::new();
 
         Ok(Self {
             pool,
@@ -99,13 +126,11 @@ impl DownloadWorker {
             chunks,
             download_id,
             app_event,
-            file_writer_tx,
+            file_writer,
             app_handle,
-            cancellation_token: CancellationToken::new(),
-            report: Arc::new(Mutex::new(Report {
-                downloaded_bytes,
-                received_bytes: 0.0,
-            })),
+            cancellation_token,
+            internet_report,
+            disk_report,
         })
     }
 
@@ -139,7 +164,8 @@ impl DownloadWorker {
         let max_retries = 5;
         let mut retries = 0;
 
-        self.listen_to_report();
+        self.listen_to_report_internet();
+        self.listen_to_report_disk();
 
         loop {
             let futures = self
@@ -149,18 +175,23 @@ impl DownloadWorker {
                 .filter(|chunk| chunk.downloaded_bytes < chunk.end_byte - chunk.start_byte)
                 .map(|chunk| async move { self.download_chunk(chunk).await });
 
+            let _ = self.emit_and_update_download_status("downloading").await;
             let results = join_all(futures).await;
 
             let outcome = Self::classify_results(results);
 
             match outcome {
                 WorkerOutcome::Finished => {
-                    dispatch(&self.app_event, AppEvent::WorkerFinished(self.download_id));
+                    dispatch(
+                        &self.app_event,
+                        AppEvent::DownloadFinished(self.download_id),
+                    );
+                    let _ = self.emit_and_update_download_status("completed").await;
                     self.cancellation_token.cancel();
                     break;
                 }
                 WorkerOutcome::Paused => {
-                    dispatch(&self.app_event, AppEvent::WorkerPaused);
+                    let _ = self.emit_and_update_download_status("paused").await;
                     self.cancellation_token.cancel();
                     break;
                 }
@@ -169,6 +200,7 @@ impl DownloadWorker {
                         retries += 1;
                         continue;
                     } else {
+                        let _ = self.emit_and_update_download_status("failed").await;
                         self.cancellation_token.cancel();
                         break;
                     }
@@ -178,16 +210,14 @@ impl DownloadWorker {
     }
 
     async fn download_chunk(&self, chunk: Chunk) -> Result<DownloadStatus, String> {
-        let downloaded_bytes = chunk.downloaded_bytes as u64;
-        let start_byte = chunk.start_byte as u64;
-        let end_byte = chunk.end_byte as u64;
+        let downloaded_bytes = chunk.downloaded_bytes;
+        let start_byte = chunk.start_byte;
+        let end_byte = chunk.end_byte;
+        let chunk_index = chunk.chunk_index;
         let url = self.download.url.clone();
-
-        let start_byte = start_byte + downloaded_bytes;
+        let range_header = format!("bytes={}-{}", start_byte + downloaded_bytes, end_byte);
 
         let client = Client::new();
-
-        let range_header = format!("bytes={}-{}", start_byte, end_byte);
 
         let response = client
             .get(url)
@@ -196,10 +226,9 @@ impl DownloadWorker {
             .await
             .map_err(|e| e.to_string())?;
 
-        let stream = response.bytes_stream();
-        let mut stream_fuse = stream.fuse();
+        let mut stream = response.bytes_stream();
         let mut downloaded = downloaded_bytes as u64;
-        let report = Arc::clone(&self.report);
+        let report = Arc::clone(&self.internet_report);
         let cancellation_token = self.cancellation_token.clone();
 
         loop {
@@ -207,48 +236,37 @@ impl DownloadWorker {
                 biased;
 
                 _ = cancellation_token.cancelled() => {
-                    let _ = self.update_chunk_and_download_status(
-                        chunk.chunk_index,
-                        chunk.start_byte,
-                        downloaded,
-                        "paused",
-                    ).await?;
+                    self.update_chunk_hash(chunk_index, start_byte).await?;
                     return Ok(DownloadStatus::Paused);
                 }
 
-                maybe_bytes = stream_fuse.next() => {
+                maybe_bytes = stream.next() => {
                     match maybe_bytes {
                         Some(Ok(bytes)) => {
-                            let chunk_len = bytes.len() as u64;
+                            let bytes_len = bytes.len() as u64;
 
-                            self.file_writer_tx
-                                .send((start_byte as u64 + downloaded, bytes.to_vec()))
-                                .await
+                            self.file_writer
+                                .send((
+                                    chunk_index as u64,
+                                    (start_byte as u64) + downloaded,
+                                    bytes_len,
+                                    bytes.to_vec(),
+                                ))
                                 .map_err(|e| e.to_string())?;
 
-                            downloaded += chunk_len;
+                            downloaded += bytes_len;
 
                             let mut report = report.lock().await;
-                            report.downloaded_bytes += chunk_len;
-                            report.received_bytes += chunk_len as f64;
+                            report.downloaded_bytes += bytes_len;
+                            report.received_bytes += bytes_len as f64;
 
                         },
-                        Some(Err(e)) => {
-                            let _ = self.update_chunk_and_download_status(
-                                chunk.chunk_index,
-                                chunk.start_byte,
-                                downloaded,
-                                "failed",
-                            ).await?;
-                            return Err(e.to_string());
+                        Some(Err(err)) => {
+                            self.update_chunk_hash(chunk_index, start_byte).await?;
+                            return Err(err.to_string());
                         },
                         None => {
-                            let _ = self.update_chunk_and_download_status(
-                                chunk.chunk_index,
-                                chunk.start_byte,
-                                downloaded,
-                                "completed",
-                            ).await?;
+                            self.update_chunk_hash(chunk_index, start_byte).await?;
                             return Ok(DownloadStatus::Finished);
                         }
                     }
@@ -258,19 +276,22 @@ impl DownloadWorker {
         }
     }
 
-    pub async fn update_chunk_and_download_status(
-        &self,
-        chunk_index: i64,
-        start_byte: i64,
-        downloaded_bytes: u64,
-        status: &str,
-    ) -> Result<(), String> {
+    pub async fn update_chunk_hash(&self, chunk_index: i64, start_byte: i64) -> Result<(), String> {
+        let downloaded_bytes = self
+            .disk_report
+            .lock()
+            .await
+            .chunks
+            .get(&(chunk_index as u64))
+            .cloned()
+            .unwrap_or(0);
+
         let hash = compute_partial_hash(
             &self.download.file_path,
             start_byte as u64,
             downloaded_bytes,
         )?;
-        let _ = update_chunk_downloaded(
+        update_chunk_downloaded(
             &self.pool,
             self.download_id,
             chunk_index,
@@ -278,22 +299,24 @@ impl DownloadWorker {
             hash,
         )
         .await?;
-        let _ = update_download_status(&self.pool, self.download_id, status).await?;
+        Ok(())
+    }
+
+    async fn emit_and_update_download_status(&self, status: &str) -> Result<(), String> {
+        update_download_status(&self.pool, self.download_id, status).await?;
+        let result = get_downloads_by_id(&self.pool, self.download_id).await?;
+        emit_app_event(&self.app_handle, "download_item", result);
 
         Ok(())
     }
 
-    pub fn pause_download(&self) {
-        self.cancellation_token.cancel();
-    }
-
-    fn listen_to_report(&self) {
+    fn listen_to_report_internet(&self) {
         let download_id = self.download.id.clone();
         let total_bytes = self.download.total_bytes.clone();
 
         let cancellation_token = self.cancellation_token.clone();
         let app_handle = self.app_handle.clone();
-        let report = Arc::clone(&self.report);
+        let report = Arc::clone(&self.internet_report);
 
         spawn(async move {
             loop {
@@ -305,8 +328,6 @@ impl DownloadWorker {
 
                 let report = report.lock().await;
 
-                println!("{}", report.downloaded_bytes);
-
                 let event = format!("downloaded_bytes_{}", download_id);
 
                 emit_app_event(&app_handle, &event, report.downloaded_bytes);
@@ -315,7 +336,7 @@ impl DownloadWorker {
 
         let cancellation_token = self.cancellation_token.clone();
         let app_handle = self.app_handle.clone();
-        let report = Arc::clone(&self.report);
+        let report = Arc::clone(&self.internet_report);
 
         spawn(async move {
             loop {
@@ -335,8 +356,6 @@ impl DownloadWorker {
 
                 let event = format!("speed_and_remaining_{}", download_id);
 
-                println!("Speed: {}, Remaining time: {}", speed, remaining_time);
-
                 emit_app_event(
                     &app_handle,
                     &event,
@@ -347,6 +366,32 @@ impl DownloadWorker {
                 );
 
                 report.received_bytes = 0.0;
+            }
+        });
+    }
+
+    fn listen_to_report_disk(&self) {
+        let cancellation_token = self.cancellation_token.clone();
+        let disk_report = self.disk_report.clone();
+        let app_handle = self.app_handle.clone();
+        let download_id = self.download.id.clone();
+        spawn(async move {
+            loop {
+                if cancellation_token.is_cancelled() {
+                    break;
+                }
+
+                sleep(Duration::from_secs(1)).await;
+
+                let mut report = disk_report.lock().await;
+
+                let speed = report.total as f64 / 1024.0;
+
+                let event = format!("disk_speed_{}", download_id);
+
+                emit_app_event(&app_handle, &event, speed);
+
+                report.total = 0;
             }
         });
     }
