@@ -15,15 +15,14 @@
       {
         "decorations": true,
         "transparent": true,
-        "title": "Download Manager",
-        "width": 1000,
-        "height": 600,
+        "title": "Ferrix",
+        "width": 1180,
+        "height": 720,
         "resizable": true,
         "fullscreen": false,
         "center": true,
         "dragDropEnabled": true,
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true
+        "titleBarStyle": "Overlay"
       }
     ],
     "security": {
@@ -39,6 +38,10 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.13"
+    },
+    "resources": ["icons/icon.icns"]
   }
 }

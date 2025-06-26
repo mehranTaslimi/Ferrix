@@ -1,10 +1,9 @@
-import { memo, useEffect, useState } from "react";
-import { Download, Status } from "./page";
-import { listen } from "@tauri-apps/api/event";
+import { memo } from "react";
 import { Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { invoke } from "@tauri-apps/api/core";
 import StatusAndSpeed from "./StatusAndSpeed";
+import { Download, Status } from "./types";
 
 function Item({ download }: { download: Download }) {
 

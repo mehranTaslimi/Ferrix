@@ -1,3 +1,4 @@
+use tauri::Manager;
 use tokio::{spawn, sync::broadcast};
 
 mod command;
@@ -6,6 +7,7 @@ mod events;
 mod manager;
 mod models;
 mod utils;
+// mod worker;
 
 use crate::{
     command::{add_download_queue, get_download_list, pause_download, resume_download},
@@ -34,6 +36,17 @@ pub async fn run() {
             pause_download
         ])
         .setup(move |app| {
+            let window = app.get_webview_window("main").unwrap();
+
+            #[cfg(target_os = "macos")]
+            window_vibrancy::apply_vibrancy(
+                &window,
+                window_vibrancy::NSVisualEffectMaterial::Menu,
+                None,
+                None,
+            )
+            .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+
             let manager = DownloadsManager::new(tx, pool, app.handle().clone());
 
             spawn(async move {

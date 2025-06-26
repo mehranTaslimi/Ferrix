@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
-import { Status } from '@/app/page';
+import { Status } from './types';
 
 interface SpeedAndRemaining {
     speed: number,
@@ -91,7 +91,7 @@ function StatusAndSpeed({ id, totalBytes, status, downloadedBytes: currentDownlo
 
         return kb + " KB/s"
 
-    }, [speedAndRemaining.speed])
+    }, [speedAndRemaining.diskSpeed])
 
     const progress = useMemo(() => {
         return Math.round((downloadedBytes / totalBytes) * 100)
