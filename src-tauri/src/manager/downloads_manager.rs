@@ -1,12 +1,17 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use sqlx::SqlitePool;
 use tauri::AppHandle;
-use tokio::sync::{broadcast::Sender, Mutex};
+use tokio::{
+    spawn,
+    sync::{broadcast::Sender, Mutex},
+    time::sleep,
+};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    manager::download_worker::DownloadWorker, models::DownloadId, utils::app_state::AppEvent,
+    events::dispatch, manager::download_worker::DownloadWorker, models::DownloadId,
+    utils::app_state::AppEvent,
 };
 
 pub struct DownloadsManager {
@@ -78,13 +83,44 @@ impl DownloadsManager {
                 if let Some(cancellation_token) = self.workers.lock().await.get(&download_id) {
                     cancellation_token.cancel();
                 };
+                Ok(())
+            }
 
-                self.workers.lock().await.remove(&download_id);
+            AppEvent::PauseAllDownload => {
+                let workers = self.workers.lock().await;
+
+                for (_, cancellation_token) in workers.iter() {
+                    cancellation_token.cancel();
+                }
 
                 Ok(())
             }
 
-            _ => Ok(()),
+            AppEvent::ForcePauseAllDownloadWorkers => {
+                dispatch(&self.app_event, AppEvent::PauseAllDownload);
+
+                let app_handle = self.app_handle.clone();
+                let workers = Arc::clone(&self.workers);
+
+                spawn(async move {
+                    loop {
+                        if workers.lock().await.is_empty() {
+                            app_handle.exit(0);
+                            break;
+                        }
+                        sleep(Duration::from_millis(100)).await;
+                    }
+                });
+
+                Ok(())
+            }
+
+            AppEvent::DownloadFinished(download_id)
+            | AppEvent::DownloadPaused(download_id)
+            | AppEvent::DownloadFailed(download_id) => {
+                self.workers.lock().await.remove(&download_id);
+                Ok(())
+            }
         }
     }
 }

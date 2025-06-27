@@ -43,4 +43,8 @@ pub enum AppEvent {
     PauseDownload(DownloadId),
     ResumeDownload(DownloadId),
     DownloadFinished(DownloadId),
+    DownloadPaused(DownloadId),
+    DownloadFailed(DownloadId),
+    PauseAllDownload,
+    ForcePauseAllDownloadWorkers,
 }

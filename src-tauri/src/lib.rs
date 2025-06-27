@@ -11,8 +11,9 @@ mod utils;
 
 use crate::{
     command::{add_download_queue, get_download_list, pause_download, resume_download},
+    events::dispatch,
     manager::downloads_manager::DownloadsManager,
-    utils::app_state::AppState,
+    utils::app_state::{AppEvent, AppState},
 };
 
 #[tokio::main]
@@ -58,6 +59,13 @@ pub async fn run() {
                 }
             });
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let state = window.app_handle().state::<AppState>();
+                dispatch(&state.broadcast_tx, AppEvent::ForcePauseAllDownloadWorkers);
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

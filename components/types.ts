@@ -1,4 +1,4 @@
-export interface Download {
+export interface DownloadType {
   id: number;
   url: string;
   total_bytes: number;

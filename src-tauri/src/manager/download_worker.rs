@@ -23,7 +23,7 @@ use tauri_plugin_http::reqwest::Client;
 use tokio::{
     spawn,
     sync::{broadcast::Sender, mpsc, Mutex},
-    time::sleep,
+    time::{sleep, timeout},
 };
 use tokio_util::sync::CancellationToken;
 
@@ -178,6 +178,7 @@ impl DownloadWorker {
             let _ = self.emit_and_update_download_status("downloading").await;
             let results = join_all(futures).await;
 
+            println!("{:?}", results);
             let outcome = Self::classify_results(results);
 
             match outcome {
@@ -191,6 +192,7 @@ impl DownloadWorker {
                     break;
                 }
                 WorkerOutcome::Paused => {
+                    dispatch(&self.app_event, AppEvent::DownloadPaused(self.download_id));
                     let _ = self.emit_and_update_download_status("paused").await;
                     self.cancellation_token.cancel();
                     break;
@@ -198,9 +200,12 @@ impl DownloadWorker {
                 WorkerOutcome::Errored | WorkerOutcome::Mixed => {
                     if retries < max_retries {
                         retries += 1;
+                        println!("{retries}");
+                        sleep(Duration::from_secs(5)).await;
                         continue;
                     } else {
                         let _ = self.emit_and_update_download_status("failed").await;
+                        dispatch(&self.app_event, AppEvent::DownloadFailed(self.download_id));
                         self.cancellation_token.cancel();
                         break;
                     }
@@ -240,9 +245,9 @@ impl DownloadWorker {
                     return Ok(DownloadStatus::Paused);
                 }
 
-                maybe_bytes = stream.next() => {
+                maybe_bytes = timeout(Duration::from_millis(500), stream.next()) => {
                     match maybe_bytes {
-                        Some(Ok(bytes)) => {
+                        Ok(Some(Ok(bytes))) => {
                             let bytes_len = bytes.len() as u64;
 
                             self.file_writer
@@ -261,13 +266,17 @@ impl DownloadWorker {
                             report.received_bytes += bytes_len as f64;
 
                         },
-                        Some(Err(err)) => {
+                        Ok(Some(Err(err))) => {
                             self.update_chunk_hash(chunk_index, start_byte).await?;
                             return Err(err.to_string());
                         },
-                        None => {
+                        Ok(None) => {
                             self.update_chunk_hash(chunk_index, start_byte).await?;
                             return Ok(DownloadStatus::Finished);
+                        },
+                        Err(_) => {
+                            self.update_chunk_hash(chunk_index, start_byte).await?;
+                            return Err("Timeout while downloading chunk".to_string());
                         }
                     }
                 }
