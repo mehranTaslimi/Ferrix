@@ -36,18 +36,21 @@ impl super::DownloadWorker {
 
         spawn(async move {
             while let Some((chunk_index, start_byte, downloaded_bytes, bytes)) = rx.recv().await {
-                println!("{downloaded_bytes}");
                 file.seek(SeekFrom::Start(start_byte)).await.unwrap();
                 file.write_all(&bytes).await.unwrap();
-                sleep(Duration::from_millis(10)).await;
+
                 let mut report = report.lock().await;
                 report.wrote_bytes += downloaded_bytes;
-                report.total_wrote_bytes += downloaded_bytes;
+                report.received_bytes += downloaded_bytes;
                 report
                     .chunks
                     .entry(chunk_index)
                     .and_modify(|f| *f += downloaded_bytes)
                     .or_insert(downloaded_bytes);
+
+                // Slow hard simulation
+                println!("{downloaded_bytes}");
+                sleep(Duration::from_millis(10)).await;
             }
         });
 

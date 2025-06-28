@@ -1,6 +1,7 @@
 mod chunk;
 mod download;
 mod file;
+mod outcome;
 mod reporter;
 pub mod validation;
 
@@ -67,8 +68,8 @@ impl DownloadWorker {
         }));
 
         let disk_report = Arc::new(Mutex::new(DiskReport {
-            wrote_bytes: 0,
-            total_wrote_bytes: downloaded_bytes,
+            received_bytes: 0,
+            wrote_bytes: downloaded_bytes,
             chunks: chunks
                 .clone()
                 .into_iter()

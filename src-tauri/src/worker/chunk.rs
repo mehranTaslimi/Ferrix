@@ -1,4 +1,4 @@
-use crate::db::downloads::update_chunk_downloaded;
+use crate::{db::downloads::update_chunk_downloaded, models::Chunk};
 use md5::{Digest, Md5};
 use std::{
     fs::File,
@@ -96,5 +96,14 @@ impl super::DownloadWorker {
         }
 
         Ok(format!("{:x}", hasher.finalize()))
+    }
+
+    pub(super) async fn not_downloaded_chunks(&self) -> impl Iterator<Item = Chunk> {
+        self.chunks
+            .lock()
+            .await
+            .clone()
+            .into_iter()
+            .filter(|chunk| chunk.downloaded_bytes < chunk.end_byte - chunk.start_byte)
     }
 }

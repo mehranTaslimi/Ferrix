@@ -3,23 +3,12 @@ use std::{sync::Arc, time::Duration};
 use futures_util::{future::join_all, StreamExt};
 use tauri::http::header::RANGE;
 use tauri_plugin_http::reqwest::Client;
-use tokio::time::{interval, sleep, MissedTickBehavior};
+use tokio::time::{interval, MissedTickBehavior};
 
-use crate::{events::dispatch, models::Chunk, utils::app_state::AppEvent};
-
-#[derive(Debug)]
-enum DownloadStatus {
-    Paused,
-    Finished,
-}
-
-#[derive(Debug)]
-enum WorkerOutcome {
-    Finished,
-    Paused,
-    Errored,
-    Mixed,
-}
+use crate::{
+    models::Chunk,
+    worker::outcome::{DownloadStatus, WorkerOutcome},
+};
 
 impl super::DownloadWorker {
     pub async fn start_download(&self) {
@@ -31,60 +20,30 @@ impl super::DownloadWorker {
         let _ = self.emit_and_update_download_status("downloading").await;
 
         loop {
-            let chunks = self
-                .chunks
-                .lock()
+            let mut futures = self
+                .not_downloaded_chunks()
                 .await
-                .clone()
-                .into_iter()
-                .filter(|chunk| chunk.downloaded_bytes < chunk.end_byte - chunk.start_byte);
-
-            let mut futures = chunks.map(|chunk| async move { self.download_chunk(chunk).await });
+                .map(|chunk| async move { self.download_chunk(chunk).await });
 
             let results = join_all(&mut futures).await;
-            let outcome = Self::classify_results(results);
+            let outcome = self.classify_results(results);
 
             match outcome {
                 WorkerOutcome::Finished => {
-                    if self.disk_report.lock().await.total_wrote_bytes
-                        < self.internet_report.lock().await.downloaded_bytes
-                    {
-                        let _ = self.emit_and_update_download_status("writing").await;
-                    }
-
-                    loop {
-                        let wrote = self.disk_report.lock().await.total_wrote_bytes;
-                        let downloaded = self.internet_report.lock().await.downloaded_bytes;
-
-                        if wrote == downloaded {
-                            break;
-                        }
-
-                        sleep(Duration::from_millis(100)).await;
-                    }
-
-                    dispatch(
-                        &self.app_event,
-                        AppEvent::DownloadFinished(self.download_id),
-                    );
-                    let _ = self.emit_and_update_download_status("completed").await;
+                    self.handle_finished().await;
                     break;
                 }
                 WorkerOutcome::Paused => {
-                    dispatch(&self.app_event, AppEvent::DownloadPaused(self.download_id));
-                    let _ = self.emit_and_update_download_status("paused").await;
+                    self.handle_paused().await;
                     break;
                 }
                 WorkerOutcome::Errored | WorkerOutcome::Mixed => {
-                    if retries <= max_retries {
-                        sleep(Duration::from_secs(5)).await;
-
+                    if retries < max_retries {
                         retries += 1;
-
+                        self.handle_retry().await;
                         continue;
                     } else {
-                        let _ = self.emit_and_update_download_status("failed").await;
-                        dispatch(&self.app_event, AppEvent::DownloadFailed(self.download_id));
+                        self.handle_failed().await;
                         break;
                     }
                 }
@@ -162,27 +121,6 @@ impl super::DownloadWorker {
                 }
 
             }
-        }
-    }
-
-    fn classify_results(results: Vec<Result<DownloadStatus, i64>>) -> WorkerOutcome {
-        let mut has_finished = false;
-        let mut has_paused = false;
-        let mut has_error = false;
-
-        for result in &results {
-            match result {
-                Ok(DownloadStatus::Finished) => has_finished = true,
-                Ok(DownloadStatus::Paused) => has_paused = true,
-                Err(_) => has_error = true,
-            }
-        }
-
-        match (has_finished, has_paused, has_error) {
-            (true, false, false) => WorkerOutcome::Finished,
-            (false, true, false) => WorkerOutcome::Paused,
-            (false, false, true) => WorkerOutcome::Errored,
-            _ => WorkerOutcome::Mixed,
         }
     }
 }

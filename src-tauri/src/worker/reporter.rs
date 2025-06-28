@@ -19,8 +19,8 @@ pub(super) struct InternetReport {
 
 #[derive(Debug, Clone)]
 pub(super) struct DiskReport {
-    pub(super) total_wrote_bytes: u64,
     pub(super) wrote_bytes: u64,
+    pub(super) received_bytes: u64,
     pub(super) chunks: HashMap<u64, u64>,
 }
 
@@ -100,15 +100,15 @@ impl super::DownloadWorker {
 
                 let mut report = disk_report.lock().await;
 
-                let speed = report.wrote_bytes as f64 / 1024.0;
+                let speed = report.received_bytes as f64 / 1024.0;
 
                 let disk_speed_event = format!("disk_speed_{}", download_id);
                 let wrote_bytes_event = format!("wrote_bytes_{}", download_id);
 
                 emit_app_event(&app_handle, &disk_speed_event, speed);
-                emit_app_event(&app_handle, &wrote_bytes_event, report.total_wrote_bytes);
+                emit_app_event(&app_handle, &wrote_bytes_event, report.wrote_bytes);
 
-                report.wrote_bytes = 0;
+                report.received_bytes = 0;
             }
         });
     }
