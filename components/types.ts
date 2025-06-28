@@ -30,4 +30,5 @@ export enum Status {
   Queued = "queued",
   Paused = "paused",
   Failed = "failed",
+  Writing = "writing",
 }

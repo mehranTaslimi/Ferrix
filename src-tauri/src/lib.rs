@@ -7,7 +7,7 @@ mod events;
 mod manager;
 mod models;
 mod utils;
-// mod worker;
+mod worker;
 
 use crate::{
     command::{add_download_queue, get_download_list, pause_download, resume_download},

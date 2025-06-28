@@ -19,6 +19,7 @@ function StatusAndSpeed({
     downloadedBytes: initialDownloadedBytes,
 }: { id: number; totalBytes: number; status: Status; downloadedBytes: number }) {
     const [downloadedBytes, setDownloadedBytes] = useState(initialDownloadedBytes)
+    const [wroteBytes, setWroteBytes] = useState(initialDownloadedBytes)
     const [speedAndRemaining, setSpeedAndRemaining] = useState<SpeedAndRemaining>({
         speed: 0,
         diskSpeed: 0,
@@ -41,21 +42,31 @@ function StatusAndSpeed({
             setSpeedAndRemaining((prev) => ({ ...prev, diskSpeed: ev.payload }))
         })
 
+        const unListen4 = listen<number>(`wrote_bytes_${id}`, (ev) => {
+            setWroteBytes(ev.payload)
+        })
+
         return () => {
             unListen1.then((fn) => fn())
             unListen2.then((fn) => fn())
             unListen3.then((fn) => fn())
+            unListen4.then((fn) => fn())
         }
     }, [id])
 
     // Update local state when prop changes (for initial load)
     useEffect(() => {
         setDownloadedBytes(initialDownloadedBytes)
+        setWroteBytes(initialDownloadedBytes)
     }, [initialDownloadedBytes])
 
-    const progress = useMemo(() => {
+    const downloadProgress = useMemo(() => {
         return Math.round((downloadedBytes / totalBytes) * 100)
     }, [downloadedBytes, totalBytes])
+
+    const writeProgress = useMemo(() => {
+        return Math.round((wroteBytes / totalBytes) * 100)
+    }, [wroteBytes, totalBytes])
 
     const remainingTime = useMemo(() => {
         const second = Math.round(speedAndRemaining.remaining_time)
@@ -110,14 +121,28 @@ function StatusAndSpeed({
         <div className="space-y-3">
             {/* Progress Section */}
             <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">{progress}%</span>
-                    <span className="text-xs text-muted-foreground">{(downloadedBytes / (1024 * 1024)).toFixed(1)} MB</span>
-                </div>
-                <Progress value={progress} className="h-2 bg-muted/30" />
+                {status === Status.Writing ? (
+                    // Show write progress when writing
+                    <>
+                        <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">Writing: {writeProgress}%</span>
+                            <span className="text-xs text-muted-foreground">{(wroteBytes / (1024 * 1024)).toFixed(1)} MB</span>
+                        </div>
+                        <Progress value={writeProgress} className="h-2 bg-muted/30 [&>div]:bg-purple-500" />
+                    </>
+                ) : (
+                    // Show download progress for other statuses
+                    <>
+                        <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">{downloadProgress}%</span>
+                            <span className="text-xs text-muted-foreground">{(downloadedBytes / (1024 * 1024)).toFixed(1)} MB</span>
+                        </div>
+                        <Progress value={downloadProgress} className="h-2 bg-muted/30" />
+                    </>
+                )}
             </div>
 
-            {/* Speed and Time Info - Only show when downloading */}
+            {/* Speed and Time Info */}
             {status === Status.Downloading && (
                 <div className="flex items-center gap-3 text-xs">
                     <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50">
@@ -131,6 +156,19 @@ function StatusAndSpeed({
                     <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50">
                         <Clock className="w-3 h-3 text-orange-500" />
                         <span className="font-medium">{remainingTime}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Show only disk speed when writing */}
+            {status === Status.Writing && (
+                <div className="flex items-center gap-3 text-xs">
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50">
+                        <HardDrive className="w-3 h-3 text-purple-500" />
+                        <span className="font-medium">{diskSpeed}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-purple-100 dark:bg-purple-900/30">
+                        <span className="text-purple-600 dark:text-purple-400 font-medium">Writing to disk...</span>
                     </div>
                 </div>
             )}

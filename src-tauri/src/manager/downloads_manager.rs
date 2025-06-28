@@ -10,8 +10,7 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    events::dispatch, manager::download_worker::DownloadWorker, models::DownloadId,
-    utils::app_state::AppEvent,
+    events::dispatch, models::DownloadId, utils::app_state::AppEvent, worker::DownloadWorker,
 };
 
 pub struct DownloadsManager {

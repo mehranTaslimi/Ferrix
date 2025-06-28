@@ -34,6 +34,8 @@ function getStatusColor(status: Status) {
             return "bg-yellow-500"
         case Status.Queued:
             return "bg-gray-500"
+        case Status.Writing:
+            return "bg-purple-500"
         default:
             return "bg-gray-500"
     }
@@ -47,6 +49,9 @@ function DownloadItem({ download }: { download: DownloadType }) {
             await invoke("pause_download", { id: download.id })
         }
     }
+
+    // Check if resume should be disabled (during writing or if paused during writing)
+    const isResumeDisabled = download.status === Status.Writing
 
     return (
         <Card className="group hover:shadow-lg transition-all duration-200 border-0 shadow-sm bg-gradient-to-br from-card to-card/50">
@@ -89,8 +94,14 @@ function DownloadItem({ download }: { download: DownloadType }) {
                                 variant="outline"
                                 size="sm"
                                 className="w-full h-9 font-medium transition-all duration-200 hover:scale-[1.02] bg-transparent"
+                                disabled={isResumeDisabled}
                             >
-                                {download.status === Status.Paused || download.status === Status.Queued ? (
+                                {download.status === Status.Writing ? (
+                                    <>
+                                        <Pause className="w-4 h-4 mr-2" />
+                                        Writing to Disk...
+                                    </>
+                                ) : download.status === Status.Paused || download.status === Status.Queued ? (
                                     <>
                                         <Play className="w-4 h-4 mr-2" />
                                         Resume

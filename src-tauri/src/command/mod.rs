@@ -2,9 +2,9 @@ use tauri::State;
 
 use crate::{
     events::dispatch,
-    manager::validation::validate_and_inspect_url,
     models::Download,
     utils::app_state::{AppEvent, AppState},
+    worker::DownloadWorker,
 };
 
 #[tauri::command]
@@ -14,7 +14,7 @@ pub async fn add_download_queue(
     chunk: Option<u8>,
 ) -> Result<(), String> {
     let chunk = chunk.unwrap_or(5).clamp(1, 5);
-    let file_info = validate_and_inspect_url(&url).await?;
+    let file_info = DownloadWorker::validate_and_inspect_url(&url).await?;
     dispatch(
         &state.broadcast_tx,
         AppEvent::StartNewDownload(file_info, chunk as i64),

@@ -49,6 +49,8 @@ pub struct Chunk {
     pub expected_hash: ExpectedHash,
     pub file_path: FilePath,
     pub total_bytes: TotalBytes,
+    pub has_error: Option<bool>,
+    pub error_message: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

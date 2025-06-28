@@ -1,0 +1,104 @@
+use std::path::Path;
+
+use tauri::{
+    http::header::{ACCEPT_RANGES, CONTENT_DISPOSITION, CONTENT_LENGTH, CONTENT_TYPE},
+    Url,
+};
+use tauri_plugin_http::reqwest::Client;
+
+use crate::{
+    models::{Chunk, FileInfo},
+    utils::path::{create_download_dir, get_available_filename},
+};
+
+impl super::DownloadWorker {
+    pub async fn validate_and_inspect_url(url: &str) -> Result<FileInfo, String> {
+        let parsed_url = Url::parse(url).map_err(|e| e.to_string())?;
+
+        let client = Client::new();
+
+        let response = client
+            .head(parsed_url.clone())
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let headers = response.headers();
+
+        let supports_range = headers
+            .get(ACCEPT_RANGES)
+            .map(|v| v == "bytes")
+            .unwrap_or(false);
+
+        if !supports_range {
+            return Err("server does not support ranged downloads".to_string());
+        };
+
+        let content_length = headers
+            .get(CONTENT_LENGTH)
+            .and_then(|f| f.to_str().ok())
+            .and_then(|f| f.parse::<u64>().ok())
+            .ok_or("invalid header content-length".to_string())?;
+
+        let content_type = headers
+            .get(CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("unknown");
+
+        let file_name = headers
+            .get(CONTENT_DISPOSITION)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| {
+                v.split(';')
+                    .find_map(|part| part.trim().strip_prefix("filename="))
+                    .map(|name| name.trim_matches('"'))
+            })
+            .or_else(|| {
+                parsed_url
+                    .path_segments()
+                    .and_then(|segments| segments.last())
+            })
+            .ok_or("invalid file name".to_string())?;
+
+        let download_path = create_download_dir().await?;
+        let joined_path = Path::new(&download_path).join(file_name);
+
+        let file_path = joined_path
+            .to_str()
+            .ok_or("cannot join filename to download path")?;
+
+        let available_path = get_available_filename(file_path).await?;
+
+        let file_extension = Path::new(file_name)
+            .extension()
+            .and_then(|f| f.to_str())
+            .ok_or("invalid file extension")?;
+
+        Ok(FileInfo {
+            url: parsed_url.to_string(),
+            file_name: available_path.file_name,
+            content_type: content_type.to_string(),
+            total_bytes: content_length as i64,
+            extension: file_extension.to_string(),
+            file_path: available_path.full_path,
+        })
+    }
+
+    pub(super) fn invalid_chunks_hash(file_path: &str, chunks: Vec<Chunk>) -> Vec<i64> {
+        chunks
+            .into_iter()
+            .filter(|chunk| chunk.downloaded_bytes > 0)
+            .filter(|chunk| {
+                let hash = Self::compute_partial_hash(
+                    file_path,
+                    chunk.start_byte as u64,
+                    chunk.downloaded_bytes as u64,
+                )
+                .ok();
+
+                Some(hash) != Some(chunk.expected_hash.clone())
+            })
+            .map(|chunk| chunk.chunk_index)
+            .collect::<Vec<i64>>()
+    }
+}

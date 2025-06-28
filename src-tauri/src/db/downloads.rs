@@ -144,6 +144,8 @@ pub async fn get_download_chunks_by_download_id(
             dc.end_byte,
             dc.downloaded_bytes,
             dc.expected_hash,
+            dc.has_error,
+            dc.error_message,
             d.url,
             d.file_path,
             d.total_bytes
@@ -163,11 +165,15 @@ pub async fn update_chunk_downloaded(
     chunk_index: i64,
     downloaded_bytes: i64,
     expected_hash: String,
+    has_error: bool,
+    error_message: &str,
 ) -> Result<(), String> {
     sqlx::query!(
-        "UPDATE download_chunks SET (downloaded_bytes, expected_hash) = (?, ?) WHERE download_id = ? AND chunk_index = ?",
+        "UPDATE download_chunks SET (downloaded_bytes, expected_hash, has_error, error_message) = (?, ?, ?, ?) WHERE download_id = ? AND chunk_index = ?",
         downloaded_bytes,
         expected_hash,
+        has_error,
+        error_message,
         download_id,
         chunk_index
     )
