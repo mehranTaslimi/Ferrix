@@ -12,7 +12,7 @@ mod worker;
 use crate::{
     command::{add_download_queue, get_download_list, pause_download, resume_download},
     events::dispatch,
-    manager::downloads_manager::DownloadsManager,
+    manager::DownloadsManager,
     utils::app_state::{AppEvent, AppState},
 };
 
