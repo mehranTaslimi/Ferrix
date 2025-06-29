@@ -52,6 +52,7 @@ impl super::DownloadWorker {
         let cancellation_token = self.cancellation_token.clone();
         let app_handle = self.app_handle.clone();
         let report = Arc::clone(&self.internet_report);
+        let speed_bps = Arc::clone(&self.speed_bps);
 
         spawn(async move {
             loop {
@@ -62,6 +63,8 @@ impl super::DownloadWorker {
                 sleep(Duration::from_secs(1)).await;
 
                 let mut report = report.lock().await;
+
+                *speed_bps.lock().await = report.received_bytes as u64;
 
                 let speed = report.received_bytes as f64 / 1024.0;
 

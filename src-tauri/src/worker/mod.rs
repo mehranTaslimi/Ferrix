@@ -34,8 +34,11 @@ pub struct DownloadWorker {
     internet_report: Arc<Mutex<InternetReport>>,
     disk_report: Arc<Mutex<DiskReport>>,
     app_event: Sender<AppEvent>,
+    bandwidth_limit: Arc<Mutex<f32>>,
     pub cancellation_token: CancellationToken,
     pub download_id: DownloadId,
+    pub chunk_count: ChunkCount,
+    pub speed_bps: Arc<Mutex<u64>>,
 }
 
 impl DownloadWorker {
@@ -43,6 +46,7 @@ impl DownloadWorker {
         pool: SqlitePool,
         app_handle: AppHandle,
         app_event: Sender<AppEvent>,
+        bandwidth_limit: Arc<Mutex<f32>>,
         download_id: Option<DownloadId>,
         file_info: Option<FileInfo>,
         chunk_count: Option<ChunkCount>,
@@ -61,6 +65,7 @@ impl DownloadWorker {
 
         let downloaded_bytes = download.downloaded_bytes as u64;
         let download_id = download.id;
+        let chunk_count = chunks.len() as i64;
 
         let internet_report = Arc::new(Mutex::new(InternetReport {
             downloaded_bytes,
@@ -95,8 +100,11 @@ impl DownloadWorker {
             file_writer,
             app_handle,
             cancellation_token,
+            bandwidth_limit,
             internet_report,
             disk_report,
+            chunk_count,
+            speed_bps: Arc::new(Mutex::new(0)),
         })
     }
 

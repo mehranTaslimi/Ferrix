@@ -88,34 +88,34 @@ function StatusAndSpeed({
     }, [speedAndRemaining.remaining_time])
 
     const speed = useMemo(() => {
-        const kb = Math.round(speedAndRemaining.speed)
-        const mb = Math.round(speedAndRemaining.speed / 1024)
-        const gb = Math.round(speedAndRemaining.speed / 1024 / 1024)
+        const kb = speedAndRemaining.speed;
+        const mb = speedAndRemaining.speed / 1024;
+        const gb = speedAndRemaining.speed / 1024 / 1024;
 
         if (gb >= 1) {
-            return gb + " GB/s"
+            return gb.toFixed(1) + " GB/s";
         }
         if (mb >= 1) {
-            return mb + " MB/s"
+            return mb.toFixed(1) + " MB/s";
         }
 
-        return kb + " KB/s"
-    }, [speedAndRemaining.speed])
+        return kb.toFixed(1) + " KB/s";
+    }, [speedAndRemaining.speed]);
 
     const diskSpeed = useMemo(() => {
-        const kb = Math.round(speedAndRemaining.diskSpeed)
-        const mb = Math.round(speedAndRemaining.diskSpeed / 1024)
-        const gb = Math.round(speedAndRemaining.diskSpeed / 1024 / 1024)
+        const kb = speedAndRemaining.diskSpeed;
+        const mb = speedAndRemaining.diskSpeed / 1024;
+        const gb = speedAndRemaining.diskSpeed / 1024 / 1024;
 
         if (gb >= 1) {
-            return gb + " GB/s"
+            return gb.toFixed(1) + " GB/s";
         }
         if (mb >= 1) {
-            return mb + " MB/s"
+            return mb.toFixed(1) + " MB/s";
         }
 
-        return kb + " KB/s"
-    }, [speedAndRemaining.diskSpeed])
+        return kb.toFixed(1) + " KB/s";
+    }, [speedAndRemaining.diskSpeed]);
 
     return (
         <div className="space-y-3">

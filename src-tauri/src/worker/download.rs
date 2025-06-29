@@ -1,9 +1,12 @@
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use futures_util::{future::join_all, StreamExt};
 use tauri::http::header::RANGE;
 use tauri_plugin_http::reqwest::Client;
-use tokio::time::{interval, MissedTickBehavior};
+use tokio::time::sleep;
 
 use crate::{
     models::Chunk,
@@ -70,11 +73,10 @@ impl super::DownloadWorker {
 
         let mut stream = response.bytes_stream();
         let mut downloaded = downloaded_bytes as u64;
+        let mut downloaded_in_one_sec = 0f32;
         let report = Arc::clone(&self.internet_report);
         let cancellation_token = self.cancellation_token.clone();
-
-        let mut interval = interval(Duration::from_millis(100));
-        interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
+        let mut start = Instant::now();
 
         loop {
             tokio::select! {
@@ -84,8 +86,6 @@ impl super::DownloadWorker {
                     self.update_chunk(chunk_index, false, "").await.map_err(|_| chunk_index)?;
                     return Ok(DownloadStatus::Paused);
                 }
-
-                _ = interval.tick() => {}
 
                 maybe_bytes = stream.next() => {
                     match maybe_bytes {
@@ -103,10 +103,29 @@ impl super::DownloadWorker {
                                 .map_err(|e| e.to_string()).map_err(|_| chunk_index)?;
 
                             downloaded += bytes_len;
+                            downloaded_in_one_sec += bytes_len as f32;
+
+                            let bandwidth_limit = *self.bandwidth_limit.lock().await;
+                            let elapsed = start.elapsed().as_secs_f32();
+                            let current_speed = downloaded_in_one_sec / elapsed;
+
+                            if current_speed > bandwidth_limit {
+                                let expected_time = downloaded_in_one_sec / bandwidth_limit;
+                                let sleep_duration = expected_time - elapsed;
+                                if sleep_duration > 0.001 {
+                                    sleep(Duration::from_secs_f32(sleep_duration)).await;
+                                }
+                            }
+
+                            if elapsed >= 1.0 {
+                                start = Instant::now();
+                                downloaded_in_one_sec = 0.0;
+                            }
 
                             let mut report = report.lock().await;
                             report.downloaded_bytes += bytes_len;
                             report.received_bytes += bytes_len as f64;
+
 
                         },
                         Some(Err(err)) => {
