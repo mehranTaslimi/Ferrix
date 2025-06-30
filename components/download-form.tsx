@@ -11,9 +11,7 @@ import { invoke } from "@tauri-apps/api/core"
 import { Plus } from "lucide-react"
 
 export default function DownloadForm() {
-    const [value, setValue] = useState(
-        "https://caspian19.asset.aparat.com/aparat-video/9dcfe3d6b9a30b4b3706abb31cc2151d62651986-360p.mp4?wmsAuthSign=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbiI6ImQ0NzVhZGFiNjM3ZTIwOTVkMmY1ZjYzMzY2ODU4ZjBmIiwiZXhwIjoxNzUwNTQ4NDMzLCJpc3MiOiJTYWJhIElkZWEgR1NJRyJ9.GOxhbEA-eYErdeJQB6vEJGkbeS2K1W0REaebE-daEwQ",
-    )
+    const [value, setValue] = useState("");
     const [isLoading, setIsLoading] = useState(false)
 
     const handleSubmit = async () => {

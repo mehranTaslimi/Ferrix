@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use tokio::fs;
+use tokio::fs::OpenOptions;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt, SeekFrom};
 use tokio::sync::{mpsc, Mutex};
-use tokio::{fs::OpenOptions, spawn};
 
+use crate::manager::task::TaskManager;
 use crate::worker::DiskReport;
 
 pub type WriteMessage = (u64, u64, u64, Vec<u8>);
@@ -14,6 +15,7 @@ impl super::DownloadWorker {
         file_path: &str,
         total_bytes: u64,
         report: Arc<Mutex<DiskReport>>,
+        task: Arc<TaskManager>,
     ) -> Result<mpsc::UnboundedSender<WriteMessage>, String> {
         let file_exists = fs::metadata(file_path).await.is_ok();
 
@@ -32,7 +34,7 @@ impl super::DownloadWorker {
 
         let (tx, mut rx) = mpsc::unbounded_channel::<WriteMessage>();
 
-        spawn(async move {
+        task.spawn(async move {
             while let Some((chunk_index, start_byte, downloaded_bytes, bytes)) = rx.recv().await {
                 file.seek(SeekFrom::Start(start_byte)).await.unwrap();
                 file.write_all(&bytes).await.unwrap();

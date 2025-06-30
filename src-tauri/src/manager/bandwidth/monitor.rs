@@ -33,13 +33,7 @@ impl super::BandwidthManager {
                     current_total_speed_bps = (*last_total_speed_bps as f32 * 1.1) as u32
                 }
 
-                let download_speed_bps = if chunk_count > 0 {
-                    current_total_speed_bps as f32 / download_count as f32
-                } else {
-                    0.0
-                };
-
-                *bandwidth_limit.lock().await = download_speed_bps / chunk_count as f32;
+                *bandwidth_limit.lock().await = current_total_speed_bps as f32 / chunk_count as f32;
 
                 sleep(Duration::from_secs(1)).await;
             }

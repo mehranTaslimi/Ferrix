@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use tokio::time::sleep;
+use tokio::{task::JoinError, time::sleep};
 
 use crate::{events::dispatch, utils::app_state::AppEvent};
 
@@ -60,7 +60,7 @@ impl super::DownloadWorker {
 
     pub(super) fn classify_results(
         &self,
-        results: Vec<Result<DownloadStatus, i64>>,
+        results: Vec<Result<Result<DownloadStatus, i64>, JoinError>>,
     ) -> WorkerOutcome {
         let mut has_finished = false;
         let mut has_paused = false;
@@ -68,9 +68,9 @@ impl super::DownloadWorker {
 
         for result in &results {
             match result {
-                Ok(DownloadStatus::Finished) => has_finished = true,
-                Ok(DownloadStatus::Paused) => has_paused = true,
-                Err(_) => has_error = true,
+                Ok(Ok(DownloadStatus::Finished)) => has_finished = true,
+                Ok(Ok(DownloadStatus::Paused)) => has_paused = true,
+                Ok(Err(_)) | Err(_) => has_error = true,
             }
         }
 

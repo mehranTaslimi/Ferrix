@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use serde::{Deserialize, Serialize};
-use tokio::{spawn, time::sleep};
+use tokio::time::sleep;
 
 use crate::events::emit_app_event;
 
@@ -33,7 +33,7 @@ impl super::DownloadWorker {
         let app_handle = self.app_handle.clone();
         let report = Arc::clone(&self.internet_report);
 
-        spawn(async move {
+        self.task.spawn(async move {
             loop {
                 if cancellation_token.is_cancelled() {
                     break;
@@ -54,7 +54,7 @@ impl super::DownloadWorker {
         let report = Arc::clone(&self.internet_report);
         let speed_bps = Arc::clone(&self.speed_bps);
 
-        spawn(async move {
+        self.task.spawn(async move {
             loop {
                 if cancellation_token.is_cancelled() {
                     break;
@@ -93,7 +93,7 @@ impl super::DownloadWorker {
         let disk_report = self.disk_report.clone();
         let app_handle = self.app_handle.clone();
         let download_id = self.download.lock().await.id.clone();
-        spawn(async move {
+        self.task.spawn(async move {
             loop {
                 if cancellation_token.is_cancelled() {
                     break;

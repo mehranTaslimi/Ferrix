@@ -1,19 +1,22 @@
 mod bandwidth;
+pub mod task;
 
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use sqlx::SqlitePool;
 use tauri::AppHandle;
 use tokio::{
-    spawn,
     sync::{broadcast::Sender, Mutex},
     time::sleep,
 };
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    events::dispatch, manager::bandwidth::BandwidthManager, models::DownloadId,
-    utils::app_state::AppEvent, worker::DownloadWorker,
+    events::dispatch,
+    manager::{bandwidth::BandwidthManager, task::TaskManager},
+    models::{ChunkCount, DownloadId, FileInfo},
+    utils::app_state::AppEvent,
+    worker::DownloadWorker,
 };
 
 #[derive(Clone)]
@@ -29,10 +32,12 @@ pub struct DownloadsManager {
     app_event: Sender<AppEvent>,
     workers: Arc<Mutex<HashMap<DownloadId, WorkerData>>>,
     bandwidth: BandwidthManager,
+    task: Arc<TaskManager>,
 }
 
 impl DownloadsManager {
     pub fn new(app_event: Sender<AppEvent>, pool: SqlitePool, app_handle: AppHandle) -> Self {
+        let task = TaskManager::new();
         let workers = Arc::new(Mutex::new(HashMap::new()));
         let workers_clone = Arc::clone(&workers);
 
@@ -40,6 +45,7 @@ impl DownloadsManager {
             app_handle,
             pool,
             app_event,
+            task: Arc::clone(&task),
             workers,
             bandwidth: BandwidthManager::new(workers_clone),
         }
@@ -48,59 +54,12 @@ impl DownloadsManager {
     pub async fn manage(&self, app_event: AppEvent) -> Result<(), String> {
         match app_event {
             AppEvent::StartNewDownload(file_info, chunk_count) => {
-                let worker = DownloadWorker::new(
-                    self.pool.clone(),
-                    self.app_handle.clone(),
-                    self.app_event.clone(),
-                    Arc::clone(&self.bandwidth.bandwidth_limit),
-                    None,
-                    Some(file_info),
-                    Some(chunk_count),
-                )
-                .await?;
-
-                self.workers.lock().await.insert(
-                    worker.download_id,
-                    WorkerData {
-                        chunk_count: worker.chunk_count,
-                        speed_bps: Arc::clone(&worker.speed_bps),
-                        cancellation_token: worker.cancellation_token.clone(),
-                    },
-                );
-
-                tokio::spawn(async move {
-                    worker.start_download().await;
-                });
-
-                Ok(())
+                self.create_worker(None, Some(file_info), Some(chunk_count))
+                    .await
             }
 
             AppEvent::ResumeDownload(download_id) => {
-                let worker = DownloadWorker::new(
-                    self.pool.clone(),
-                    self.app_handle.clone(),
-                    self.app_event.clone(),
-                    Arc::clone(&self.bandwidth.bandwidth_limit),
-                    Some(download_id),
-                    None,
-                    None,
-                )
-                .await?;
-
-                self.workers.lock().await.insert(
-                    worker.download_id,
-                    WorkerData {
-                        chunk_count: worker.chunk_count,
-                        speed_bps: Arc::clone(&worker.speed_bps),
-                        cancellation_token: worker.cancellation_token.clone(),
-                    },
-                );
-
-                tokio::spawn(async move {
-                    worker.start_download().await;
-                });
-
-                Ok(())
+                self.create_worker(Some(download_id), None, None).await
             }
 
             AppEvent::PauseDownload(download_id) => {
@@ -126,7 +85,7 @@ impl DownloadsManager {
                 let app_handle = self.app_handle.clone();
                 let workers = Arc::clone(&self.workers);
 
-                spawn(async move {
+                self.task.spawn(async move {
                     loop {
                         if workers.lock().await.is_empty() {
                             app_handle.exit(0);
@@ -146,5 +105,39 @@ impl DownloadsManager {
                 Ok(())
             }
         }
+    }
+
+    async fn create_worker(
+        &self,
+        download_id: Option<DownloadId>,
+        file_info: Option<FileInfo>,
+        chunk_count: Option<ChunkCount>,
+    ) -> Result<(), String> {
+        let worker = DownloadWorker::new(
+            self.pool.clone(),
+            self.app_handle.clone(),
+            self.app_event.clone(),
+            Arc::clone(&self.bandwidth.bandwidth_limit),
+            Arc::clone(&self.task),
+            download_id,
+            file_info,
+            chunk_count,
+        )
+        .await?;
+
+        self.workers.lock().await.insert(
+            worker.download_id,
+            WorkerData {
+                chunk_count: worker.chunk_count,
+                speed_bps: Arc::clone(&worker.speed_bps),
+                cancellation_token: worker.cancellation_token.clone(),
+            },
+        );
+
+        self.task.spawn(async move {
+            worker.start_download().await;
+        });
+
+        Ok(())
     }
 }

@@ -11,6 +11,7 @@ use crate::{
         insert_new_download, reset_downloaded_chunks, update_download_status,
     },
     events::emit_app_event,
+    manager::task::TaskManager,
     models::{Chunk, ChunkCount, Download, DownloadId, FileInfo},
     utils::app_state::AppEvent,
     worker::{
@@ -35,6 +36,7 @@ pub struct DownloadWorker {
     disk_report: Arc<Mutex<DiskReport>>,
     app_event: Sender<AppEvent>,
     bandwidth_limit: Arc<Mutex<f32>>,
+    task: Arc<TaskManager>,
     pub cancellation_token: CancellationToken,
     pub download_id: DownloadId,
     pub chunk_count: ChunkCount,
@@ -47,6 +49,7 @@ impl DownloadWorker {
         app_handle: AppHandle,
         app_event: Sender<AppEvent>,
         bandwidth_limit: Arc<Mutex<f32>>,
+        task: Arc<TaskManager>,
         download_id: Option<DownloadId>,
         file_info: Option<FileInfo>,
         chunk_count: Option<ChunkCount>,
@@ -86,6 +89,7 @@ impl DownloadWorker {
             &download.file_path,
             download.total_bytes as u64,
             Arc::clone(&disk_report),
+            Arc::clone(&task),
         )
         .await?;
 
@@ -103,6 +107,7 @@ impl DownloadWorker {
             bandwidth_limit,
             internet_report,
             disk_report,
+            task,
             chunk_count,
             speed_bps: Arc::new(Mutex::new(0)),
         })

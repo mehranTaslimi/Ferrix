@@ -23,12 +23,14 @@ impl super::DownloadWorker {
         let _ = self.emit_and_update_download_status("downloading").await;
 
         loop {
-            let mut futures = self
-                .not_downloaded_chunks()
-                .await
-                .map(|chunk| async move { self.download_chunk(chunk).await });
+            let mut futures = self.not_downloaded_chunks().await.map(|chunk| {
+                let self_clone = self.clone();
+                self.task
+                    .spawn(async move { self_clone.download_chunk(chunk).await })
+            });
 
             let results = join_all(&mut futures).await;
+
             let outcome = self.classify_results(results);
 
             match outcome {
