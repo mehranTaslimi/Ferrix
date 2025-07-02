@@ -1,7 +1,11 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::Arc,
+    time::Duration,
+};
 
 use serde::{Deserialize, Serialize};
-use tokio::time::sleep;
+use tokio::{sync::Mutex, time::sleep};
 
 use crate::events::emit_app_event;
 
@@ -15,6 +19,7 @@ pub(super) struct SpeedAndRemaining {
 pub(super) struct InternetReport {
     pub(super) downloaded_bytes: u64,
     pub(super) received_bytes: f64,
+    pub(super) received_bytes_history: Arc<Mutex<VecDeque<f64>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -33,7 +38,8 @@ impl super::DownloadWorker {
         let app_handle = self.app_handle.clone();
         let report = Arc::clone(&self.internet_report);
 
-        self.task.spawn(async move {
+        let task_name = format!("downloaded bytes reporter: {}", self.download_id);
+        self.task.spawn(&task_name, async move {
             loop {
                 if cancellation_token.is_cancelled() {
                     break;
@@ -54,7 +60,8 @@ impl super::DownloadWorker {
         let report = Arc::clone(&self.internet_report);
         let speed_bps = Arc::clone(&self.speed_bps);
 
-        self.task.spawn(async move {
+        let task_name = format!("speed reporter: {}", self.download_id);
+        self.task.spawn(&task_name, async move {
             loop {
                 if cancellation_token.is_cancelled() {
                     break;
@@ -64,9 +71,22 @@ impl super::DownloadWorker {
 
                 let mut report = report.lock().await;
 
-                *speed_bps.lock().await = report.received_bytes as u64;
+                let history = Arc::clone(&report.received_bytes_history);
+                let mut history = history.lock().await;
 
-                let speed = report.received_bytes as f64 / 1024.0;
+                history.push_back(report.received_bytes);
+
+                report.received_bytes = 0.0;
+
+                if history.len() > 10 {
+                    history.pop_front();
+                };
+
+                let speed_history_avg = history.iter().sum::<f64>() / history.len() as f64;
+
+                *speed_bps.lock().await = speed_history_avg as u64;
+
+                let speed = speed_history_avg / 1024.0;
 
                 let remaining_time = total_bytes.saturating_sub(report.downloaded_bytes as i64)
                     as f64
@@ -82,8 +102,6 @@ impl super::DownloadWorker {
                         remaining_time,
                     },
                 );
-
-                report.received_bytes = 0.0;
             }
         });
     }
@@ -93,7 +111,9 @@ impl super::DownloadWorker {
         let disk_report = self.disk_report.clone();
         let app_handle = self.app_handle.clone();
         let download_id = self.download.lock().await.id.clone();
-        self.task.spawn(async move {
+
+        let task_name = format!("disk reporter: {}", self.download_id);
+        self.task.spawn(&task_name, async move {
             loop {
                 if cancellation_token.is_cancelled() {
                     break;

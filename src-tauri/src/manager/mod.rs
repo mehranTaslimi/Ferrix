@@ -21,7 +21,6 @@ use crate::{
 
 #[derive(Clone)]
 struct WorkerData {
-    chunk_count: i64,
     speed_bps: Arc<Mutex<u64>>,
     cancellation_token: CancellationToken,
 }
@@ -37,17 +36,17 @@ pub struct DownloadsManager {
 
 impl DownloadsManager {
     pub fn new(app_event: Sender<AppEvent>, pool: SqlitePool, app_handle: AppHandle) -> Self {
-        let task = TaskManager::new();
+        let task = Arc::new(TaskManager::new());
         let workers = Arc::new(Mutex::new(HashMap::new()));
-        let workers_clone = Arc::clone(&workers);
+        let bandwidth = BandwidthManager::new(Arc::clone(&workers), Arc::clone(&task));
 
         Self {
             app_handle,
             pool,
             app_event,
-            task: Arc::clone(&task),
+            task,
             workers,
-            bandwidth: BandwidthManager::new(workers_clone),
+            bandwidth,
         }
     }
 
@@ -85,7 +84,7 @@ impl DownloadsManager {
                 let app_handle = self.app_handle.clone();
                 let workers = Arc::clone(&self.workers);
 
-                self.task.spawn(async move {
+                self.task.spawn("app close", async move {
                     loop {
                         if workers.lock().await.is_empty() {
                             app_handle.exit(0);
@@ -128,13 +127,13 @@ impl DownloadsManager {
         self.workers.lock().await.insert(
             worker.download_id,
             WorkerData {
-                chunk_count: worker.chunk_count,
                 speed_bps: Arc::clone(&worker.speed_bps),
                 cancellation_token: worker.cancellation_token.clone(),
             },
         );
 
-        self.task.spawn(async move {
+        let task_name = format!("start download: {}", worker.download_id);
+        self.task.spawn(&task_name, async move {
             worker.start_download().await;
         });
 

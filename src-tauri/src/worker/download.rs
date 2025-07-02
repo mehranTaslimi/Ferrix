@@ -1,12 +1,9 @@
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{sync::Arc, time::Duration};
 
 use futures_util::{future::join_all, StreamExt};
 use tauri::http::header::RANGE;
 use tauri_plugin_http::reqwest::Client;
-use tokio::time::sleep;
+use tokio::time::timeout;
 
 use crate::{
     models::Chunk,
@@ -25,8 +22,14 @@ impl super::DownloadWorker {
         loop {
             let mut futures = self.not_downloaded_chunks().await.map(|chunk| {
                 let self_clone = self.clone();
-                self.task
-                    .spawn(async move { self_clone.download_chunk(chunk).await })
+                let task_name = format!(
+                    "chunk download: {}, index: {}",
+                    self_clone.download_id, chunk.chunk_index
+                );
+                self.task.spawn(
+                    &task_name,
+                    async move { self_clone.download_chunk(chunk).await },
+                )
             });
 
             let results = join_all(&mut futures).await;
@@ -75,10 +78,9 @@ impl super::DownloadWorker {
 
         let mut stream = response.bytes_stream();
         let mut downloaded = downloaded_bytes as u64;
-        let mut downloaded_in_one_sec = 0f32;
+
         let report = Arc::clone(&self.internet_report);
         let cancellation_token = self.cancellation_token.clone();
-        let mut start = Instant::now();
 
         loop {
             tokio::select! {
@@ -89,9 +91,9 @@ impl super::DownloadWorker {
                     return Ok(DownloadStatus::Paused);
                 }
 
-                maybe_bytes = stream.next() => {
+                maybe_bytes = timeout(Duration::from_secs(1), stream.next()) => {
                     match maybe_bytes {
-                        Some(Ok(bytes)) => {
+                        Ok(Some(Ok(bytes))) => {
 
                             let bytes_len = bytes.len() as u64;
 
@@ -104,25 +106,9 @@ impl super::DownloadWorker {
                                 ))
                                 .map_err(|e| e.to_string()).map_err(|_| chunk_index)?;
 
+                            self.limiter(bytes_len as u32).await;
+
                             downloaded += bytes_len;
-                            downloaded_in_one_sec += bytes_len as f32;
-
-                            let bandwidth_limit = *self.bandwidth_limit.lock().await;
-                            let elapsed = start.elapsed().as_secs_f32();
-                            let current_speed = downloaded_in_one_sec / elapsed;
-
-                            if current_speed > bandwidth_limit {
-                                let expected_time = downloaded_in_one_sec / bandwidth_limit;
-                                let sleep_duration = expected_time - elapsed;
-                                if sleep_duration > 0.001 {
-                                    sleep(Duration::from_secs_f32(sleep_duration)).await;
-                                }
-                            }
-
-                            if elapsed >= 1.0 {
-                                start = Instant::now();
-                                downloaded_in_one_sec = 0.0;
-                            }
 
                             let mut report = report.lock().await;
                             report.downloaded_bytes += bytes_len;
@@ -130,14 +116,18 @@ impl super::DownloadWorker {
 
 
                         },
-                        Some(Err(err)) => {
+                        Ok(Some(Err(err))) => {
                             self.update_chunk(chunk_index, true, &err.to_string()).await.map_err(|_| chunk_index)?;
                             return Err(chunk_index);
                         },
-                        None => {
+                        Ok(None) => {
                             self.update_chunk(chunk_index, false, "").await.map_err(|_| chunk_index)?;
                             return Ok(DownloadStatus::Finished);
                         },
+                        Err(_) => {
+                            self.update_chunk(chunk_index, true, "timeout").await.map_err(|_| chunk_index)?;
+                            return Err(chunk_index);
+                        }
                     }
                 }
 

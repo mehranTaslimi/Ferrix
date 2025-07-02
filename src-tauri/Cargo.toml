@@ -7,6 +7,20 @@ edition = "2021"
 
 [profile.dev]
 incremental = true
+opt-level = 0
+debug = true
+
+[profile.dev.package."*"]
+opt-level = 1
+debug = false
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
+
 
 [target.aarch64-apple-darwin]
 rustflags = ["-C", "link-arg=-fuse-ld=lld"]

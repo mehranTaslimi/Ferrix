@@ -1,3 +1,4 @@
+mod bandwidth_limiter;
 mod chunk;
 mod download;
 mod file;
@@ -15,12 +16,13 @@ use crate::{
     models::{Chunk, ChunkCount, Download, DownloadId, FileInfo},
     utils::app_state::AppEvent,
     worker::{
+        bandwidth_limiter::Limiter,
         file::WriteMessage,
         reporter::{DiskReport, InternetReport},
     },
 };
 use sqlx::SqlitePool;
-use std::sync::Arc;
+use std::{collections::VecDeque, sync::Arc};
 use tauri::AppHandle;
 use tokio::sync::{broadcast::Sender, mpsc, Mutex};
 use tokio_util::sync::CancellationToken;
@@ -37,6 +39,7 @@ pub struct DownloadWorker {
     app_event: Sender<AppEvent>,
     bandwidth_limit: Arc<Mutex<f32>>,
     task: Arc<TaskManager>,
+    limiter: Limiter,
     pub cancellation_token: CancellationToken,
     pub download_id: DownloadId,
     pub chunk_count: ChunkCount,
@@ -73,6 +76,7 @@ impl DownloadWorker {
         let internet_report = Arc::new(Mutex::new(InternetReport {
             downloaded_bytes,
             received_bytes: 0.0,
+            received_bytes_history: Arc::new(Mutex::new(VecDeque::with_capacity(10))),
         }));
 
         let disk_report = Arc::new(Mutex::new(DiskReport {
@@ -95,6 +99,11 @@ impl DownloadWorker {
 
         let cancellation_token = CancellationToken::new();
 
+        let limiter = Limiter {
+            duration: Arc::new(Mutex::new(None)),
+            downloaded_bytes: Arc::new(Mutex::new(0)),
+        };
+
         Ok(Self {
             pool,
             download: Arc::new(Mutex::new(download)),
@@ -102,6 +111,7 @@ impl DownloadWorker {
             download_id,
             app_event,
             file_writer,
+            limiter,
             app_handle,
             cancellation_token,
             bandwidth_limit,
