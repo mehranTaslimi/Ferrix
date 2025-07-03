@@ -1,0 +1,70 @@
+use mime2ext::mime2ext;
+use std::path::Path;
+use tauri::http::{
+    header::{ACCEPT_RANGES, CONTENT_DISPOSITION, CONTENT_LENGTH, CONTENT_TYPE},
+    Method,
+};
+
+#[derive(Clone, Debug)]
+pub struct InspectResponse {
+    supports_range: bool,
+    content_length: u64,
+    content_type: String,
+    file_name: String,
+    extension: String,
+    url: String,
+}
+
+impl super::Client {
+    pub async fn inspect(&self) -> Result<InspectResponse, String> {
+        let request = self.client.request(Method::HEAD, &self.url);
+        let request = Self::auth_handler(request, &self.auth);
+
+        let response = request.send().await.map_err(|e| e.to_string())?;
+
+        let final_url = response.url();
+        let headers = response.headers();
+
+        let supports_range = headers
+            .get(ACCEPT_RANGES)
+            .map(|v| v == "bytes")
+            .unwrap_or(false);
+
+        let content_length = headers
+            .get(CONTENT_LENGTH)
+            .and_then(|f| f.to_str().ok())
+            .and_then(|f| f.parse::<u64>().ok())
+            .unwrap_or(0);
+
+        let content_type = headers
+            .get(CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+
+        let file_name = headers
+            .get(CONTENT_DISPOSITION)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| {
+                v.split(';')
+                    .find_map(|part| part.trim().strip_prefix("filename="))
+                    .map(|name| name.trim_matches('"'))
+            })
+            .or_else(|| {
+                final_url
+                    .path_segments()
+                    .and_then(|segments| segments.last())
+            })
+            .unwrap_or("");
+
+        let extension = mime2ext(content_type).unwrap_or("bin");
+
+        Ok(InspectResponse {
+            url: final_url.to_string(),
+            file_name: file_name.to_string(),
+            content_type: content_type.to_string(),
+            content_length,
+            extension: extension.to_string(),
+            supports_range,
+        })
+    }
+}

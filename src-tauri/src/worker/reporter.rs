@@ -26,6 +26,7 @@ pub(super) struct InternetReport {
 pub(super) struct DiskReport {
     pub(super) wrote_bytes: u64,
     pub(super) received_bytes: u64,
+    pub(super) received_bytes_history: Arc<Mutex<VecDeque<f64>>>,
     pub(super) chunks: HashMap<u64, u64>,
 }
 
@@ -123,7 +124,20 @@ impl super::DownloadWorker {
 
                 let mut report = disk_report.lock().await;
 
-                let speed = report.received_bytes as f64 / 1024.0;
+                let history = Arc::clone(&report.received_bytes_history);
+                let mut history = history.lock().await;
+
+                history.push_back(report.received_bytes as f64);
+
+                report.received_bytes = 0;
+
+                if history.len() > 10 {
+                    history.pop_front();
+                };
+
+                let speed_history_avg = history.iter().sum::<f64>() / history.len() as f64;
+
+                let speed = speed_history_avg as f64 / 1024.0;
 
                 let disk_speed_event = format!("disk_speed_{}", download_id);
                 let wrote_bytes_event = format!("wrote_bytes_{}", download_id);

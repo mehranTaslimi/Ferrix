@@ -1,5 +1,5 @@
 [package]
-name = "ferrix"
+name = "Ferrix"
 version = "0.1.0"
 description = "Awesome Download Manager App"
 authors = ["Mehran Taslimi"]
@@ -9,10 +9,6 @@ edition = "2021"
 incremental = true
 opt-level = 0
 debug = true
-
-[profile.dev.package."*"]
-opt-level = 1
-debug = false
 
 [profile.release]
 panic = "abort"
@@ -54,4 +50,5 @@ dirs-next = "2.0.0"
 tokio-util = "0.7.15"
 window-vibrancy = "0.6.0"
 num_cpus = "1.17.0"
+mime2ext = "0.1.54"
 

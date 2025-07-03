@@ -15,7 +15,7 @@ impl super::DownloadWorker {
     pub async fn validate_and_inspect_url(url: &str) -> Result<FileInfo, String> {
         let parsed_url = Url::parse(url).map_err(|e| e.to_string())?;
 
-        let client = Client::new();
+        let client = Client::builder().build().map_err(|e| e.to_string())?;
 
         let response = client
             .head(parsed_url.clone())

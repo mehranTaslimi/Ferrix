@@ -67,7 +67,7 @@ impl super::DownloadWorker {
         let url = self.download.lock().await.url.clone();
         let range_header = format!("bytes={}-{}", start_byte + downloaded_bytes, end_byte);
 
-        let client = Client::new();
+        let client = Client::builder().build().map_err(|_| chunk_index)?;
 
         let response = client
             .get(url)

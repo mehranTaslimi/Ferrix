@@ -28,7 +28,7 @@ impl super::BandwidthManager {
                 if current_bps > *prev_bps {
                     *prev_bps = current_bps
                 } else {
-                    current_bps = (current_bps as f32 + 0.1) as u32
+                    current_bps *= 2
                 }
 
                 *bandwidth_limit.lock().await = current_bps as f32 / download_count as f32;

@@ -29,7 +29,6 @@ impl super::DownloadWorker {
         let hash =
             Self::compute_partial_hash(&self.download.lock().await.file_path, 0, downloaded_bytes)?;
         update_chunk_downloaded(
-            &self.pool,
             self.download_id,
             chunk_index,
             downloaded_bytes as i64,

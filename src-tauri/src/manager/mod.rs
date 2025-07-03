@@ -1,7 +1,7 @@
 mod bandwidth;
 pub mod task;
 
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, os::unix::process, sync::Arc, time::Duration};
 
 use sqlx::SqlitePool;
 use tauri::AppHandle;
@@ -26,7 +26,6 @@ struct WorkerData {
 }
 
 pub struct DownloadsManager {
-    pool: SqlitePool,
     app_handle: AppHandle,
     app_event: Sender<AppEvent>,
     workers: Arc<Mutex<HashMap<DownloadId, WorkerData>>>,
@@ -35,14 +34,13 @@ pub struct DownloadsManager {
 }
 
 impl DownloadsManager {
-    pub fn new(app_event: Sender<AppEvent>, pool: SqlitePool, app_handle: AppHandle) -> Self {
+    pub fn new(app_event: Sender<AppEvent>, app_handle: AppHandle) -> Self {
         let task = Arc::new(TaskManager::new());
         let workers = Arc::new(Mutex::new(HashMap::new()));
         let bandwidth = BandwidthManager::new(Arc::clone(&workers), Arc::clone(&task));
 
         Self {
             app_handle,
-            pool,
             app_event,
             task,
             workers,
@@ -84,7 +82,7 @@ impl DownloadsManager {
                 let app_handle = self.app_handle.clone();
                 let workers = Arc::clone(&self.workers);
 
-                self.task.spawn("app close", async move {
+                self.task.spawn("exit_app", async move {
                     loop {
                         if workers.lock().await.is_empty() {
                             app_handle.exit(0);
@@ -113,7 +111,6 @@ impl DownloadsManager {
         chunk_count: Option<ChunkCount>,
     ) -> Result<(), String> {
         let worker = DownloadWorker::new(
-            self.pool.clone(),
             self.app_handle.clone(),
             self.app_event.clone(),
             Arc::clone(&self.bandwidth.bandwidth_limit),

@@ -1,12 +1,13 @@
-use sqlx::SqlitePool;
-
-use crate::models::{Chunk, ChunkCount, Download, FileInfo};
+use crate::{
+    models::{Chunk, ChunkCount, Download, FileInfo},
+    registry::STATE,
+};
 
 pub async fn insert_new_download(
-    pool: &SqlitePool,
     file_info: FileInfo,
     chunk_count: ChunkCount,
 ) -> Result<i64, String> {
+    let pool = &STATE.get().expect("STATE not initialized").pool;
     let status = "queued";
     sqlx::query!(
         "INSERT INTO downloads (status, file_path, chunk_count, url, total_bytes, file_name, extension, content_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -25,11 +26,8 @@ pub async fn insert_new_download(
     .map_err(|e| e.to_string())
 }
 
-pub async fn insert_download_chunks(
-    pool: &SqlitePool,
-    id: i64,
-    ranges: Vec<(u64, u64)>,
-) -> Result<(), String> {
+pub async fn insert_download_chunks(id: i64, ranges: Vec<(u64, u64)>) -> Result<(), String> {
+    let pool = &STATE.get().expect("STATE not initialized").pool;
     for (i, (start, end)) in ranges.iter().enumerate() {
         let chunk_index = i as i64;
         let start = *start as i64;
@@ -44,7 +42,8 @@ pub async fn insert_download_chunks(
     Ok(())
 }
 
-pub async fn get_downloads_by_id(pool: &SqlitePool, id: i64) -> Result<Download, String> {
+pub async fn get_downloads_by_id(id: i64) -> Result<Download, String> {
+    let pool = &STATE.get().expect("STATE not initialized").pool;
     sqlx::query_as!(
         Download,
         r#"
@@ -82,7 +81,8 @@ WHERE
     .map_err(|e| e.to_string())
 }
 
-pub async fn get_downloads_list(pool: &SqlitePool) -> Result<Vec<Download>, String> {
+pub async fn get_downloads_list() -> Result<Vec<Download>, String> {
+    let pool = &STATE.get().expect("STATE not initialized").pool;
     sqlx::query_as!(
         Download,
         r#"
@@ -120,11 +120,8 @@ ORDER BY
     .map_err(|e| e.to_string())
 }
 
-pub async fn update_download_status(
-    pool: &SqlitePool,
-    id: i64,
-    status: &str,
-) -> Result<(), String> {
+pub async fn update_download_status(id: i64, status: &str) -> Result<(), String> {
+    let pool = &STATE.get().expect("STATE not initialized").pool;
     sqlx::query!("UPDATE downloads SET status = ? WHERE id = ?", status, id)
         .execute(pool)
         .await
@@ -132,10 +129,8 @@ pub async fn update_download_status(
         .map_err(|e| e.to_string())
 }
 
-pub async fn get_download_chunks_by_download_id(
-    pool: &SqlitePool,
-    id: i64,
-) -> Result<Vec<Chunk>, String> {
+pub async fn get_download_chunks_by_download_id(id: i64) -> Result<Vec<Chunk>, String> {
+    let pool = &STATE.get().expect("STATE not initialized").pool;
     sqlx::query_as!(
         Chunk,
         r#"SELECT dc.download_id,
@@ -160,7 +155,6 @@ pub async fn get_download_chunks_by_download_id(
 }
 
 pub async fn update_chunk_downloaded(
-    pool: &SqlitePool,
     download_id: i64,
     chunk_index: i64,
     downloaded_bytes: i64,
@@ -168,6 +162,7 @@ pub async fn update_chunk_downloaded(
     has_error: bool,
     error_message: &str,
 ) -> Result<(), String> {
+    let pool = &STATE.get().expect("STATE not initialized").pool;
     sqlx::query!(
         "UPDATE download_chunks SET (downloaded_bytes, expected_hash, has_error, error_message) = (?, ?, ?, ?) WHERE download_id = ? AND chunk_index = ?",
         downloaded_bytes,
@@ -184,10 +179,10 @@ pub async fn update_chunk_downloaded(
 }
 
 pub async fn reset_downloaded_chunks(
-    pool: &SqlitePool,
     download_id: i64,
     chunk_indexes: Vec<i64>,
 ) -> Result<(), String> {
+    let pool = &STATE.get().expect("STATE not initialized").pool;
     let query = format!(
         "UPDATE download_chunks SET downloaded_bytes = 0, expected_hash = NULL WHERE download_id = ? AND chunk_index IN ({})",
         chunk_indexes.iter().map(|_| "?").collect::<Vec<_>>().join(", ")
