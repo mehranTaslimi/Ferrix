@@ -1,7 +1,5 @@
 use tokio::sync::broadcast;
 
-use crate::models::{ChunkCount, DownloadId, FileInfo};
-
 pub struct AppState {
     pub broadcast_tx: broadcast::Sender<AppEvent>,
 }
@@ -14,12 +12,12 @@ impl AppState {
 
 #[derive(Clone, Debug)]
 pub enum AppEvent {
-    StartNewDownload(FileInfo, ChunkCount),
-    PauseDownload(DownloadId),
-    ResumeDownload(DownloadId),
-    DownloadFinished(DownloadId),
-    DownloadPaused(DownloadId),
-    DownloadFailed(DownloadId),
-    PauseAllDownload,
-    ForcePauseAllDownloadWorkers,
+    // StartNewDownload(FileInfo, ChunkCount),
+    // PauseDownload(DownloadId),
+    // ResumeDownload(DownloadId),
+    // DownloadFinished(DownloadId),
+    // DownloadPaused(DownloadId),
+    // DownloadFailed(DownloadId),
+    // PauseAllDownload,
+    // ForcePauseAllDownloadWorkers,
 }

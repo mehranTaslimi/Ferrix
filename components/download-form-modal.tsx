@@ -24,9 +24,11 @@ export default function DownloadFormModal({ open, onOpenChange }: DownloadFormMo
 
         setIsLoading(true)
         try {
-            await invoke("add_download_queue", {
+            await invoke("add_new_download", {
                 url: url.trim(),
-                chunk: Number.parseInt(chunk) || 5,
+                options: {
+                    chunk_count: 5
+                }
             })
             // Reset form and close modal on success
             setUrl("")

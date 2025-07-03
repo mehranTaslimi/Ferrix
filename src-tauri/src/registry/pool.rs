@@ -1,6 +1,10 @@
 use sqlx::SqlitePool;
 
 impl super::Registry {
+    pub fn get_pool() -> &'static SqlitePool {
+        &Self::get_state().pool
+    }
+
     pub(super) async fn init_db() -> SqlitePool {
         let db_url = Self::get_db_url();
 

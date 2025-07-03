@@ -7,13 +7,8 @@ mod reporter;
 pub mod validation;
 
 use crate::{
-    db::downloads::{
-        get_download_chunks_by_download_id, get_downloads_by_id, insert_download_chunks,
-        insert_new_download, reset_downloaded_chunks, update_download_status,
-    },
     events::emit_app_event,
     manager::task::TaskManager,
-    models::{Chunk, ChunkCount, Download, DownloadId, FileInfo},
     utils::app_state::AppEvent,
     worker::{
         bandwidth_limiter::Limiter,

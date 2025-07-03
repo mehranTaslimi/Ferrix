@@ -2,13 +2,15 @@ use std::{sync::Arc, time::Duration};
 
 use tokio::time::sleep;
 
+use crate::registry::Registry;
+
 impl super::BandwidthManager {
     pub(super) fn monitor_bandwidth(&self) {
         let workers = Arc::clone(&self.workers);
         let bandwidth_limit = Arc::clone(&self.bandwidth_limit);
         let prev_bps = Arc::clone(&self.prev_bps);
 
-        self.task.spawn("monitor bandwidth", async move {
+        Registry::spawn("monitor bandwidth", async move {
             loop {
                 let workers = workers.lock().await;
                 let mut prev_bps = prev_bps.lock().await;

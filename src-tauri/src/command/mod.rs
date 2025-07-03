@@ -1,10 +1,10 @@
 use tauri::State;
 
 use crate::{
-    events::dispatch,
     models::Download,
     registry::{DownloadOptions, Registry, RegistryAction},
-    utils::app_state::{AppEvent, AppState},
+    repository::download::DownloadRepository,
+    utils::app_state::AppState,
 };
 
 #[tauri::command]
@@ -13,16 +13,14 @@ pub async fn add_new_download(url: String, options: DownloadOptions) -> Result<(
 }
 
 #[tauri::command]
-pub async fn get_download_list(state: State<'_, AppState>) -> Result<Vec<Download>, String> {
-    crate::db::downloads::get_downloads_list().await
+pub async fn get_download_list() -> Result<Vec<Download>, String> {
+    DownloadRepository::find_all()
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn pause_download(state: State<'_, AppState>, id: i64) {
-    dispatch(&state.broadcast_tx, AppEvent::PauseDownload(id));
-}
+pub fn pause_download(state: State<'_, AppState>, id: i64) {}
 
 #[tauri::command]
-pub fn resume_download(state: State<'_, AppState>, id: i64) {
-    dispatch(&state.broadcast_tx, AppEvent::ResumeDownload(id));
-}
+pub fn resume_download(state: State<'_, AppState>, id: i64) {}

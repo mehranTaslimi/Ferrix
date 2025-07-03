@@ -7,12 +7,12 @@ use tauri::http::{
 
 #[derive(Clone, Debug)]
 pub struct InspectResponse {
-    supports_range: bool,
-    content_length: u64,
-    content_type: String,
-    file_name: String,
-    extension: String,
-    url: String,
+    pub supports_range: bool,
+    pub content_length: u64,
+    pub content_type: String,
+    pub file_name: String,
+    pub extension: String,
+    pub url: String,
 }
 
 impl super::Client {

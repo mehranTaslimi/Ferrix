@@ -51,4 +51,6 @@ tokio-util = "0.7.15"
 window-vibrancy = "0.6.0"
 num_cpus = "1.17.0"
 mime2ext = "0.1.54"
+thiserror = "2.0.12"
+async-trait = "0.1.88"
 

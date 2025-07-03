@@ -1,4 +1,4 @@
-use crate::{db::downloads::update_chunk_downloaded, models::Chunk};
+use crate::db::downloads::update_chunk_downloaded;
 use md5::{Digest, Md5};
 use std::{
     fs::File,
@@ -43,29 +43,6 @@ impl super::DownloadWorker {
         chunk.error_message = Some(error_message.to_string());
 
         Ok(())
-    }
-
-    pub(super) fn get_chunk_ranges(
-        content_length: u64,
-        chunk: u8,
-    ) -> Result<Vec<(u64, u64)>, String> {
-        let chunk = chunk as u64;
-        let mut ranges = Vec::with_capacity(chunk as usize);
-
-        let base_chunk_size = content_length / chunk;
-        let remainder = content_length % chunk;
-
-        let mut start = 0;
-
-        for i in 0..chunk {
-            let extra = if i < remainder { 1 } else { 0 };
-            let end = start + base_chunk_size + extra - 1;
-
-            ranges.push((start, end));
-            start = end + 1;
-        }
-
-        Ok(ranges)
     }
 
     pub(super) fn compute_partial_hash(

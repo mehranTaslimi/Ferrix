@@ -1,7 +1,4 @@
-use crate::{
-    models::{Chunk, ChunkCount, Download, FileInfo},
-    registry::STATE,
-};
+use crate::{models::Download, registry::STATE};
 
 pub async fn insert_new_download(
     file_info: FileInfo,
