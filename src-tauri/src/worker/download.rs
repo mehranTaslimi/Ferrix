@@ -9,7 +9,6 @@ use tauri_plugin_http::reqwest::Client;
 use tokio::time::timeout;
 
 use crate::{
-    // models::Chunk,
     models::DownloadChunk,
     registry::Registry,
     worker::outcome::{DownloadStatus, WorkerOutcome},
@@ -98,14 +97,14 @@ impl super::DownloadWorker {
 
                             let bytes_len = bytes.len() as u64;
 
-                            // self.file
-                            //     .send((
-                            //         chunk_index as u64,
-                            //         (start_byte + downloaded_bytes) as u64,
-                            //         bytes_len,
-                            //         bytes.to_vec(),
-                            //     ))
-                            //     .map_err(|e| e.to_string()).map_err(|_| chunk_index)?;
+                            self.file
+                                .send((
+                                    chunk_index as u64,
+                                    (start_byte + downloaded_bytes) as u64,
+                                    bytes_len,
+                                    bytes.to_vec(),
+                                ))
+                                .map_err(|e| e.to_string()).map_err(|_| chunk_index)?;
 
                             // self.limiter(bytes_len as u32).await;
 
@@ -116,7 +115,7 @@ impl super::DownloadWorker {
                                 report.total_downloaded_bytes.fetch_add(bytes_len, Ordering::Relaxed);
                             };
                         },
-                        Ok(Some(Err(err))) => {
+                        Ok(Some(Err(_))) => {
                             // self.update_chunk(chunk_index, true, &err.to_string()).await.map_err(|_| chunk_index)?;
                             return Err(chunk_index);
                         },

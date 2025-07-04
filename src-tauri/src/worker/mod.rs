@@ -24,7 +24,7 @@ pub mod validation;
 pub struct DownloadWorker {
     download_id: i64,
     download_ref: Arc<Mutex<DownloadWithChunk>>,
-    // file: mpsc::UnboundedSender<WriteMessage>,
+    file: mpsc::UnboundedSender<WriteMessage>,
     pub cancellation_token: CancellationToken,
 }
 
@@ -64,24 +64,24 @@ impl DownloadWorker {
             },
         );
 
-        // let file = match File::new(
-        //     download_id,
-        //     &download_ref_clone.download.file_path,
-        //     download_ref_clone.download.total_bytes as u64,
-        // )
-        // .await
-        // {
-        //     Ok(f) => f,
-        //     Err(err) => {
-        //         Emitter::emit_error(err);
-        //         return Err(());
-        //     }
-        // };
+        let file = match File::new(
+            download_id,
+            &download_ref_clone.download.file_path,
+            download_ref_clone.download.total_bytes as u64,
+        )
+        .await
+        {
+            Ok(f) => f,
+            Err(err) => {
+                Emitter::emit_error(err);
+                return Err(());
+            }
+        };
 
         let worker = Self {
             cancellation_token,
             download_id,
-            // file,
+            file,
             download_ref,
         };
 

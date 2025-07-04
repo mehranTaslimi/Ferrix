@@ -1,5 +1,4 @@
 use mime2ext::mime2ext;
-use std::path::Path;
 use tauri::http::{
     header::{ACCEPT_RANGES, CONTENT_DISPOSITION, CONTENT_LENGTH, CONTENT_TYPE},
     Method,

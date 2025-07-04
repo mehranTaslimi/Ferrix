@@ -7,6 +7,7 @@ use tokio::sync::Mutex;
 use crate::{
     client::{AuthType, Client, ProxyType},
     emitter::Emitter,
+    file::File,
     models::{DownloadWithChunk, NewDownload, UpdateDownload},
     repository::{chunk::ChunkRepository, download::DownloadRepository},
 };
@@ -31,6 +32,16 @@ impl super::Registry {
         let client = Client::new(&url, AuthType::None, ProxyType::None)?;
         let response = client.inspect().await?;
 
+        let file_path = match options.file_path {
+            Some(path) => path,
+            None => {
+                let default_path = File::get_default_path(&response.file_name).await?;
+                File::get_available_filename(&default_path).await?
+            }
+        };
+
+        let file_name = File::get_file_name(&file_path)?;
+
         let new_download = NewDownload {
             auth: serde_json::to_string(&options.auth).ok(),
             backoff_factor: options.backoff_factor,
@@ -39,8 +50,8 @@ impl super::Registry {
             cookies: serde_json::to_string(&options.cookies).ok(),
             delay_secs: options.delay_secs,
             extension: response.extension,
-            file_name: response.file_name,
-            file_path: options.file_path.unwrap_or("".to_string()),
+            file_name,
+            file_path,
             headers: serde_json::to_string(&options.headers).ok(),
             max_retries: options.max_retries,
             proxy: serde_json::to_string(&options.proxy).ok(),

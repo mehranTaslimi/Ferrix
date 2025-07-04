@@ -1,8 +1,6 @@
-use std::{sync::Arc, time::Duration};
-
-use tokio::time::sleep;
-
 use crate::{registry::Registry, worker::DownloadWorker};
+use std::{sync::Arc, time::Duration};
+use tokio::time::sleep;
 
 impl super::DownloadsManager {
     pub(super) fn pending_queue_monitor() {

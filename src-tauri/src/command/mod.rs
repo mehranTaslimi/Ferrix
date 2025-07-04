@@ -17,7 +17,7 @@ pub async fn get_download_list() -> Result<Vec<Download>, String> {
 }
 
 #[tauri::command]
-pub fn pause_download(id: i64) {}
+pub fn pause_download() {}
 
 #[tauri::command]
-pub fn resume_download(id: i64) {}
+pub fn resume_download() {}

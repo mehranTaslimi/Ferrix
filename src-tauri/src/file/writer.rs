@@ -1,12 +1,10 @@
+use crate::registry::Registry;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-
 use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt, SeekFrom};
 use tokio::sync::mpsc;
-
-use crate::registry::Registry;
 
 pub type WriteMessage = (u64, u64, u64, Vec<u8>);
 

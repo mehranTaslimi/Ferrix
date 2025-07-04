@@ -84,8 +84,9 @@ impl DownloadRepository {
             "file_name",
             "content_type",
             "extension",
+            "total_bytes",
         ];
-        let mut values = vec!["?", "?", "?", "?", "?", "?", "?"];
+        let mut values = vec!["?", "?", "?", "?", "?", "?", "?", "?"];
         let mut params = vec![
             new.url,
             new.status,
@@ -94,6 +95,7 @@ impl DownloadRepository {
             new.file_name,
             new.content_type,
             new.extension,
+            new.total_bytes.to_string(),
         ];
 
         if let Some(auth) = new.auth {

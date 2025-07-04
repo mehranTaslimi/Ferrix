@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM download_chunks WHERE download_id = ?;",
+  "describe": {
+    "columns": [
+      {
+        "name": "download_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "chunk_index",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "start_byte",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "end_byte",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "downloaded_bytes",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "expected_hash",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "error_message",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "has_error",
+        "ordinal": 7,
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "149e789b56222b5086da23d345767bd227259a3c67d83cdc64e4e5f9d5dff3f3"
+}
