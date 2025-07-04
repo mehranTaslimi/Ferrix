@@ -37,20 +37,16 @@ impl super::DownloadsManager {
 
             let speed_history_avg = history.iter().sum::<u64>() / history.len() as u64;
 
-            println!("speed_history_avg: {speed_history_avg}");
-
             let speed = speed_history_avg / 1024;
 
-            println!("speed: {speed}");
+            let total_downloaded_bytes = report.total_downloaded_bytes.load(Ordering::Relaxed);
+            let remaining = report.total_bytes.saturating_sub(total_downloaded_bytes);
 
-            if report.total_downloaded_bytes.load(Ordering::Relaxed) <= 0 {
-                return;
-            }
-
-            let remaining_time = report
-                .total_bytes
-                .saturating_sub(report.total_downloaded_bytes.load(Ordering::Relaxed))
-                / speed_history_avg;
+            let remaining_time = if speed_history_avg == 0 {
+                0
+            } else {
+                remaining / speed_history_avg
+            };
 
             let event = format!("speed_and_remaining_{}", download_id);
             Emitter::emit_event(
