@@ -1,6 +1,8 @@
 use chrono::NaiveDateTime;
+use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use tokio_util::sync::CancellationToken;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Download {
@@ -88,4 +90,12 @@ pub struct UpdateChunk {
     pub error_message: Option<String>,
     pub expected_hash: Option<String>,
     pub has_error: Option<bool>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DownloadWithChunk {
+    pub download: Download,
+    pub chunks: Vec<DownloadChunk>,
+    pub worker_created: bool,
+    pub cancel_token: OnceCell<CancellationToken>,
 }

@@ -1,46 +1,14 @@
 mod bandwidth;
 mod monitor;
+mod repoter;
 
-use std::{collections::HashMap, sync::Arc, time::Duration};
-
-use tauri::AppHandle;
-use tokio::{
-    sync::{broadcast::Sender, Mutex},
-    time::sleep,
-};
-use tokio_util::sync::CancellationToken;
-
-use crate::{
-    events::dispatch,
-    manager::bandwidth::BandwidthManager,
-    utils::app_state::AppEvent,
-    // worker::DownloadWorker,
-};
-
-#[derive(Clone)]
-struct WorkerData {
-    speed_bps: Arc<Mutex<u64>>,
-    cancellation_token: CancellationToken,
-}
-
-pub struct DownloadsManager {
-    app_handle: AppHandle,
-    app_event: Sender<AppEvent>,
-    workers: Arc<Mutex<HashMap<i64, WorkerData>>>,
-    // bandwidth: BandwidthManager,
-}
+pub struct DownloadsManager;
 
 impl DownloadsManager {
-    pub fn new(app_event: Sender<AppEvent>, app_handle: AppHandle) -> Self {
-        let workers = Arc::new(Mutex::new(HashMap::new()));
-        // let bandwidth = BandwidthManager::new(Arc::clone(&workers));
-
-        Self {
-            app_handle,
-            app_event,
-            workers,
-            // bandwidth,
-        }
+    pub fn new() {
+        Self::downloading_monitor();
+        Self::pending_queue_monitor();
+        Self::reporting_monitor();
     }
 
     // pub async fn manage(&self, app_event: AppEvent) -> Result<(), String> {

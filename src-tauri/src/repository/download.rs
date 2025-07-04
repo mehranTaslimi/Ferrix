@@ -76,49 +76,88 @@ impl DownloadRepository {
     pub async fn add(new: NewDownload) -> Result<i64, sqlx::Error> {
         let pool = Registry::get_pool();
 
-        sqlx::query_as!(
-            Download,
-            r#"
-        INSERT INTO downloads (
-            url,
-            status,
-            chunk_count,
-            file_path,
-            file_name,
-            content_type,
-            extension,
-            auth,
-            proxy,
-            headers,
-            cookies,
-            speed_limit,
-            max_retries,
-            delay_secs,
-            backoff_factor,
-            timeout_secs
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#,
+        let mut fields = vec![
+            "url",
+            "status",
+            "chunk_count",
+            "file_path",
+            "file_name",
+            "content_type",
+            "extension",
+        ];
+        let mut values = vec!["?", "?", "?", "?", "?", "?", "?"];
+        let mut params = vec![
             new.url,
             new.status,
-            new.chunk_count,
+            new.chunk_count.to_string(),
             new.file_path,
             new.file_name,
             new.content_type,
             new.extension,
-            new.auth,
-            new.proxy,
-            new.headers,
-            new.cookies,
-            new.speed_limit,
-            new.max_retries,
-            new.delay_secs,
-            new.backoff_factor,
-            new.timeout_secs
-        )
-        .execute(pool)
-        .await
-        .map(|result| result.last_insert_rowid())
+        ];
+
+        if let Some(auth) = new.auth {
+            fields.push("auth");
+            values.push("?");
+            params.push(auth);
+        }
+        if let Some(proxy) = new.proxy {
+            fields.push("proxy");
+            values.push("?");
+            params.push(proxy);
+        }
+        if let Some(headers) = new.headers {
+            fields.push("headers");
+            values.push("?");
+            params.push(headers);
+        }
+        if let Some(cookies) = new.cookies {
+            fields.push("cookies");
+            values.push("?");
+            params.push(cookies);
+        }
+        if let Some(speed_limit) = new.speed_limit {
+            fields.push("speed_limit");
+            values.push("?");
+            params.push(speed_limit.to_string());
+        }
+        if let Some(max_retries) = new.max_retries {
+            fields.push("speed_limit");
+            values.push("?");
+            params.push(max_retries.to_string());
+        }
+        if let Some(delay_secs) = new.delay_secs {
+            fields.push("speed_limit");
+            values.push("?");
+            params.push(delay_secs.to_string());
+        }
+        if let Some(backoff_factor) = new.backoff_factor {
+            fields.push("speed_limit");
+            values.push("?");
+            params.push(backoff_factor.to_string());
+        }
+        if let Some(timeout_secs) = new.timeout_secs {
+            fields.push("speed_limit");
+            values.push("?");
+            params.push(timeout_secs.to_string());
+        }
+
+        let query = format!(
+            "INSERT INTO downloads ({}) VALUES ({})",
+            fields.join(", "),
+            values.join(", ")
+        );
+
+        let mut query_builder = sqlx::query(&query);
+
+        for param in params {
+            query_builder = query_builder.bind(param);
+        }
+
+        query_builder
+            .execute(pool)
+            .await
+            .map(|op| op.last_insert_rowid())
     }
 
     pub async fn update(id: i64, update: UpdateDownload) -> Result<(), sqlx::Error> {

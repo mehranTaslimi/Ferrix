@@ -1,10 +1,13 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
+use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use tokio::sync::Mutex;
 
 use crate::{
     client::{AuthType, Client, ProxyType},
-    models::NewDownload,
+    emitter::Emitter,
+    models::{DownloadWithChunk, NewDownload, UpdateDownload},
     repository::{chunk::ChunkRepository, download::DownloadRepository},
 };
 
@@ -24,10 +27,7 @@ pub struct DownloadOptions {
 }
 
 impl super::Registry {
-    pub(super) async fn add_new_download(
-        url: String,
-        options: DownloadOptions,
-    ) -> Result<(), String> {
+    pub async fn add_new_download(url: String, options: DownloadOptions) -> Result<(), String> {
         let client = Client::new(&url, AuthType::None, ProxyType::None)?;
         let response = client.inspect().await?;
 
@@ -66,13 +66,82 @@ impl super::Registry {
                     .join(", ")
             })?;
 
-        Self::dispatch(super::RegistryAction::AddDownloadToQueue(download_id));
+        Self::add_download_to_pending_queue(download_id);
 
         Ok(())
     }
 
-    pub async fn add_download_queue(download_id: i64) {
-        let mut download_queue = Self::get_state().download_queue.lock().await;
-        download_queue.push_back(download_id);
+    pub fn add_download_to_pending_queue(download_id: i64) {
+        let pending_queue = Arc::clone(&Self::get_state().pending_queue);
+        Self::spawn("add_download_to_pending_queue", async move {
+            let download = DownloadRepository::find(download_id).await.unwrap();
+            Emitter::emit_event("download_item", download);
+
+            let mut pending_queue = pending_queue.lock().await;
+            pending_queue.push_back(download_id);
+        });
+    }
+
+    pub fn add_download_to_downloading_queue() {
+        let pending_queue = Arc::clone(&Self::get_state().pending_queue);
+
+        Self::spawn("add_download_to_downloading_queue", async move {
+            let mut pending_queue = pending_queue.lock().await;
+
+            if let Some(pend_download) = pending_queue.pop_front() {
+                Self::add_download_to_map(pend_download);
+            }
+        });
+    }
+
+    pub fn add_download_to_map(download_id: i64) {
+        let downloading_map = Arc::clone(&Self::get_state().downloading_map);
+
+        Self::spawn("add_download_to_map", async move {
+            DownloadRepository::update(
+                download_id,
+                UpdateDownload {
+                    status: Some("downloading".to_string()),
+                    auth: None,
+                    backoff_factor: None,
+                    cookies: None,
+                    delay_secs: None,
+                    headers: None,
+                    max_retries: None,
+                    proxy: None,
+                    speed_limit: None,
+                    timeout_secs: None,
+                    total_bytes: None,
+                },
+            )
+            .await
+            .unwrap();
+
+            let download_result = DownloadRepository::find(download_id).await;
+
+            if let Ok(ref download) = download_result {
+                Emitter::emit_event("download_item", download.clone());
+            }
+
+            let chunks = ChunkRepository::find_all(download_id).await;
+
+            match (download_result, chunks) {
+                (Ok(download), Ok(chunks)) => {
+                    let mut downloading_map = downloading_map.lock().await;
+                    downloading_map.insert(
+                        download_id,
+                        Arc::new(Mutex::new(DownloadWithChunk {
+                            download,
+                            chunks,
+                            worker_created: false,
+                            cancel_token: OnceCell::new(),
+                        })),
+                    );
+                }
+                (Err(err), _) | (_, Err(err)) => {
+                    Emitter::emit_error(err.to_string());
+                }
+            }
+        });
     }
 }

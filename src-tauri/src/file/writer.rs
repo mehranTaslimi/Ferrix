@@ -1,21 +1,20 @@
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt, SeekFrom};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc;
 
-use crate::manager::task::TaskManager;
-use crate::worker::DiskReport;
+use crate::registry::Registry;
 
 pub type WriteMessage = (u64, u64, u64, Vec<u8>);
 
-impl super::DownloadWorker {
-    pub(super) async fn file_writer(
+impl super::File {
+    pub(super) async fn setup_file_writer(
+        download_id: i64,
         file_path: &str,
         total_bytes: u64,
-        report: Arc<Mutex<DiskReport>>,
-        task: Arc<TaskManager>,
     ) -> Result<mpsc::UnboundedSender<WriteMessage>, String> {
         let file_exists = fs::metadata(file_path).await.is_ok();
 
@@ -32,22 +31,34 @@ impl super::DownloadWorker {
                 .map_err(|e| e.to_string())?;
         }
 
+        let report = Arc::clone(&Registry::get_state().report);
+
         let (tx, mut rx) = mpsc::unbounded_channel::<WriteMessage>();
 
         let task_name = format!("file writer: {}", file_path);
-        task.spawn(&task_name, async move {
+
+        Registry::spawn(&task_name, async move {
             while let Some((chunk_index, start_byte, downloaded_bytes, bytes)) = rx.recv().await {
                 file.seek(SeekFrom::Start(start_byte)).await.unwrap();
                 file.write_all(&bytes).await.unwrap();
 
-                let mut report = report.lock().await;
-                report.wrote_bytes += downloaded_bytes;
-                report.received_bytes += downloaded_bytes;
-                report
-                    .chunks
-                    .entry(chunk_index)
-                    .and_modify(|f| *f += downloaded_bytes)
-                    .or_insert(downloaded_bytes);
+                if let Some(report) = report.get(&download_id) {
+                    report
+                        .chunks_wrote_bytes
+                        .entry(chunk_index as i64)
+                        .and_modify(|atomic| {
+                            atomic.fetch_add(downloaded_bytes, Ordering::Relaxed);
+                        })
+                        .or_insert(AtomicU64::new(downloaded_bytes));
+
+                    report
+                        .total_wrote_bytes
+                        .fetch_add(downloaded_bytes, Ordering::Relaxed);
+
+                    report
+                        .wrote_bytes
+                        .fetch_add(downloaded_bytes, Ordering::Relaxed);
+                }
             }
         });
 

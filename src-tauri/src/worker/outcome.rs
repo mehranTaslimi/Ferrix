@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use tokio::{task::JoinError, time::sleep};
 
-use crate::{events::dispatch, utils::app_state::AppEvent};
+// use crate::{events::dispatch, utils::app_state::AppEvent};
 
 #[derive(Debug)]
 pub(super) enum DownloadStatus {
@@ -20,33 +20,33 @@ pub(super) enum WorkerOutcome {
 
 impl super::DownloadWorker {
     pub(super) async fn handle_finished(&self) {
-        if self.disk_report.lock().await.wrote_bytes
-            < self.internet_report.lock().await.downloaded_bytes
-        {
-            let _ = self.emit_and_update_download_status("writing").await;
-        }
+        // if self.disk_report.lock().await.wrote_bytes
+        //     < self.internet_report.lock().await.downloaded_bytes
+        // {
+        //     let _ = self.emit_and_update_download_status("writing").await;
+        // }
 
-        loop {
-            let wrote = self.disk_report.lock().await.wrote_bytes;
-            let downloaded = self.internet_report.lock().await.downloaded_bytes;
+        // loop {
+        //     let wrote = self.disk_report.lock().await.wrote_bytes;
+        //     let downloaded = self.internet_report.lock().await.downloaded_bytes;
 
-            if wrote == downloaded {
-                break;
-            }
+        //     if wrote == downloaded {
+        //         break;
+        //     }
 
-            sleep(Duration::from_millis(100)).await;
-        }
+        //     sleep(Duration::from_millis(100)).await;
+        // }
 
-        dispatch(
-            &self.app_event,
-            AppEvent::DownloadFinished(self.download_id),
-        );
-        let _ = self.emit_and_update_download_status("completed").await;
+        // dispatch(
+        //     &self.app_event,
+        //     AppEvent::DownloadFinished(self.download_id),
+        // );
+        // let _ = self.emit_and_update_download_status("completed").await;
     }
 
     pub(super) async fn handle_paused(&self) {
-        dispatch(&self.app_event, AppEvent::DownloadPaused(self.download_id));
-        let _ = self.emit_and_update_download_status("paused").await;
+        // dispatch(&self.app_event, AppEvent::DownloadPaused(self.download_id));
+        // let _ = self.emit_and_update_download_status("paused").await;
     }
 
     pub(super) async fn handle_retry(&self) {
@@ -54,8 +54,8 @@ impl super::DownloadWorker {
     }
 
     pub(super) async fn handle_failed(&self) {
-        let _ = self.emit_and_update_download_status("failed").await;
-        dispatch(&self.app_event, AppEvent::DownloadFailed(self.download_id));
+        // let _ = self.emit_and_update_download_status("failed").await;
+        // dispatch(&self.app_event, AppEvent::DownloadFailed(self.download_id));
     }
 
     pub(super) fn classify_results(

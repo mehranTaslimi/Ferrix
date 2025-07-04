@@ -3,13 +3,14 @@ use tokio::spawn;
 
 mod client;
 mod command;
-mod events;
+mod emitter;
+mod file;
 mod manager;
 mod models;
 mod registry;
 mod repository;
 mod utils;
-// mod worker;
+mod worker;
 
 use crate::registry::Registry;
 
