@@ -5,7 +5,7 @@ use tokio::{task::JoinError, time::sleep};
 // use crate::{events::dispatch, utils::app_state::AppEvent};
 
 #[derive(Debug)]
-pub(super) enum DownloadStatus {
+pub enum DownloadStatus {
     Paused,
     Finished,
 }

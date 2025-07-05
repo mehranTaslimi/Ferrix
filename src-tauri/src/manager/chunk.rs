@@ -1,8 +1,5 @@
-impl super::Registry {
-    pub(super) fn get_chunk_ranges(
-        content_length: u64,
-        chunk_count: u64,
-    ) -> Result<Vec<(u64, u64)>, String> {
+impl super::DownloadsManager {
+    pub(super) fn get_chunk_ranges(content_length: u64, chunk_count: u64) -> Vec<(u64, u64)> {
         let chunk = chunk_count;
         let mut ranges = Vec::with_capacity(chunk as usize);
 
@@ -19,6 +16,6 @@ impl super::Registry {
             start = end + 1;
         }
 
-        Ok(ranges)
+        ranges
     }
 }

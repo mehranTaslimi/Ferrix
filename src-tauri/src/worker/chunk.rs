@@ -75,10 +75,7 @@ impl super::DownloadWorker {
     // }
 
     pub(super) async fn not_downloaded_chunks(&self) -> impl Iterator<Item = DownloadChunk> {
-        self.download_ref
-            .lock()
-            .await
-            .chunks
+        self.chunks
             .clone()
             .into_iter()
             .filter(|chunk| chunk.downloaded_bytes < chunk.end_byte - chunk.start_byte)

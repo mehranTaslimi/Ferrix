@@ -27,7 +27,7 @@ impl super::Registry {
 
             available_permits.store(permit.available_permits(), Ordering::SeqCst);
             println!(
-                "[CREATED] available_permits: {}, task_name: {}",
+                "[CREATED] {}, task_name: {}",
                 available_permits.load(Ordering::SeqCst),
                 task_name
             );
@@ -38,7 +38,7 @@ impl super::Registry {
 
             available_permits.store(permit.available_permits(), Ordering::SeqCst);
             println!(
-                "[DROPPED] available_permits: {}, task_name: {}",
+                "[DROPPED] {}, task_name: {}",
                 available_permits.load(Ordering::SeqCst),
                 task_name
             );

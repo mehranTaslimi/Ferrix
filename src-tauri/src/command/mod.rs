@@ -1,12 +1,12 @@
 use crate::{
+    manager::{DownloadOptions, DownloadsManager},
     models::Download,
-    registry::{DownloadOptions, Registry},
     repository::download::DownloadRepository,
 };
 
 #[tauri::command]
 pub async fn add_new_download(url: String, options: DownloadOptions) -> Result<(), String> {
-    Registry::add_new_download(url, options).await
+    DownloadsManager::add_new_download(url, options).await
 }
 
 #[tauri::command]
