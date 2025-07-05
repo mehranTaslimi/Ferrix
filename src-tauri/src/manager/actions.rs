@@ -134,7 +134,9 @@ impl super::DownloadsManager {
 
     pub(super) async fn manage_worker_result_action(self: &Arc<Self>, worker: DownloadWorker) {
         Registry::spawn("start_download", async move {
+            Self::start_monitor_report();
             let result = worker.start_download().await;
+            Registry::dispatch(RegistryAction::CleanDownloadedItemData(worker.download_id));
             println!("{:?}", result);
         });
     }

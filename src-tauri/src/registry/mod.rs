@@ -48,6 +48,7 @@ pub struct State {
     pub workers: Arc<DashMap<i64, Arc<Mutex<Worker>>>>,
     pub report: Arc<DashMap<i64, Report>>,
     queue_listener_running: Arc<AtomicBool>,
+    pub monitor_reporting_running: Arc<AtomicBool>,
     mpsc_sender: Arc<mpsc::UnboundedSender<RegistryAction>>,
     manager: OnceCell<Arc<DownloadsManager>>,
 }
@@ -70,6 +71,7 @@ impl Registry {
         let mpsc_sender = Arc::new(tx);
         let queue_listener_running = Arc::new(AtomicBool::new(false));
         let manager = OnceCell::new();
+        let monitor_reporting_running = Arc::new(AtomicBool::new(false));
 
         let state = Arc::new(State {
             pool,
@@ -82,6 +84,7 @@ impl Registry {
             mpsc_sender,
             queue_listener_running,
             manager,
+            monitor_reporting_running,
         });
 
         STATE.set(state).unwrap();

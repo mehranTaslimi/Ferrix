@@ -86,7 +86,7 @@ impl super::Registry {
                         None => {
                             /*
                                 This `None` match means the queue is empty.
-                                There’s no reason to continue the loop, so we break out of it.
+                                There’s no reason to continue the loop, so we break it.
                             */
                             queue_listener_running.store(false, Ordering::SeqCst);
                             break;
@@ -167,15 +167,16 @@ impl super::Registry {
 
     pub(super) async fn update_network_report_action(download_id: i64, bytes_len: u64) {
         let reports = Arc::clone(&Registry::get_state().report);
-        let report = reports.get(&download_id).unwrap();
+        let maybe_report = reports.get(&download_id);
+        if let Some(report) = maybe_report {
+            report
+                .total_downloaded_bytes
+                .fetch_add(bytes_len, Ordering::Relaxed);
 
-        report
-            .total_downloaded_bytes
-            .fetch_add(bytes_len, Ordering::Relaxed);
-
-        report
-            .downloaded_bytes
-            .fetch_add(bytes_len, Ordering::Relaxed);
+            report
+                .downloaded_bytes
+                .fetch_add(bytes_len, Ordering::Relaxed);
+        }
     }
 
     pub(super) async fn update_disk_report_action(
@@ -184,20 +185,29 @@ impl super::Registry {
         bytes_len: u64,
     ) {
         let reports = Arc::clone(&Registry::get_state().report);
-        let report = reports.get(&download_id).unwrap();
+        let maybe_report = reports.get(&download_id);
+        if let Some(report) = maybe_report {
+            report
+                .chunks_wrote_bytes
+                .entry(chunk_index as i64)
+                .and_modify(|atomic| {
+                    atomic.fetch_add(bytes_len, Ordering::Relaxed);
+                })
+                .or_insert(AtomicU64::new(bytes_len));
 
-        report
-            .chunks_wrote_bytes
-            .entry(chunk_index as i64)
-            .and_modify(|atomic| {
-                atomic.fetch_add(bytes_len, Ordering::Relaxed);
-            })
-            .or_insert(AtomicU64::new(bytes_len));
+            report
+                .total_wrote_bytes
+                .fetch_add(bytes_len, Ordering::Relaxed);
 
-        report
-            .total_wrote_bytes
-            .fetch_add(bytes_len, Ordering::Relaxed);
+            report.wrote_bytes.fetch_add(bytes_len, Ordering::Relaxed);
+        }
+    }
 
-        report.wrote_bytes.fetch_add(bytes_len, Ordering::Relaxed);
+    pub(super) async fn clean_downloaded_item_data(download_id: i64) {
+        let reports = Arc::clone(&Registry::get_state().report);
+        let workers = Arc::clone(&Registry::get_state().workers);
+
+        reports.remove(&download_id);
+        workers.remove(&download_id);
     }
 }

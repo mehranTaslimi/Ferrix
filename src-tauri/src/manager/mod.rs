@@ -5,7 +5,6 @@ mod actions;
 mod bandwidth;
 mod chunk;
 mod event;
-mod monitor;
 mod reporter;
 
 pub use actions::DownloadOptions;

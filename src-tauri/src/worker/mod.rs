@@ -7,7 +7,6 @@ use crate::{
     file::WriteMessage,
     manager::DownloadsManager,
     models::{Download, DownloadChunk},
-    registry::Registry,
 };
 
 mod bandwidth_limiter;
@@ -30,7 +29,7 @@ pub struct DownloadWorker {
     download: Download,
     chunks: Vec<DownloadChunk>,
     cancel_token: Arc<CancellationToken>,
-    download_id: i64,
+    pub download_id: i64,
     file: Arc<UnboundedSender<WriteMessage>>,
     manager: Arc<DownloadsManager>,
 }

@@ -1,6 +1,10 @@
 use crate::{emitter::Emitter, registry::Registry};
 use serde::{Deserialize, Serialize};
-use std::sync::{atomic::Ordering, Arc};
+use std::{
+    sync::{atomic::Ordering, Arc},
+    time::Duration,
+};
+use tokio::time::sleep;
 
 #[derive(Clone, Serialize, Deserialize)]
 struct SpeedAndRemaining {
@@ -9,6 +13,56 @@ struct SpeedAndRemaining {
 }
 
 impl super::DownloadsManager {
+    pub(super) fn start_monitor_report() {
+        let report = Arc::clone(&Registry::get_state().report);
+
+        if !report.is_empty()
+            && !Registry::get_state()
+                .monitor_reporting_running
+                .swap(true, Ordering::SeqCst)
+        {
+            Registry::spawn("downloaded_bytes_report", async move {
+                loop {
+                    sleep(Duration::from_millis(100)).await;
+                    let report = Arc::clone(&Registry::get_state().report);
+                    if report.is_empty() {
+                        Registry::get_state()
+                            .monitor_reporting_running
+                            .store(false, Ordering::SeqCst);
+                        break;
+                    }
+                    Self::report_downloaded_bytes();
+                }
+            });
+            Registry::spawn("speed_report", async move {
+                loop {
+                    sleep(Duration::from_secs(1)).await;
+                    let report = Arc::clone(&Registry::get_state().report);
+                    if report.is_empty() {
+                        Registry::get_state()
+                            .monitor_reporting_running
+                            .store(false, Ordering::SeqCst);
+                        break;
+                    }
+                    Self::report_network_speed().await;
+                }
+            });
+            Registry::spawn("disk_report", async move {
+                loop {
+                    sleep(Duration::from_secs(1)).await;
+                    let report = Arc::clone(&Registry::get_state().report);
+                    if report.is_empty() {
+                        Registry::get_state()
+                            .monitor_reporting_running
+                            .store(false, Ordering::SeqCst);
+                        break;
+                    }
+                    Self::report_disk_speed().await;
+                }
+            });
+        }
+    }
+
     pub(super) fn report_downloaded_bytes() {
         let reports = Arc::clone(&Registry::get_state().report);
 

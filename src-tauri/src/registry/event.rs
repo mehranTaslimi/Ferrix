@@ -14,6 +14,7 @@ pub enum RegistryAction {
         /* Chunk Index */ i64,
         /* Bytes len */ u64,
     ),
+    CleanDownloadedItemData(/* Download ID */ i64),
 }
 
 impl super::Registry {
@@ -41,6 +42,9 @@ impl super::Registry {
             }
             RegistryAction::UpdateDiskReport(download_id, chunk_index, bytes_len) => {
                 Self::update_disk_report_action(download_id, chunk_index, bytes_len).await;
+            }
+            RegistryAction::CleanDownloadedItemData(download_id) => {
+                Self::clean_downloaded_item_data(download_id).await;
             }
         }
     }
