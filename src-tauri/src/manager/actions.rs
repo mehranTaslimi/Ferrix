@@ -47,7 +47,7 @@ impl super::DownloadsManager {
         let file_name = File::get_file_name(&file_path)?;
 
         let chunk_count = match response.supports_range {
-            true => options.chunk_count as u64,
+            true => options.chunk_count.clamp(1, 5) as u64,
             false => 1,
         };
 
