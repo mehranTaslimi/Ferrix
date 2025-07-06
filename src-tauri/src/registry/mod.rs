@@ -32,6 +32,7 @@ pub struct Report {
     pub wrote_history: Mutex<VecDeque<u64>>,
     pub chunks_wrote_bytes: DashMap<i64, AtomicU64>,
     pub total_bytes: u64,
+    pub speed_bps: AtomicU64,
 }
 
 #[derive(Debug)]
@@ -43,8 +44,9 @@ pub struct State {
     pub pending_queue: Arc<Mutex<VecDeque<i64>>>,
     pub workers: Arc<DashMap<i64, Arc<Mutex<Worker>>>>,
     pub report: Arc<DashMap<i64, Report>>,
+    pub monitor_running: Arc<AtomicBool>,
+    pub bandwidth_limit: Arc<AtomicU64>,
     queue_listener_running: Arc<AtomicBool>,
-    pub monitor_reporting_running: Arc<AtomicBool>,
     mpsc_sender: Arc<mpsc::UnboundedSender<RegistryAction>>,
     manager: OnceCell<Arc<DownloadsManager>>,
 }
@@ -67,7 +69,8 @@ impl Registry {
         let mpsc_sender = Arc::new(tx);
         let queue_listener_running = Arc::new(AtomicBool::new(false));
         let manager = OnceCell::new();
-        let monitor_reporting_running = Arc::new(AtomicBool::new(false));
+        let monitor_running = Arc::new(AtomicBool::new(false));
+        let bandwidth_limit = Arc::new(AtomicU64::new(0));
 
         let state = Arc::new(State {
             pool,
@@ -80,7 +83,8 @@ impl Registry {
             mpsc_sender,
             queue_listener_running,
             manager,
-            monitor_reporting_running,
+            monitor_running,
+            bandwidth_limit,
         });
 
         STATE.set(state).unwrap();

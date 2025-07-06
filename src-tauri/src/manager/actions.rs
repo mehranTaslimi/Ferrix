@@ -140,7 +140,8 @@ impl super::DownloadsManager {
     }
 
     pub(super) async fn manage_worker_result_action(self: &Arc<Self>, worker: DownloadWorker) {
-        Self::start_monitor_report();
+        Self::start_monitoring();
+
         let self_clone = Arc::clone(&self);
 
         Registry::spawn("start_download", async move {

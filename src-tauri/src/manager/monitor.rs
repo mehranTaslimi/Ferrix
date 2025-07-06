@@ -13,21 +13,34 @@ struct SpeedAndRemaining {
 }
 
 impl super::DownloadsManager {
-    pub(super) fn start_monitor_report() {
+    pub(super) fn start_monitoring() {
         let report = Arc::clone(&Registry::get_state().report);
 
         if !report.is_empty()
             && !Registry::get_state()
-                .monitor_reporting_running
+                .monitor_running
                 .swap(true, Ordering::SeqCst)
         {
+            Registry::spawn("monitor_download_speed", async move {
+                loop {
+                    let report = Arc::clone(&Registry::get_state().report);
+                    if report.is_empty() {
+                        Registry::get_state()
+                            .monitor_running
+                            .store(false, Ordering::SeqCst);
+                        break;
+                    }
+                    sleep(Duration::from_secs(1)).await;
+                    Self::monitor_download_speed().await;
+                }
+            });
             Registry::spawn("downloaded_bytes_report", async move {
                 loop {
                     sleep(Duration::from_millis(100)).await;
                     let report = Arc::clone(&Registry::get_state().report);
                     if report.is_empty() {
                         Registry::get_state()
-                            .monitor_reporting_running
+                            .monitor_running
                             .store(false, Ordering::SeqCst);
                         break;
                     }
@@ -40,7 +53,7 @@ impl super::DownloadsManager {
                     let report = Arc::clone(&Registry::get_state().report);
                     if report.is_empty() {
                         Registry::get_state()
-                            .monitor_reporting_running
+                            .monitor_running
                             .store(false, Ordering::SeqCst);
                         break;
                     }
@@ -53,7 +66,7 @@ impl super::DownloadsManager {
                     let report = Arc::clone(&Registry::get_state().report);
                     if report.is_empty() {
                         Registry::get_state()
-                            .monitor_reporting_running
+                            .monitor_running
                             .store(false, Ordering::SeqCst);
                         break;
                     }
@@ -90,6 +103,8 @@ impl super::DownloadsManager {
             };
 
             let speed_history_avg = history.iter().sum::<u64>() / history.len() as u64;
+
+            report.speed_bps.swap(speed_history_avg, Ordering::Relaxed);
 
             let speed = speed_history_avg / 1024;
 

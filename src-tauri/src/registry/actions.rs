@@ -166,6 +166,7 @@ impl super::Registry {
                 wrote_history: Mutex::new(VecDeque::with_capacity(10)),
                 chunks_wrote_bytes,
                 total_bytes: download.total_bytes as u64,
+                speed_bps: AtomicU64::new(0),
             },
         );
     }

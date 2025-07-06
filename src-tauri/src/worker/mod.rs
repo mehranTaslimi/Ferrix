@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
+use futures_util::lock::Mutex;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_util::sync::CancellationToken;
 
@@ -9,7 +10,7 @@ use crate::{
     models::{Download, DownloadChunk},
 };
 
-mod bandwidth_limiter;
+mod bandwidth;
 mod download;
 mod outcome;
 pub mod validation;
@@ -31,9 +32,9 @@ pub struct DownloadWorker {
     download: Download,
     chunks: Vec<DownloadChunk>,
     cancel_token: Arc<CancellationToken>,
-    pub download_id: i64,
     file: Arc<UnboundedSender<WriteMessage>>,
     manager: Arc<DownloadsManager>,
+    pub download_id: i64,
 }
 
 impl DownloadWorker {
