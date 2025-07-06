@@ -1,19 +1,22 @@
 use std::sync::Arc;
 
-use tokio_util::bytes;
-
 use crate::worker::DownloadWorker;
 
 #[derive(Debug)]
 pub enum ManagerAction {
     StartDownload(/*Download ID */ i64),
-    UpdateDownloadStatus(/*Download ID */ i64),
+    UpdateDownloadStatus(/* Status */ &'static str, /*Download ID */ i64),
     ManageWorkerResult(DownloadWorker),
     ReportNetworkWorker(/*Download ID */ i64, /*Bytes len*/ u64),
+    PauseDownload(/*Download ID */ i64),
+    ResumeDownload(/*Download ID */ i64),
+    UpdateChunks(/*Download ID */ i64),
+    ValidateChunksHash(/*Download ID */ i64),
+    ResetChunks(/*Download ID */ i64, /* Chunk Index */ Vec<i64>),
 }
 
 impl super::DownloadsManager {
-    pub fn dispatch(self: Arc<Self>, action: ManagerAction) {
+    pub fn dispatch(self: &Arc<Self>, action: ManagerAction) {
         let mpsc_sender = Arc::clone(&self.mpsc_sender);
         mpsc_sender.send(action).unwrap()
     }
@@ -25,8 +28,10 @@ impl super::DownloadsManager {
             ManagerAction::StartDownload(download_id) => {
                 self_clone.start_download_action(download_id).await;
             }
-            ManagerAction::UpdateDownloadStatus(download_id) => {
-                self_clone.update_download_status_action(download_id).await;
+            ManagerAction::UpdateDownloadStatus(status, download_id) => {
+                self_clone
+                    .update_download_status_action(status, download_id)
+                    .await;
             }
             ManagerAction::ManageWorkerResult(worker) => {
                 self_clone.manage_worker_result_action(worker).await
@@ -34,6 +39,23 @@ impl super::DownloadsManager {
             ManagerAction::ReportNetworkWorker(download_id, bytes_len) => {
                 self_clone
                     .update_worker_network_report(download_id, bytes_len)
+                    .await;
+            }
+            ManagerAction::PauseDownload(download_id) => {
+                self_clone.pause_download_action(download_id).await;
+            }
+            ManagerAction::UpdateChunks(download_id) => {
+                self_clone.update_chunks_action(download_id).await;
+            }
+            ManagerAction::ResumeDownload(download_id) => {
+                self_clone.resume_download_action(download_id).await;
+            }
+            ManagerAction::ValidateChunksHash(download_id) => {
+                self_clone.validate_chunks_hash_action(download_id).await;
+            }
+            ManagerAction::ResetChunks(download_id, chunk_index) => {
+                self_clone
+                    .reset_chunks_action(download_id, chunk_index)
                     .await;
             }
         }

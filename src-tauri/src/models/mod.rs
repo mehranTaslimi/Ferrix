@@ -7,6 +7,7 @@ pub struct Download {
     pub id: i64,
     pub url: String,
     pub total_bytes: i64,
+    pub downloaded_bytes: i64,
     pub status: String,
     pub created_at: Option<NaiveDateTime>,
     pub chunk_count: i64,
@@ -83,7 +84,7 @@ pub struct NewChunk {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateChunk {
-    pub id: i64,
+    pub chunk_index: i64,
     pub downloaded_bytes: Option<i64>,
     pub error_message: Option<String>,
     pub expected_hash: Option<String>,

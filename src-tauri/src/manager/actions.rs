@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc, thread::spawn};
+use std::{
+    collections::HashMap,
+    sync::{atomic::Ordering, Arc},
+};
 
 use serde::Deserialize;
 
@@ -7,7 +10,7 @@ use crate::{
     emitter::Emitter,
     file::File,
     manager::ManagerAction,
-    models::{NewDownload, UpdateDownload},
+    models::{NewDownload, UpdateChunk, UpdateDownload},
     registry::{Registry, RegistryAction},
     repository::{chunk::ChunkRepository, download::DownloadRepository},
     worker::DownloadWorker,
@@ -89,30 +92,40 @@ impl super::DownloadsManager {
     }
 
     pub(super) async fn start_download_action(self: &Arc<Self>, download_id: i64) {
-        self.clone()
-            .dispatch(ManagerAction::UpdateDownloadStatus(download_id));
-
         let worker = Registry::get_state().workers.get(&download_id).unwrap();
         let worker = worker.lock().await;
 
-        let worker = DownloadWorker::new(
-            worker.download.clone(),
-            worker.chunks.clone(),
-            Arc::clone(&worker.cancel_token),
-            worker.download_id,
-            Arc::clone(&worker.file),
-            Arc::clone(self),
-        );
+        let prev_status = worker.download.status.clone();
+        let paused_download = prev_status == "paused";
 
-        self.clone()
-            .dispatch(ManagerAction::ManageWorkerResult(worker));
+        if paused_download {
+            self.dispatch(ManagerAction::ResumeDownload(download_id));
+        } else {
+            self.dispatch(ManagerAction::UpdateDownloadStatus(
+                "downloading",
+                download_id,
+            ));
+            let worker = DownloadWorker::new(
+                worker.download.clone(),
+                worker.chunks.clone(),
+                Arc::clone(&worker.cancel_token),
+                worker.download_id,
+                Arc::clone(&worker.file),
+                Arc::clone(self),
+            );
+            self.dispatch(ManagerAction::ManageWorkerResult(worker));
+        }
     }
 
-    pub(super) async fn update_download_status_action(self: &Arc<Self>, download_id: i64) {
+    pub(super) async fn update_download_status_action(
+        self: &Arc<Self>,
+        status: &str,
+        download_id: i64,
+    ) {
         DownloadRepository::update(
             download_id,
             UpdateDownload {
-                status: Some("downloading".to_string()),
+                status: Some(status.to_string()),
                 auth: None,
                 backoff_factor: None,
                 cookies: None,
@@ -133,11 +146,13 @@ impl super::DownloadsManager {
     }
 
     pub(super) async fn manage_worker_result_action(self: &Arc<Self>, worker: DownloadWorker) {
+        let self_clone = Arc::clone(&self);
+        Self::start_monitor_report();
+
         Registry::spawn("start_download", async move {
-            Self::start_monitor_report();
             let result = worker.start_download().await;
-            Registry::dispatch(RegistryAction::CleanDownloadedItemData(worker.download_id));
-            println!("{:?}", result);
+            println!("{result:?}");
+            self_clone.dispatch(ManagerAction::UpdateChunks(worker.download_id));
         });
     }
 
@@ -147,5 +162,116 @@ impl super::DownloadsManager {
         bytes_len: u64,
     ) {
         Registry::dispatch(RegistryAction::UpdateNetworkReport(download_id, bytes_len));
+    }
+
+    pub(super) async fn pause_download_action(self: &Arc<Self>, download_id: i64) {
+        let workers = Arc::clone(&Registry::get_state().workers);
+        let maybe_worker = workers.get(&download_id);
+
+        if let Some(worker) = maybe_worker {
+            let worker = worker.lock().await;
+            worker.cancel_token.cancel();
+        }
+
+        self.dispatch(ManagerAction::UpdateDownloadStatus("paused", download_id));
+    }
+
+    pub(super) async fn update_chunks_action(self: &Arc<Self>, download_id: i64) {
+        let workers = Arc::clone(&Registry::get_state().workers);
+        let maybe_worker = workers.get(&download_id);
+        let reports = Arc::clone(&Registry::get_state().report);
+
+        if let Some(worker) = maybe_worker {
+            let worker = worker.lock().await.clone();
+            let file_path = worker.download.file_path.clone();
+
+            let update_chunks = worker
+                .chunks
+                .iter()
+                .map(|chunk| {
+                    let start_byte = chunk.start_byte as u64;
+                    let chunk_index = chunk.chunk_index;
+
+                    let wrote_bytes = reports
+                        .get(&download_id)
+                        .and_then(|r| {
+                            r.chunks_wrote_bytes
+                                .get(&chunk_index)
+                                .map(|v| v.load(Ordering::Relaxed))
+                        })
+                        .unwrap_or(0);
+
+                    let expected_hash =
+                        Self::compute_partial_hash(&file_path, start_byte, wrote_bytes).ok();
+
+                    UpdateChunk {
+                        downloaded_bytes: Some(wrote_bytes as i64),
+                        error_message: None,
+                        expected_hash,
+                        has_error: Some(false),
+                        chunk_index,
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            if let Err(errors) = ChunkRepository::update_all(download_id, update_chunks).await {
+                errors.iter().for_each(|err| {
+                    Emitter::emit_error(err.to_string());
+                });
+            }
+        }
+
+        Registry::dispatch(RegistryAction::CleanDownloadedItemData(download_id));
+    }
+
+    pub(super) async fn resume_download_action(self: &Arc<Self>, download_id: i64) {
+        self.dispatch(ManagerAction::ValidateChunksHash(download_id));
+    }
+
+    pub(super) async fn validate_chunks_hash_action(self: &Arc<Self>, download_id: i64) {
+        let workers = Arc::clone(&Registry::get_state().workers);
+        let worker = workers.get(&download_id).unwrap();
+        let worker = worker.lock().await;
+
+        let chunks = worker.chunks.clone();
+        let file_path = worker.download.file_path.clone();
+
+        let invalid_chunks = Self::validate_chunks_hash(&file_path, chunks);
+
+        if !invalid_chunks.is_empty() {
+            self.dispatch(ManagerAction::ResetChunks(download_id, invalid_chunks));
+        } else {
+            Registry::dispatch(RegistryAction::ShallowUpdateDownloadStatus(
+                download_id,
+                "queued",
+            ));
+            self.dispatch(ManagerAction::StartDownload(download_id));
+        }
+    }
+
+    pub(super) async fn reset_chunks_action(
+        self: &Arc<Self>,
+        download_id: i64,
+        chunks_index: Vec<i64>,
+    ) {
+        let update_chunks = chunks_index
+            .into_iter()
+            .map(|chunk_index| UpdateChunk {
+                chunk_index,
+                downloaded_bytes: Some(0),
+                error_message: Some("invalid chunk hash".to_string()),
+                expected_hash: None,
+                has_error: Some(true),
+            })
+            .collect::<Vec<UpdateChunk>>();
+
+        if let Err(errors) = ChunkRepository::update_all(download_id, update_chunks).await {
+            errors.iter().for_each(|err| {
+                Emitter::emit_error(err.to_string());
+            });
+        }
+
+        Registry::dispatch(RegistryAction::CleanDownloadedItemData(download_id));
+        Registry::dispatch(RegistryAction::AddDownloadToWorkersMap(download_id));
     }
 }

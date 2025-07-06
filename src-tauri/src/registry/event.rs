@@ -15,6 +15,9 @@ pub enum RegistryAction {
         /* Bytes len */ u64,
     ),
     CleanDownloadedItemData(/* Download ID */ i64),
+    PauseDownload(/* Download ID */ i64),
+    ResumeDownload(/* Download ID */ i64),
+    ShallowUpdateDownloadStatus(/* Download ID */ i64, /* Status */ &'static str),
 }
 
 impl super::Registry {
@@ -45,6 +48,15 @@ impl super::Registry {
             }
             RegistryAction::CleanDownloadedItemData(download_id) => {
                 Self::clean_downloaded_item_data(download_id).await;
+            }
+            RegistryAction::PauseDownload(download_id) => {
+                Self::pause_download_action(download_id).await;
+            }
+            RegistryAction::ResumeDownload(download_id) => {
+                Self::resume_download_action(download_id).await;
+            }
+            RegistryAction::ShallowUpdateDownloadStatus(download_id, status) => {
+                Self::shallow_update_download_status_action(download_id, status).await;
             }
         }
     }

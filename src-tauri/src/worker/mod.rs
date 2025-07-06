@@ -10,7 +10,6 @@ use crate::{
 };
 
 mod bandwidth_limiter;
-mod chunk;
 mod download;
 mod outcome;
 pub mod validation;

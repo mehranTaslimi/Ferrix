@@ -106,9 +106,14 @@ impl super::Registry {
         let download = DownloadRepository::find(download_id).await.unwrap();
         let chunks = ChunkRepository::find_all(download_id).await.unwrap();
 
+        let not_downloaded_chunks = chunks
+            .into_iter()
+            .filter(|chunk| chunk.downloaded_bytes < chunk.end_byte - chunk.start_byte)
+            .collect::<Vec<_>>();
+
         Registry::dispatch(RegistryAction::CreateDownloadReport(
             download.clone(),
-            chunks.clone(),
+            not_downloaded_chunks.clone(),
         ));
 
         let file = match File::new(
@@ -129,7 +134,7 @@ impl super::Registry {
             download.id,
             Arc::new(Mutex::new(Worker {
                 download,
-                chunks,
+                chunks: not_downloaded_chunks.clone(),
                 cancel_token: Arc::new(CancellationToken::new()),
                 download_id,
                 file,
@@ -153,9 +158,9 @@ impl super::Registry {
         report.insert(
             download.id,
             Report {
-                total_downloaded_bytes: AtomicU64::new(0),
+                total_downloaded_bytes: AtomicU64::new(download.downloaded_bytes as u64),
                 downloaded_bytes: AtomicU64::new(0),
-                total_wrote_bytes: AtomicU64::new(0),
+                total_wrote_bytes: AtomicU64::new(download.downloaded_bytes as u64),
                 wrote_bytes: AtomicU64::new(0),
                 download_history: Mutex::new(VecDeque::with_capacity(10)),
                 wrote_history: Mutex::new(VecDeque::with_capacity(10)),
@@ -209,5 +214,20 @@ impl super::Registry {
 
         reports.remove(&download_id);
         workers.remove(&download_id);
+    }
+
+    pub(super) async fn pause_download_action(download_id: i64) {
+        let manager = Arc::clone(&Registry::get_manager());
+        manager.dispatch(ManagerAction::PauseDownload(download_id));
+    }
+
+    pub(super) async fn resume_download_action(download_id: i64) {
+        Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
+    }
+
+    pub(super) async fn shallow_update_download_status_action(download_id: i64, status: &str) {
+        let worker = Registry::get_state().workers.get(&download_id).unwrap();
+        let mut worker = worker.lock().await;
+        worker.download.status = status.to_string()
     }
 }

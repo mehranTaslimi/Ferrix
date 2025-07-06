@@ -112,7 +112,7 @@ impl ChunkRepository {
             return Ok(());
         }
 
-        let sql = format!(
+        let sql: String = format!(
             "UPDATE download_chunks SET {} WHERE download_id = ? AND chunk_index = ?",
             fields.join(", ")
         );
@@ -123,7 +123,7 @@ impl ChunkRepository {
             query = query.bind(val);
         }
 
-        query = query.bind(download_id).bind(chunk.id);
+        query = query.bind(download_id).bind(chunk.chunk_index);
 
         query.execute(pool).await.map(|_| ())
     }

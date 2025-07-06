@@ -11,29 +11,42 @@ impl DownloadRepository {
         sqlx::query_as!(
             Download,
             r#"
-    SELECT
-        id,
-        url,
-        total_bytes,
-        status,
-        created_at,
-        chunk_count,
-        file_path,
-        file_name,
-        content_type,
-        extension,
-        auth,
-        proxy,
-        headers,
-        cookies,
-        speed_limit,
-        max_retries,
-        delay_secs,
-        backoff_factor,
-        timeout_secs
-    FROM downloads
-    ORDER BY created_at DESC
-    "#
+            SELECT
+    d.id,
+    d.url,
+    d.total_bytes,
+    d.status,
+    d.created_at,
+    d.chunk_count,
+    d.file_path,
+    d.file_name,
+    d.content_type,
+    d.extension,
+    d.auth,
+    d.proxy,
+    d.headers,
+    d.cookies,
+    d.speed_limit,
+    d.max_retries,
+    d.delay_secs,
+    d.backoff_factor,
+    d.timeout_secs,
+    COALESCE(
+		(
+			SELECT
+				SUM(c.downloaded_bytes)
+			FROM
+				download_chunks c
+			WHERE
+				c.download_id = d.id
+		),
+		0
+	) AS downloaded_bytes
+FROM downloads d
+LEFT JOIN download_chunks c ON c.download_id = d.id
+GROUP BY d.id
+ORDER BY d.created_at DESC;
+        "#
         )
         .fetch_all(pool)
         .await
@@ -44,29 +57,42 @@ impl DownloadRepository {
         sqlx::query_as!(
             Download,
             r#"
-    SELECT
-        id,
-        url,
-        total_bytes,
-        status,
-        created_at,
-        chunk_count,
-        file_path,
-        file_name,
-        content_type,
-        extension,
-        auth,
-        proxy,
-        headers,
-        cookies,
-        speed_limit,
-        max_retries,
-        delay_secs,
-        backoff_factor,
-        timeout_secs
-    FROM downloads
-    WHERE id = ?
-    "#,
+            SELECT
+    d.id,
+    d.url,
+    d.total_bytes,
+    d.status,
+    d.created_at,
+    d.chunk_count,
+    d.file_path,
+    d.file_name,
+    d.content_type,
+    d.extension,
+    d.auth,
+    d.proxy,
+    d.headers,
+    d.cookies,
+    d.speed_limit,
+    d.max_retries,
+    d.delay_secs,
+    d.backoff_factor,
+    d.timeout_secs,
+    COALESCE(
+		(
+			SELECT
+				SUM(c.downloaded_bytes)
+			FROM
+				download_chunks c
+			WHERE
+				c.download_id = d.id
+		),
+		0
+	) AS downloaded_bytes
+FROM downloads d
+LEFT JOIN download_chunks c ON c.download_id = d.id
+WHERE d.id = ?
+GROUP BY d.id;
+            "#,
             id
         )
         .fetch_one(pool)

@@ -63,7 +63,7 @@ impl super::DownloadsManager {
         }
     }
 
-    pub(super) fn report_downloaded_bytes() {
+    fn report_downloaded_bytes() {
         let reports = Arc::clone(&Registry::get_state().report);
 
         reports.iter().for_each(|report| {
@@ -76,7 +76,7 @@ impl super::DownloadsManager {
         });
     }
 
-    pub(super) async fn report_network_speed() {
+    async fn report_network_speed() {
         let reports = Arc::clone(&Registry::get_state().report);
 
         for report in reports.iter() {
@@ -113,7 +113,7 @@ impl super::DownloadsManager {
         }
     }
 
-    pub(super) async fn report_disk_speed() {
+    async fn report_disk_speed() {
         let reports = Arc::clone(&Registry::get_state().report);
 
         for report in reports.iter() {

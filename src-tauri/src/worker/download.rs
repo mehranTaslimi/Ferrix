@@ -14,10 +14,10 @@ impl super::DownloadWorker {
     pub async fn start_download(
         &self,
     ) -> Vec<Result<Result<DownloadStatus, i64>, tokio::task::JoinError>> {
-        let mut futures = self.not_downloaded_chunks().await.map(|chunk| {
+        let mut futures = self.chunks.clone().into_iter().map(|chunk| {
             let self_clone = self.clone();
             let task_name = format!(
-                "chunk download: {}, index: {}",
+                "chunk_download: {}, {}",
                 self_clone.download_id, chunk.chunk_index
             );
             Registry::spawn(
@@ -72,6 +72,8 @@ impl super::DownloadWorker {
         let mut stream = response.bytes_stream();
         let cancellation_token = self.cancel_token.clone();
 
+        let timeout_secs = self.download.timeout_secs as u64;
+
         loop {
             tokio::select! {
                 biased;
@@ -80,7 +82,7 @@ impl super::DownloadWorker {
                     return Ok(DownloadStatus::Paused);
                 }
 
-                maybe_bytes = timeout(Duration::from_secs(1), stream.next()) => {
+                maybe_bytes = timeout(Duration::from_secs(timeout_secs), stream.next()) => {
                     match maybe_bytes {
                         Ok(Some(Ok(bytes))) => {
 
