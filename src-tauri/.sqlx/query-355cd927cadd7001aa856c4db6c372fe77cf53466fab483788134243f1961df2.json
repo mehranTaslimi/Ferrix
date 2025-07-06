@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n    SELECT\n        id,\n        url,\n        total_bytes,\n        status,\n        created_at,\n        chunk_count,\n        file_path,\n        file_name,\n        content_type,\n        extension,\n        auth,\n        proxy,\n        headers,\n        cookies,\n        speed_limit,\n        max_retries,\n        delay_secs,\n        backoff_factor,\n        timeout_secs\n    FROM downloads\n    ORDER BY created_at DESC\n    ",
+  "query": "\n            SELECT\n    d.id,\n    d.url,\n    d.total_bytes,\n    d.status,\n    d.created_at,\n    d.chunk_count,\n    d.file_path,\n    d.file_name,\n    d.content_type,\n    d.extension,\n    d.auth,\n    d.proxy,\n    d.headers,\n    d.cookies,\n    d.speed_limit,\n    d.max_retries,\n    d.delay_secs,\n    d.backoff_factor,\n    d.timeout_secs,\n    COALESCE(\n\t\t(\n\t\t\tSELECT\n\t\t\t\tSUM(c.downloaded_bytes)\n\t\t\tFROM\n\t\t\t\tdownload_chunks c\n\t\t\tWHERE\n\t\t\t\tc.download_id = d.id\n\t\t),\n\t\t0\n\t) AS downloaded_bytes\nFROM downloads d\nLEFT JOIN download_chunks c ON c.download_id = d.id\nGROUP BY d.id\nORDER BY d.created_at DESC;\n        ",
   "describe": {
     "columns": [
       {
@@ -97,6 +97,11 @@
         "name": "timeout_secs",
         "ordinal": 18,
         "type_info": "Integer"
+      },
+      {
+        "name": "downloaded_bytes",
+        "ordinal": 19,
+        "type_info": "Integer"
       }
     ],
     "parameters": {
@@ -121,8 +126,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "194e29ad93842ee0ceffc5864555a50476b5d0898ed5d4c4b16c5a95552fdf31"
+  "hash": "355cd927cadd7001aa856c4db6c372fe77cf53466fab483788134243f1961df2"
 }

@@ -1,8 +1,4 @@
-use crate::{
-    emitter::Emitter,
-    manager::DownloadsManager,
-    worker::{DownloadWorker, Worker},
-};
+use crate::{emitter::Emitter, manager::DownloadsManager, worker::Worker};
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use sqlx::SqlitePool;
