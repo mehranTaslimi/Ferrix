@@ -222,12 +222,6 @@ impl super::Registry {
     }
 
     pub(super) async fn resume_download_action(download_id: i64) {
-        Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
-    }
-
-    pub(super) async fn shallow_update_download_status_action(download_id: i64, status: &str) {
-        let worker = Registry::get_state().workers.get(&download_id).unwrap();
-        let mut worker = worker.lock().await;
-        worker.download.status = status.to_string()
+        Registry::get_manager().dispatch(ManagerAction::ValidateChunksHash(download_id));
     }
 }

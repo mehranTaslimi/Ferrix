@@ -1,19 +1,17 @@
-use std::{sync::Arc, time::Duration};
-
 use futures_util::{future::join_all, StreamExt};
-use tauri::http::header::RANGE;
-use tauri_plugin_http::reqwest::Client;
+use std::{sync::Arc, time::Duration};
 use tokio::time::timeout;
 
 use crate::{
-    file::WriteMessage, manager::ManagerAction, models::DownloadChunk, registry::Registry,
-    worker::outcome::DownloadStatus,
+    client::{AuthType, Client, ProxyType},
+    file::WriteMessage,
+    manager::ManagerAction,
+    models::DownloadChunk,
+    registry::Registry,
 };
 
 impl super::DownloadWorker {
-    pub async fn start_download(
-        &self,
-    ) -> Vec<Result<Result<DownloadStatus, i64>, tokio::task::JoinError>> {
+    pub async fn start_download(&self) -> super::WorkerOutcome {
         let mut futures = self.chunks.clone().into_iter().map(|chunk| {
             let self_clone = self.clone();
             let task_name = format!(
@@ -26,51 +24,25 @@ impl super::DownloadWorker {
             )
         });
 
-        join_all(&mut futures).await
-
-        // let outcome = self.classify_results(results);
-
-        // match outcome {
-        //     WorkerOutcome::Finished => {
-        //         self.handle_finished().await;
-        //         break;
-        //     }
-        //     WorkerOutcome::Paused => {
-        //         self.handle_paused().await;
-        //         break;
-        //     }
-        //     WorkerOutcome::Errored | WorkerOutcome::Mixed => {
-        //         if retries < max_retries {
-        //             retries += 1;
-        //             self.handle_retry().await;
-        //             continue;
-        //         } else {
-        //             self.handle_failed().await;
-        //             break;
-        //         }
-        //     }
-        // };
+        let results = join_all(&mut futures).await;
+        self.classify_results(results)
     }
 
-    async fn download_chunk(&self, chunk: DownloadChunk) -> Result<DownloadStatus, i64> {
+    async fn download_chunk(&self, chunk: DownloadChunk) -> Result<super::DownloadStatus, i64> {
         let chunk_index = chunk.chunk_index;
         let mut downloaded_bytes = chunk.downloaded_bytes;
         let start_byte = chunk.start_byte;
         let end_byte = chunk.end_byte;
-        let url = self.download.url.clone();
-        let range_header = format!("bytes={}-{}", start_byte + downloaded_bytes, end_byte);
 
-        let client = Client::builder().build().map_err(|_| chunk_index)?;
+        let client = Client::new(&self.download.url, AuthType::None, ProxyType::None)
+            .map_err(|_| chunk_index)?;
 
-        let response = client
-            .get(url)
-            .header(RANGE, range_header)
-            .send()
+        let mut stream = client
+            .stream(Some((start_byte + downloaded_bytes, end_byte)))
             .await
             .map_err(|_| chunk_index)?;
 
-        let mut stream = response.bytes_stream();
-        let cancellation_token = self.cancel_token.clone();
+        let cancellation_token = Arc::clone(&self.cancel_token);
 
         let timeout_secs = self.download.timeout_secs as u64;
 
@@ -79,7 +51,7 @@ impl super::DownloadWorker {
                 biased;
 
                 _ = cancellation_token.cancelled() => {
-                    return Ok(DownloadStatus::Paused);
+                    return Ok(super::DownloadStatus::Paused);
                 }
 
                 maybe_bytes = timeout(Duration::from_secs(timeout_secs), stream.next()) => {
@@ -109,7 +81,7 @@ impl super::DownloadWorker {
                             return Err(chunk_index);
                         },
                         Ok(None) => {
-                            return Ok(DownloadStatus::Finished);
+                            return Ok(super::DownloadStatus::Finished);
                         },
                         Err(_) => {
                             return Err(chunk_index);

@@ -14,6 +14,9 @@ mod download;
 mod outcome;
 pub mod validation;
 
+use outcome::DownloadStatus;
+pub use outcome::WorkerOutcome;
+
 #[derive(Clone, Debug)]
 pub struct Worker {
     pub download: Download,

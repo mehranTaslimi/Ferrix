@@ -9,7 +9,6 @@ pub enum ManagerAction {
     ManageWorkerResult(DownloadWorker),
     ReportNetworkWorker(/*Download ID */ i64, /*Bytes len*/ u64),
     PauseDownload(/*Download ID */ i64),
-    ResumeDownload(/*Download ID */ i64),
     UpdateChunks(/*Download ID */ i64),
     ValidateChunksHash(/*Download ID */ i64),
     ResetChunks(/*Download ID */ i64, /* Chunk Index */ Vec<i64>),
@@ -46,9 +45,6 @@ impl super::DownloadsManager {
             }
             ManagerAction::UpdateChunks(download_id) => {
                 self_clone.update_chunks_action(download_id).await;
-            }
-            ManagerAction::ResumeDownload(download_id) => {
-                self_clone.resume_download_action(download_id).await;
             }
             ManagerAction::ValidateChunksHash(download_id) => {
                 self_clone.validate_chunks_hash_action(download_id).await;

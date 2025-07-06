@@ -103,9 +103,9 @@ function StatusAndSpeed({
     }, [speedAndRemaining.speed]);
 
     const diskSpeed = useMemo(() => {
-        const kb = speedAndRemaining.speed;
-        const mb = speedAndRemaining.speed / 1000;
-        const gb = speedAndRemaining.speed / 1000 / 1000;
+        const kb = speedAndRemaining.diskSpeed;
+        const mb = speedAndRemaining.diskSpeed / 1000;
+        const gb = speedAndRemaining.diskSpeed / 1000 / 1000;
 
         if (gb >= 1) {
             return gb.toFixed(1) + " GB/s";
