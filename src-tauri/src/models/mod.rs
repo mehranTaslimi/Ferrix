@@ -1,66 +1,92 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 
-pub type ChunkCount = i64;
-pub type DownloadId = i64;
-pub type DownloadedBytes = i64;
-pub type TotalBytes = i64;
-pub type DownloadUrl = String;
-pub type DownloadStatus = String;
-pub type CreatedAt = NaiveDateTime;
-pub type FilePath = String;
-pub type FileName = String;
-pub type ContentType = String;
-pub type Extension = String;
-pub type ExpectedHash = Option<String>;
-
-#[derive(Debug, Clone)]
-pub struct FileInfo {
-    pub url: DownloadUrl,
-    pub file_name: FileName,
-    pub content_type: ContentType,
-    pub total_bytes: TotalBytes,
-    pub extension: Extension,
-    pub file_path: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Download {
-    pub id: DownloadId,
-    pub url: DownloadUrl,
-    pub total_bytes: TotalBytes,
-    pub status: DownloadStatus,
-    pub created_at: Option<CreatedAt>,
-    pub downloaded_bytes: DownloadedBytes,
-    pub chunk_count: ChunkCount,
-    pub file_path: FilePath,
-    pub file_name: FileName,
-    pub content_type: ContentType,
-    pub extension: Extension,
+    pub id: i64,
+    pub url: String,
+    pub total_bytes: i64,
+    pub downloaded_bytes: i64,
+    pub status: String,
+    pub created_at: Option<NaiveDateTime>,
+    pub chunk_count: i64,
+    pub file_path: String,
+    pub file_name: String,
+    pub content_type: String,
+    pub extension: String,
+    pub auth: Option<String>,
+    pub proxy: Option<String>,
+    pub headers: Option<String>,
+    pub cookies: Option<String>,
+    pub speed_limit: Option<i64>,
+    pub max_retries: i64,
+    pub delay_secs: f64,
+    pub backoff_factor: f64,
+    pub timeout_secs: i64,
 }
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Chunk {
-    pub download_id: String,
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewDownload {
+    pub url: String,
+    pub total_bytes: i64,
+    pub status: String,
+    pub chunk_count: i64,
+    pub file_path: String,
+    pub file_name: String,
+    pub content_type: String,
+    pub extension: String,
+    pub auth: Option<String>,
+    pub proxy: Option<String>,
+    pub headers: Option<String>,
+    pub cookies: Option<String>,
+    pub speed_limit: Option<i64>,
+    pub max_retries: Option<i64>,
+    pub delay_secs: Option<f64>,
+    pub backoff_factor: Option<f64>,
+    pub timeout_secs: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateDownload {
+    pub status: Option<String>,
+    pub total_bytes: Option<i64>,
+    pub speed_limit: Option<i64>,
+    pub auth: Option<String>,
+    pub proxy: Option<String>,
+    pub headers: Option<String>,
+    pub cookies: Option<String>,
+    pub max_retries: Option<i64>,
+    pub delay_secs: Option<f64>,
+    pub backoff_factor: Option<f64>,
+    pub timeout_secs: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DownloadChunk {
+    pub download_id: i64,
     pub chunk_index: i64,
     pub start_byte: i64,
     pub end_byte: i64,
     pub downloaded_bytes: i64,
-    pub url: String,
-    pub expected_hash: ExpectedHash,
-    pub file_path: FilePath,
-    pub total_bytes: TotalBytes,
-    pub has_error: Option<bool>,
+    pub expected_hash: Option<String>,
     pub error_message: Option<String>,
+    pub has_error: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct DownloadReport {
-    pub id: i64,
-    pub downloaded_bytes_chunks: Vec<i64>,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewChunk {
+    pub download_id: i64,
+    pub chunk_index: i64,
+    pub start_byte: i64,
+    pub end_byte: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct DownloadSpeed {
-    pub id: i64,
-    pub speed_kbps: f64,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateChunk {
+    pub chunk_index: i64,
+    pub downloaded_bytes: Option<i64>,
+    pub error_message: Option<String>,
+    pub expected_hash: Option<String>,
+    pub has_error: Option<bool>,
 }

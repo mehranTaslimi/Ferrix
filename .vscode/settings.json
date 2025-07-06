@@ -1,5 +1,1 @@
-{
-  "rust-analyzer.cargo.extraEnv": {
-    "MACOSX_DEPLOYMENT_TARGET": "10.13"
-  }
-}
+

@@ -1,21 +1,16 @@
-use std::sync::Arc;
-
+use crate::registry::{Registry, RegistryAction};
 use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt, SeekFrom};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc;
 
-use crate::manager::task::TaskManager;
-use crate::worker::DiskReport;
+pub type WriteMessage = (i64, u64, u64, Vec<u8>);
 
-pub type WriteMessage = (u64, u64, u64, Vec<u8>);
-
-impl super::DownloadWorker {
-    pub(super) async fn file_writer(
+impl super::File {
+    pub(super) async fn setup_file_writer(
+        download_id: i64,
         file_path: &str,
         total_bytes: u64,
-        report: Arc<Mutex<DiskReport>>,
-        task: Arc<TaskManager>,
     ) -> Result<mpsc::UnboundedSender<WriteMessage>, String> {
         let file_exists = fs::metadata(file_path).await.is_ok();
 
@@ -35,19 +30,17 @@ impl super::DownloadWorker {
         let (tx, mut rx) = mpsc::unbounded_channel::<WriteMessage>();
 
         let task_name = format!("file writer: {}", file_path);
-        task.spawn(&task_name, async move {
+
+        Registry::spawn(&task_name, async move {
             while let Some((chunk_index, start_byte, downloaded_bytes, bytes)) = rx.recv().await {
                 file.seek(SeekFrom::Start(start_byte)).await.unwrap();
                 file.write_all(&bytes).await.unwrap();
 
-                let mut report = report.lock().await;
-                report.wrote_bytes += downloaded_bytes;
-                report.received_bytes += downloaded_bytes;
-                report
-                    .chunks
-                    .entry(chunk_index)
-                    .and_modify(|f| *f += downloaded_bytes)
-                    .or_insert(downloaded_bytes);
+                Registry::dispatch(RegistryAction::UpdateDiskReport(
+                    download_id,
+                    chunk_index,
+                    downloaded_bytes,
+                ));
             }
         });
 

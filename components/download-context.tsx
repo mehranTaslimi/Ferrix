@@ -29,6 +29,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
+        listen("error", (ev) => {
+            console.log(ev)
+        })
+    }, [])
+
+    useEffect(() => {
+
         const unlisten = listen<DownloadType>("download_item", (ev) => {
             setDownloads((prev) => {
                 const clone = structuredClone(prev)

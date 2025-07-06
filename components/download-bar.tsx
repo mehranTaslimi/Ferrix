@@ -46,8 +46,11 @@ export default function DownloadBar({
 
     setIsLoading(true);
     try {
-      await invoke("add_download_queue", {
+      await invoke("add_new_download", {
         url: value.url,
+        options: {
+          chunk_count: 0
+        }
       });
       form.setValue("url", "");
     } catch (error) {

@@ -1,0 +1,134 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n    d.id,\n    d.url,\n    d.total_bytes,\n    d.status,\n    d.created_at,\n    d.chunk_count,\n    d.file_path,\n    d.file_name,\n    d.content_type,\n    d.extension,\n    d.auth,\n    d.proxy,\n    d.headers,\n    d.cookies,\n    d.speed_limit,\n    d.max_retries,\n    d.delay_secs,\n    d.backoff_factor,\n    d.timeout_secs,\n    COALESCE(\n\t\t(\n\t\t\tSELECT\n\t\t\t\tSUM(c.downloaded_bytes)\n\t\t\tFROM\n\t\t\t\tdownload_chunks c\n\t\t\tWHERE\n\t\t\t\tc.download_id = d.id\n\t\t),\n\t\t0\n\t) AS downloaded_bytes\nFROM downloads d\nLEFT JOIN download_chunks c ON c.download_id = d.id\nWHERE d.id = ?\nGROUP BY d.id;\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "url",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "total_bytes",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "status",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "chunk_count",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "file_path",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "file_name",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "content_type",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "extension",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "auth",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "proxy",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "headers",
+        "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "cookies",
+        "ordinal": 13,
+        "type_info": "Text"
+      },
+      {
+        "name": "speed_limit",
+        "ordinal": 14,
+        "type_info": "Integer"
+      },
+      {
+        "name": "max_retries",
+        "ordinal": 15,
+        "type_info": "Integer"
+      },
+      {
+        "name": "delay_secs",
+        "ordinal": 16,
+        "type_info": "Float"
+      },
+      {
+        "name": "backoff_factor",
+        "ordinal": 17,
+        "type_info": "Float"
+      },
+      {
+        "name": "timeout_secs",
+        "ordinal": 18,
+        "type_info": "Integer"
+      },
+      {
+        "name": "downloaded_bytes",
+        "ordinal": 19,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "463b4f41028c5cf8af9d42048f91e3e16a49378ce47c17cedded09457112e0a0"
+}
