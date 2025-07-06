@@ -19,9 +19,11 @@ export default function DownloadForm() {
 
         setIsLoading(true)
         try {
-            await invoke("add_download_queue", {
+            await invoke("add_new_download", {
                 url: value,
-                chunk: 5,
+                options: {
+                    chunk_count: 0
+                }
             })
             setValue("")
         } catch (error) {

@@ -58,9 +58,11 @@ export default function DownloadFormModal({
 
     setIsLoading(true);
     try {
-      await invoke("add_download_queue", {
+      await invoke("add_new_download", {
         url: values.url.trim(),
-        chunk: values.chunk,
+        options: {
+          chunk_count: values.chunk,
+        }
       });
       setUrl(url);
       onOpenChange(false);
