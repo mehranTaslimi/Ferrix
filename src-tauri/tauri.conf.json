@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Ferrix",
+  "productName": "Ferrix (Beta)",
   "version": "0.1.0",
   "identifier": "com.ferrix.app",
   "build": {
@@ -16,13 +16,14 @@
         "decorations": true,
         "transparent": true,
         "title": "Ferrix",
-        "width": 1180,
-        "height": 720,
-        "resizable": true,
+        "width": 1000,
+        "height": 650,
+        "resizable": false,
         "fullscreen": false,
         "center": true,
         "dragDropEnabled": true,
-        "titleBarStyle": "Overlay"
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ],
     "security": {

@@ -43,11 +43,12 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.57.0",
+    "react-resizable-panels": "^3.0.3",
     "recharts": "^2.15.3",
     "sonner": "^2.0.5",
     "tailwind-merge": "^3.3.0",
-    "zod": "^3.25.51",
-    "ts-pattern":"^5.7.1"
+    "ts-pattern": "^5.7.1",
+    "zod": "^3.25.51"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
