@@ -16,7 +16,7 @@ impl super::DownloadWorker {
             let self_clone = self.clone();
             let task_name = format!(
                 "chunk_download: {}, {}",
-                self_clone.download_id, chunk.chunk_index
+                self_clone.download.id, chunk.chunk_index
             );
             Registry::spawn(
                 &task_name,
@@ -75,7 +75,7 @@ impl super::DownloadWorker {
 
                             downloaded_bytes += bytes_len as i64;
 
-                            Arc::clone(&self.manager).dispatch(ManagerAction::ReportNetworkWorker(self.download_id, bytes_len));
+                            Arc::clone(&self.manager).dispatch(ManagerAction::ReportNetworkWorker(self.download.id, bytes_len));
                         },
                         Ok(Some(Err(_))) => {
                             return Err(chunk_index);

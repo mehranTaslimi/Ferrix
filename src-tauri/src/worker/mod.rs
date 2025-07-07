@@ -1,6 +1,4 @@
-use std::{sync::Arc, time::Instant};
-
-use futures_util::lock::Mutex;
+use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_util::sync::CancellationToken;
 
@@ -23,18 +21,16 @@ pub struct Worker {
     pub download: Download,
     pub chunks: Vec<DownloadChunk>,
     pub cancel_token: Arc<CancellationToken>,
-    pub download_id: i64,
     pub file: Arc<UnboundedSender<WriteMessage>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct DownloadWorker {
-    download: Download,
+    pub download: Download,
     chunks: Vec<DownloadChunk>,
     cancel_token: Arc<CancellationToken>,
     file: Arc<UnboundedSender<WriteMessage>>,
     manager: Arc<DownloadsManager>,
-    pub download_id: i64,
 }
 
 impl DownloadWorker {
@@ -42,7 +38,6 @@ impl DownloadWorker {
         download: Download,
         chunks: Vec<DownloadChunk>,
         cancel_token: Arc<CancellationToken>,
-        download_id: i64,
         file: Arc<UnboundedSender<WriteMessage>>,
         manager: Arc<DownloadsManager>,
     ) -> Self {
@@ -50,7 +45,6 @@ impl DownloadWorker {
             download,
             chunks,
             cancel_token,
-            download_id,
             file,
             manager,
         }

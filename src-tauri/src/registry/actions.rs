@@ -136,7 +136,6 @@ impl super::Registry {
                 download,
                 chunks: not_downloaded_chunks.clone(),
                 cancel_token: Arc::new(CancellationToken::new()),
-                download_id,
                 file,
             })),
         );

@@ -104,7 +104,6 @@ impl super::DownloadsManager {
             worker.download.clone(),
             worker.chunks.clone(),
             Arc::clone(&worker.cancel_token),
-            worker.download_id,
             Arc::clone(&worker.file),
             Arc::clone(self),
         );
@@ -147,20 +146,20 @@ impl super::DownloadsManager {
         Registry::spawn("start_download", async move {
             loop {
                 let result = worker.start_download().await;
-                self_clone.dispatch(ManagerAction::UpdateChunks(worker.download_id));
+                self_clone.dispatch(ManagerAction::UpdateChunks(worker.download.id));
 
                 match result {
                     WorkerOutcome::Finished => {
                         self_clone.dispatch(ManagerAction::UpdateDownloadStatus(
                             "completed",
-                            worker.download_id,
+                            worker.download.id,
                         ));
                         break;
                     }
                     WorkerOutcome::Paused => {
                         self_clone.dispatch(ManagerAction::UpdateDownloadStatus(
                             "paused",
-                            worker.download_id,
+                            worker.download.id,
                         ));
                         break;
                     }
