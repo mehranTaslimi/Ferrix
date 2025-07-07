@@ -34,8 +34,8 @@ export default function RootLayout({
                     </ResizablePanel>
                     <ResizableHandle className="bg-transparent" />
                     <ResizablePanel defaultSize={75}>
-                      <div className="h-screen flex items-center justify-center flex-col mr-3">
-                        <div className="bg-background w-full h-[96%] rounded-md p-3 overflow-x-hidden overflow-y-auto">{children}</div>
+                      <div className="h-screen flex items-center justify-center flex-col mr-2">
+                        <div className="bg-background w-full h-[97.4%] rounded-lg overflow-x-hidden p-3 overflow-y-auto">{children}</div>
                       </div>
                     </ResizablePanel>
                   </ResizablePanelGroup>
