@@ -4,7 +4,6 @@ import { DownloadProvider } from "@/components/download-context"
 import Sidebar from "@/components/sidebar"
 import "./globals.css"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
-import { Input } from "@/components/ui/input"
 
 export default function RootLayout({
   children,
@@ -35,8 +34,8 @@ export default function RootLayout({
                     </ResizablePanel>
                     <ResizableHandle className="bg-transparent" />
                     <ResizablePanel defaultSize={75}>
-                      <div className="h-screen flex items-center mr-3">
-                        <div className="bg-background w-full max-h-[96%] rounded-md p-3 overflow-x-hidden overflow-y-auto">{children}</div>
+                      <div className="h-screen flex items-center justify-center flex-col mr-3">
+                        <div className="bg-background w-full h-[96%] rounded-md p-3 overflow-x-hidden overflow-y-auto">{children}</div>
                       </div>
                     </ResizablePanel>
                   </ResizablePanelGroup>
