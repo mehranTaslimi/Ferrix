@@ -8,7 +8,7 @@
   --foreground: rgb(47, 46, 45);
   --card: oklch(1 0 0 / 0.1);
   --card-foreground: rgb(47, 46, 45);
-  --popover: oklch(1 0 0 / 0.1);
+  --popover: rgb(240, 239, 238);
   --popover-foreground: rgb(47, 46, 45);
   --primary: oklch(0.205 0 0);
   --primary-foreground: rgb(240, 239, 238);
@@ -44,7 +44,7 @@
   --foreground: rgb(240, 239, 238);
   --card: oklch(0.985 0 0 / 0.05);
   --card-foreground: rgb(240, 239, 238);
-  --popover: oklch(0.985 0 0 / 0.05);
+  --popover: oklch(0.205 0 0);
   --popover-foreground: rgb(240, 239, 238);
   --primary: rgb(240, 239, 238);
   --primary-foreground: oklch(0.205 0 0);
@@ -56,7 +56,7 @@
   --accent-foreground: rgb(240, 239, 238);
   --destructive: oklch(0.396 0.141 25.723);
   --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: rgb(204, 204, 204);
+  --border: oklch(58.292% 0.00007 271.152 / 0.317);
   --input: rgb(167, 167, 167);
   --ring: oklch(0.439 0 0);
   --chart-1: oklch(0.488 0.243 264.376);

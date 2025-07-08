@@ -29,7 +29,7 @@ export default function Page() {
 
   return (
     <div className="container mx-auto max-w-5xl">
-      <div className="mb-8">
+      <div className="mb-8 sticky z-2 top-0 bg-background">
         <DownloadBar
           setUrl={setUrl}
           url={url}
@@ -39,7 +39,7 @@ export default function Page() {
         />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 px-3">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">
             Downloads ({filteredDownloads.length})

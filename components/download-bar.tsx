@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { DownloadIcon, MoreVerticalIcon } from "lucide-react";
+import { DownloadIcon, MoreHorizontal, MoreVerticalIcon } from "lucide-react";
 import { DownloadType } from "./types";
 import { useForm } from "react-hook-form";
 
@@ -24,6 +24,8 @@ interface DownloadBarProps {
   setUrl: (url: string) => void;
 }
 import { Loading } from "./ui/loading";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type UrlFormData = z.infer<typeof urlFormSchema>;
 
@@ -39,7 +41,10 @@ export default function DownloadBar({
   const form = useForm<UrlFormData>({
     resolver: zodResolver(urlFormSchema),
     defaultValues: { url },
+    mode: "onChange",
   });
+
+  const urlError = form.formState.errors.url;
 
   const handleSubmit = async (value: z.infer<typeof urlFormSchema>) => {
     if (!value.url.trim()) return;
@@ -49,23 +54,43 @@ export default function DownloadBar({
       await invoke("add_new_download", {
         url: value.url,
         options: {
-          chunk_count: 0
-        }
+          chunk_count: 0,
+        },
       });
       form.setValue("url", "");
     } catch (error) {
       console.error("Failed to add download:", error);
+      toast("Failed to add download. Please check the URL.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleUrlFieldChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
+    if (urlError) {
+      form.clearErrors("url");
+    }
+    setUrl(ev.target.value);
+    form.setValue("url", ev.target.value, { shouldValidate: false });
+  };
+
   return (
-    <div className="flex items-start gap-2 justify-between t-pb-20">
+    <div
+      className={cn(
+        "flex items-start gap-2 justify-between py-1 pl-1 pr-3 bg-card border-b border-b-transparent",
+        {
+          "border-b border-b-red-600/30": urlError,
+        }
+      )}
+    >
       <Form {...form}>
         <form
           className="flex gap-2 w-full"
-          onSubmit={form.handleSubmit(handleSubmit)}
+          onSubmit={form.handleSubmit(handleSubmit, (errors) => {
+            if (errors.url?.message) {
+              toast.error(errors.url.message);
+            }
+          })}
         >
           <FormField
             control={form.control}
@@ -74,26 +99,23 @@ export default function DownloadBar({
               <FormItem className="w-full gap-1">
                 <FormControl>
                   <Input
+                    inputMode="url"
                     placeholder="Enter a link to download."
                     {...field}
-                    onChange={(ev) => {
-                      setUrl(ev.target.value);
-                      field.onChange(ev);
-                    }}
-                    className="w-full"
-                    autoFocus
+                    onChange={handleUrlFieldChange}
+                    className={cn(
+                      "w-full border-none !bg-inherit focus-visible:ring-0 shadow-none"
+                    )}
                   />
                 </FormControl>
-                <div className="min-h-[20px]">
-                  <FormMessage />
-                </div>
               </FormItem>
             )}
           />
           <Button
+            variant="ghost"
             type="submit"
             disabled={isLoading}
-            className="flex items-center gap-2"
+            className="flex items-center"
           >
             {isLoading ? (
               <Loading className="w-4 h-4" />
@@ -110,10 +132,13 @@ export default function DownloadBar({
         </p> */}
       <Button
         onClick={() => setIsModalOpen(true)}
-        className="flex items-center gap-2"
+        className="flex items-center gap-1"
+        variant="ghost"
+        autoCorrect="off"
+        spellCheck={false}
+        autoCapitalize="none"
       >
-        <MoreVerticalIcon className="w-4 h-4" />
-        Advanced
+        <MoreHorizontal className="w-4 h-4" />
       </Button>
     </div>
   );

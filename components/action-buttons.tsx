@@ -40,7 +40,7 @@ export default function ActionButtons({
           className={buttonClassName}
           disabled={isResumeDisabled}
         >
-          {status === Status.Paused || status === Status.Queued ? (
+          {status === Status.Paused ? (
             <div className="flex gap-2">
               <Play className="w-4 h-4" />
             </div>
