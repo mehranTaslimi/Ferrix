@@ -29,7 +29,7 @@ export default function Page() {
 
   return (
     <div className="container mx-auto max-w-5xl">
-      <div className="mb-8">
+      <div className="mb-8 sticky z-2 top-0 bg-background">
         <DownloadBar
           setUrl={setUrl}
           url={url}
