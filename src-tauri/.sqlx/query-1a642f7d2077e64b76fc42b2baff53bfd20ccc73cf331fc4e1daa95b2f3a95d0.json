@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n    d.id,\n    d.url,\n    d.total_bytes,\n    d.status,\n    d.created_at,\n    d.chunk_count,\n    d.file_path,\n    d.file_name,\n    d.content_type,\n    d.extension,\n    d.auth,\n    d.proxy,\n    d.headers,\n    d.cookies,\n    d.speed_limit,\n    d.max_retries,\n    d.delay_secs,\n    d.backoff_factor,\n    d.timeout_secs,\n    COALESCE(\n\t\t(\n\t\t\tSELECT\n\t\t\t\tSUM(c.downloaded_bytes)\n\t\t\tFROM\n\t\t\t\tdownload_chunks c\n\t\t\tWHERE\n\t\t\t\tc.download_id = d.id\n\t\t),\n\t\t0\n\t) AS downloaded_bytes\nFROM downloads d\nLEFT JOIN download_chunks c ON c.download_id = d.id\nGROUP BY d.id\nORDER BY d.created_at DESC;\n        ",
+  "query": "\n            SELECT\n    d.id,\n    d.url,\n    d.total_bytes,\n    d.status,\n    d.created_at,\n    d.modified_at,\n    d.chunk_count,\n    d.file_path,\n    d.file_name,\n    d.content_type,\n    d.extension,\n    d.auth,\n    d.proxy,\n    d.headers,\n    d.cookies,\n    d.speed_limit,\n    d.max_retries,\n    d.delay_secs,\n    d.backoff_factor,\n    d.timeout_secs,\n    COALESCE(\n\t\t(\n\t\t\tSELECT\n\t\t\t\tSUM(c.downloaded_bytes)\n\t\t\tFROM\n\t\t\t\tdownload_chunks c\n\t\t\tWHERE\n\t\t\t\tc.download_id = d.id\n\t\t),\n\t\t0\n\t) AS downloaded_bytes\nFROM downloads d\nLEFT JOIN download_chunks c ON c.download_id = d.id\nWHERE d.id = ?\nGROUP BY d.id;\n            ",
   "describe": {
     "columns": [
       {
@@ -29,83 +29,88 @@
         "type_info": "Datetime"
       },
       {
-        "name": "chunk_count",
+        "name": "modified_at",
         "ordinal": 5,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "chunk_count",
+        "ordinal": 6,
         "type_info": "Integer"
       },
       {
         "name": "file_path",
-        "ordinal": 6,
-        "type_info": "Text"
-      },
-      {
-        "name": "file_name",
         "ordinal": 7,
         "type_info": "Text"
       },
       {
-        "name": "content_type",
+        "name": "file_name",
         "ordinal": 8,
         "type_info": "Text"
       },
       {
-        "name": "extension",
+        "name": "content_type",
         "ordinal": 9,
         "type_info": "Text"
       },
       {
-        "name": "auth",
+        "name": "extension",
         "ordinal": 10,
         "type_info": "Text"
       },
       {
-        "name": "proxy",
+        "name": "auth",
         "ordinal": 11,
         "type_info": "Text"
       },
       {
-        "name": "headers",
+        "name": "proxy",
         "ordinal": 12,
         "type_info": "Text"
       },
       {
-        "name": "cookies",
+        "name": "headers",
         "ordinal": 13,
         "type_info": "Text"
       },
       {
-        "name": "speed_limit",
+        "name": "cookies",
         "ordinal": 14,
-        "type_info": "Integer"
+        "type_info": "Text"
       },
       {
-        "name": "max_retries",
+        "name": "speed_limit",
         "ordinal": 15,
         "type_info": "Integer"
       },
       {
-        "name": "delay_secs",
+        "name": "max_retries",
         "ordinal": 16,
-        "type_info": "Float"
+        "type_info": "Integer"
       },
       {
-        "name": "backoff_factor",
+        "name": "delay_secs",
         "ordinal": 17,
         "type_info": "Float"
       },
       {
-        "name": "timeout_secs",
+        "name": "backoff_factor",
         "ordinal": 18,
+        "type_info": "Float"
+      },
+      {
+        "name": "timeout_secs",
+        "ordinal": 19,
         "type_info": "Integer"
       },
       {
         "name": "downloaded_bytes",
-        "ordinal": 19,
+        "ordinal": 20,
         "type_info": "Integer"
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false,
@@ -113,6 +118,7 @@
       false,
       false,
       false,
+      true,
       false,
       false,
       false,
@@ -130,5 +136,5 @@
       false
     ]
   },
-  "hash": "355cd927cadd7001aa856c4db6c372fe77cf53466fab483788134243f1961df2"
+  "hash": "1a642f7d2077e64b76fc42b2baff53bfd20ccc73cf331fc4e1daa95b2f3a95d0"
 }

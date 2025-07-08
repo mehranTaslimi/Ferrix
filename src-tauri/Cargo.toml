@@ -54,4 +54,4 @@ mime2ext = "0.1.54"
 thiserror = "2.0.12"
 async-trait = "0.1.88"
 dashmap = "6.1.0"
-
+fs2 = "0.4.3"

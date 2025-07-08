@@ -10,6 +10,7 @@ pub struct Download {
     pub downloaded_bytes: i64,
     pub status: String,
     pub created_at: Option<NaiveDateTime>,
+    pub modified_at: Option<NaiveDateTime>,
     pub chunk_count: i64,
     pub file_path: String,
     pub file_name: String,

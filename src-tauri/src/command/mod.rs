@@ -12,7 +12,7 @@ pub async fn add_new_download(url: String, options: DownloadOptions) -> Result<(
 
 #[tauri::command]
 pub async fn get_download_list() -> Result<Vec<Download>, String> {
-    DownloadRepository::find_all()
+    DownloadRepository::find_all(None)
         .await
         .map_err(|e| e.to_string())
 }
@@ -24,5 +24,6 @@ pub fn pause_download(id: i64) {
 
 #[tauri::command]
 pub fn resume_download(id: i64) {
+    println!("{id}");
     Registry::dispatch(RegistryAction::ResumeDownload(id));
 }

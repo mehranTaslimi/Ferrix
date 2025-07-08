@@ -245,6 +245,12 @@ impl super::DownloadsManager {
         ));
 
         let download = DownloadRepository::find(download_id).await.unwrap();
+
+        if download.downloaded_bytes == 0 {
+            Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
+            return;
+        }
+
         let chunks = ChunkRepository::find_all(download_id).await.unwrap();
 
         let file_path = download.file_path;

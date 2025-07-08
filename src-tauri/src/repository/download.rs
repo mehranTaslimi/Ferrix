@@ -6,50 +6,59 @@ use crate::{
 pub struct DownloadRepository;
 
 impl DownloadRepository {
-    pub async fn find_all() -> Result<Vec<Download>, sqlx::Error> {
+    pub async fn find_all(status: Option<&str>) -> Result<Vec<Download>, sqlx::Error> {
         let pool = Registry::get_pool();
-        sqlx::query_as!(
-            Download,
-            r#"
-            SELECT
-    d.id,
-    d.url,
-    d.total_bytes,
-    d.status,
-    d.created_at,
-    d.chunk_count,
-    d.file_path,
-    d.file_name,
-    d.content_type,
-    d.extension,
-    d.auth,
-    d.proxy,
-    d.headers,
-    d.cookies,
-    d.speed_limit,
-    d.max_retries,
-    d.delay_secs,
-    d.backoff_factor,
-    d.timeout_secs,
-    COALESCE(
-		(
-			SELECT
-				SUM(c.downloaded_bytes)
-			FROM
-				download_chunks c
-			WHERE
-				c.download_id = d.id
-		),
-		0
-	) AS downloaded_bytes
-FROM downloads d
-LEFT JOIN download_chunks c ON c.download_id = d.id
-GROUP BY d.id
-ORDER BY d.created_at DESC;
-        "#
-        )
-        .fetch_all(pool)
-        .await
+
+        let query = r#"
+        SELECT
+            d.id,
+            d.url,
+            d.total_bytes,
+            d.status,
+            d.created_at,
+            d.modified_at,
+            d.chunk_count,
+            d.file_path,
+            d.file_name,
+            d.content_type,
+            d.extension,
+            d.auth,
+            d.proxy,
+            d.headers,
+            d.cookies,
+            d.speed_limit,
+            d.max_retries,
+            d.delay_secs,
+            d.backoff_factor,
+            d.timeout_secs,
+            COALESCE(
+                (
+                    SELECT SUM(c.downloaded_bytes)
+                    FROM download_chunks c
+                    WHERE c.download_id = d.id
+                ),
+                0
+            ) AS downloaded_bytes
+        FROM downloads d
+        LEFT JOIN download_chunks c ON c.download_id = d.id
+        WHERE ($1::TEXT IS NULL OR d.status = $1)
+        GROUP BY d.id
+        ORDER BY
+            CASE d.status
+                WHEN 'downloading' THEN 0
+                WHEN 'queued' THEN 1
+                ELSE 2
+            END,
+            CASE d.status
+                WHEN 'downloading' THEN d.modified_at
+                ELSE d.created_at
+            END DESC
+    "#;
+
+        sqlx::query_as::<_, Download>(query)
+            .bind(status)
+            .fetch_all(pool)
+            .await
     }
 
     pub async fn find(id: i64) -> Result<Download, sqlx::Error> {
@@ -63,6 +72,7 @@ ORDER BY d.created_at DESC;
     d.total_bytes,
     d.status,
     d.created_at,
+    d.modified_at,
     d.chunk_count,
     d.file_path,
     d.file_name,

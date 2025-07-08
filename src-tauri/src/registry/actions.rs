@@ -30,10 +30,50 @@ impl super::Registry {
         let download = DownloadRepository::find(download_id).await.unwrap();
         Emitter::emit_event("download_item", download);
 
-        Registry::dispatch(super::RegistryAction::CheckAvailablePermit);
+        Registry::dispatch(RegistryAction::CheckAvailableDiskSpace(download_id));
     }
 
-    pub async fn check_available_permit_action() {
+    pub(super) async fn recover_queued_download_from_repository_action() {
+        let download_ids = DownloadRepository::find_all(Some("queued"))
+            .await
+            .map(|downloads| {
+                downloads
+                    .iter()
+                    .map(|download| download.id)
+                    .collect::<Vec<i64>>()
+            });
+
+        if let Ok(download_ids) = download_ids {
+            for download_id in download_ids.iter() {
+                Registry::dispatch(RegistryAction::NewDownloadQueue(*download_id));
+            }
+        };
+    }
+
+    pub(super) async fn check_available_disk_space_action(download_id: i64) {
+        if let Ok(download) = DownloadRepository::find(download_id).await {
+            match File::check_disk_space(
+                &download.file_path,
+                (download.total_bytes - download.downloaded_bytes) as u64,
+            ) {
+                Ok(_) => {
+                    Registry::dispatch(super::RegistryAction::CheckAvailablePermit);
+                }
+                Err(err) => {
+                    let pending_queue = Arc::clone(&Self::get_state().pending_queue);
+                    let mut pending_queue = pending_queue.lock().await;
+                    pending_queue.pop_front();
+
+                    Emitter::emit_error(err);
+
+                    Self::get_manager()
+                        .dispatch(ManagerAction::UpdateDownloadStatus("failed", download_id));
+                }
+            }
+        }
+    }
+
+    pub(super) async fn check_available_permit_action() {
         let state = Arc::clone(&Registry::get_state());
         let pending_queue = Arc::clone(&state.pending_queue);
         let queue_listener_running = Arc::clone(&state.queue_listener_running);
@@ -66,7 +106,9 @@ impl super::Registry {
                                         If enough permits are available, the ID is popped from the queue
                                         and the download is dispatched.
                                     */
-                                    if available_permits >= chunk_count + 5 {
+                                    if available_permits >= 10
+                                        && available_permits - 5 >= chunk_count
+                                    {
                                         pending_queue.lock().await.pop_front();
                                         Registry::dispatch(
                                             RegistryAction::AddDownloadToWorkersMap(download_id),

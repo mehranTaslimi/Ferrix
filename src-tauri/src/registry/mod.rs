@@ -90,6 +90,8 @@ impl Registry {
         STATE.set(state).unwrap();
         Self::initialize_mpsc_action(rx);
         Self::initialize_manager();
+
+        Self::dispatch(RegistryAction::RecoverQueuedDownloadFromRepository);
     }
 
     fn initialize_mpsc_action(mut rx: UnboundedReceiver<RegistryAction>) {
