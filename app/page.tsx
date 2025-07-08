@@ -39,7 +39,7 @@ export default function Page() {
         />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 px-3">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">
             Downloads ({filteredDownloads.length})
