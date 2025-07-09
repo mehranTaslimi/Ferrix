@@ -7,11 +7,11 @@ mod proxy;
 mod stream;
 
 pub use auth::AuthType;
-pub use proxy::ProxyType;
+pub use proxy::*;
 
 pub struct Client {
     url: String,
     client: ReqwestClient,
-    auth: AuthType,
-    proxy: ProxyType,
+    auth: Option<AuthType>,
+    proxy: Option<ProxyType>,
 }

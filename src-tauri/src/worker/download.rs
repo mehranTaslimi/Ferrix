@@ -34,8 +34,7 @@ impl super::DownloadWorker {
         let start_byte = chunk.start_byte;
         let end_byte = chunk.end_byte;
 
-        let client = Client::new(&self.download.url, AuthType::None, ProxyType::None)
-            .map_err(|_| chunk_index)?;
+        let client = Client::new(&self.download.url, &None, &None).map_err(|_| chunk_index)?;
 
         let mut stream = client
             .stream(Some((start_byte + downloaded_bytes, end_byte)))

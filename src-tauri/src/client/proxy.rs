@@ -28,5 +28,4 @@ pub enum ProxyType {
         password: Option<String>,
     },
     System,
-    None,
 }

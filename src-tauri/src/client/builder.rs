@@ -1,7 +1,11 @@
 use tauri_plugin_http::reqwest::Client as ReqwestClient;
 
 impl super::Client {
-    pub fn new(url: &str, auth: super::AuthType, proxy: super::ProxyType) -> Result<Self, String> {
+    pub fn new(
+        url: &str,
+        auth: &Option<super::AuthType>,
+        proxy: &Option<super::ProxyType>,
+    ) -> Result<Self, String> {
         let client = ReqwestClient::builder()
             .build()
             .map_err(|e| e.to_string())?;
@@ -9,8 +13,8 @@ impl super::Client {
         Ok(Self {
             url: url.to_string(),
             client,
-            auth,
-            proxy,
+            auth: auth.clone(),
+            proxy: proxy.clone(),
         })
     }
 }

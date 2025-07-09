@@ -33,7 +33,7 @@ pub struct DownloadOptions {
 
 impl super::DownloadsManager {
     pub async fn add_new_download(url: String, options: DownloadOptions) -> Result<(), String> {
-        let client = Client::new(&url, AuthType::None, ProxyType::None)?;
+        let client = Client::new(&url, &options.auth, &options.proxy)?;
         let response = client.inspect().await?;
 
         let file_path = match options.file_path {
@@ -52,18 +52,30 @@ impl super::DownloadsManager {
         };
 
         let new_download = NewDownload {
-            auth: serde_json::to_string(&options.auth).ok(),
+            auth: match &options.auth {
+                Some(val) => serde_json::to_string(&val).ok(),
+                None => None,
+            },
             backoff_factor: options.backoff_factor,
             chunk_count: options.chunk_count,
             content_type: response.content_type,
-            cookies: serde_json::to_string(&options.cookies).ok(),
+            cookies: match &options.cookies {
+                Some(val) => serde_json::to_string(val).ok(),
+                None => None,
+            },
             delay_secs: options.delay_secs,
             extension: response.extension,
             file_name,
             file_path,
-            headers: serde_json::to_string(&options.headers).ok(),
+            headers: match &options.headers {
+                Some(val) => serde_json::to_string(val).ok(),
+                None => None,
+            },
             max_retries: options.max_retries,
-            proxy: serde_json::to_string(&options.proxy).ok(),
+            proxy: match &options.proxy {
+                Some(val) => serde_json::to_string(&val).ok(),
+                None => None,
+            },
             speed_limit: options.speed_limit,
             status: "queued".to_string(),
             timeout_secs: options.timeout_secs,

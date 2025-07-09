@@ -1,5 +1,5 @@
 use crate::{
-    models::{Download, NewDownload, UpdateDownload},
+    models::{Download, DownloadRaw, NewDownload, UpdateDownload},
     registry::Registry,
 };
 
@@ -55,16 +55,20 @@ impl DownloadRepository {
             END DESC
     "#;
 
-        sqlx::query_as::<_, Download>(query)
+        let raw = sqlx::query_as::<_, DownloadRaw>(query)
             .bind(status)
             .fetch_all(pool)
-            .await
+            .await?;
+
+        raw.into_iter()
+            .map(Download::try_from)
+            .collect::<Result<Vec<_>, _>>()
     }
 
     pub async fn find(id: i64) -> Result<Download, sqlx::Error> {
         let pool = Registry::get_pool();
-        sqlx::query_as!(
-            Download,
+        let raw = sqlx::query_as!(
+            DownloadRaw,
             r#"
             SELECT
     d.id,
@@ -106,7 +110,9 @@ GROUP BY d.id;
             id
         )
         .fetch_one(pool)
-        .await
+        .await?;
+
+        Download::try_from(raw)
     }
 
     pub async fn add(new: NewDownload) -> Result<i64, sqlx::Error> {

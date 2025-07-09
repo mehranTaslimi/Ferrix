@@ -31,13 +31,12 @@ pub enum AuthType {
         #[serde(default)]
         password: Option<String>,
     },
-    None,
 }
 
 impl super::Client {
-    pub(super) fn auth_handler(request: RequestBuilder, auth: &AuthType) -> RequestBuilder {
+    pub(super) fn auth_handler(request: RequestBuilder, auth: &Option<AuthType>) -> RequestBuilder {
         match auth {
-            AuthType::Basic { username, password } => {
+            Some(AuthType::Basic { username, password }) => {
                 return request.basic_auth(username, Some(password));
             }
             _ => {}
