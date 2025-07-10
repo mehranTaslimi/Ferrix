@@ -8,7 +8,7 @@ use std::{
 };
 
 use dashmap::DashMap;
-use tokio::{sync::Mutex, time::sleep};
+use tokio::{sync::Mutex, time::interval};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -30,7 +30,7 @@ impl super::Registry {
         let download = DownloadRepository::find(download_id).await.unwrap();
         Emitter::emit_event("download_item", download);
 
-        Registry::dispatch(RegistryAction::CheckAvailableDiskSpace(download_id));
+        Registry::dispatch(RegistryAction::CheckAvailablePermit);
     }
 
     pub(super) async fn recover_queued_download_from_repository_action() {
@@ -50,29 +50,6 @@ impl super::Registry {
         };
     }
 
-    pub(super) async fn check_available_disk_space_action(download_id: i64) {
-        if let Ok(download) = DownloadRepository::find(download_id).await {
-            match File::check_disk_space(
-                &download.file_path,
-                (download.total_bytes - download.downloaded_bytes) as u64,
-            ) {
-                Ok(_) => {
-                    Registry::dispatch(super::RegistryAction::CheckAvailablePermit);
-                }
-                Err(err) => {
-                    let pending_queue = Arc::clone(&Self::get_state().pending_queue);
-                    let mut pending_queue = pending_queue.lock().await;
-                    pending_queue.pop_front();
-
-                    Emitter::emit_error(err);
-
-                    Self::get_manager()
-                        .dispatch(ManagerAction::UpdateDownloadStatus("failed", download_id));
-                }
-            }
-        }
-    }
-
     pub(super) async fn check_available_permit_action() {
         let state = Arc::clone(&Registry::get_state());
         let pending_queue = Arc::clone(&state.pending_queue);
@@ -81,6 +58,7 @@ impl super::Registry {
         if !pending_queue.lock().await.is_empty()
             && !queue_listener_running.swap(true, Ordering::SeqCst)
         {
+            let mut interval = interval(Duration::from_secs(1));
             Registry::spawn("check_available_permit_action", async move {
                 loop {
                     let download_id = {
@@ -106,9 +84,28 @@ impl super::Registry {
                                         If enough permits are available, the ID is popped from the queue
                                         and the download is dispatched.
                                     */
-                                    if available_permits >= 10
-                                        && available_permits - 5 >= chunk_count
-                                    {
+
+                                    let remaining_bytes = download
+                                        .total_bytes
+                                        .saturating_sub(download.downloaded_bytes)
+                                        as u64;
+
+                                    let has_disk_space = match File::check_disk_space(
+                                        &download.file_path,
+                                        remaining_bytes,
+                                    ) {
+                                        Ok(is_available) => is_available,
+                                        Err(e) => {
+                                            Emitter::emit_error(e);
+                                            false
+                                        }
+                                    };
+
+                                    let permit_available = has_disk_space
+                                        && (available_permits >= 10
+                                            && available_permits - 5 >= chunk_count);
+
+                                    if permit_available {
                                         pending_queue.lock().await.pop_front();
                                         Registry::dispatch(
                                             RegistryAction::AddDownloadToWorkersMap(download_id),
@@ -135,7 +132,7 @@ impl super::Registry {
                         }
                     }
 
-                    sleep(Duration::from_secs(1)).await;
+                    interval.tick().await;
                 }
             });
         }

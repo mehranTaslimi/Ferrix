@@ -3,11 +3,10 @@ use std::{sync::Arc, time::Duration};
 use tokio::time::timeout;
 
 use crate::{
-    client::{AuthType, Client, ProxyType},
+    client::Client,
     file::WriteMessage,
-    manager::ManagerAction,
     models::DownloadChunk,
-    registry::Registry,
+    registry::{Registry, RegistryAction},
 };
 
 impl super::DownloadWorker {
@@ -74,7 +73,7 @@ impl super::DownloadWorker {
 
                             downloaded_bytes += bytes_len as i64;
 
-                            Arc::clone(&self.manager).dispatch(ManagerAction::ReportNetworkWorker(self.download.id, bytes_len));
+                            Registry::dispatch(RegistryAction::UpdateNetworkReport(self.download.id, bytes_len));
                         },
                         Ok(Some(Err(_))) => {
                             return Err(chunk_index);

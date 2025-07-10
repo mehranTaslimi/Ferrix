@@ -184,14 +184,6 @@ impl super::DownloadsManager {
         });
     }
 
-    pub(super) async fn update_worker_network_report(
-        self: &Arc<Self>,
-        download_id: i64,
-        bytes_len: u64,
-    ) {
-        Registry::dispatch(RegistryAction::UpdateNetworkReport(download_id, bytes_len));
-    }
-
     pub(super) async fn pause_download_action(self: &Arc<Self>, download_id: i64) {
         let workers = Arc::clone(&Registry::get_state().workers);
         let maybe_worker = workers.get(&download_id);

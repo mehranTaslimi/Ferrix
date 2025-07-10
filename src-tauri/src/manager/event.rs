@@ -7,7 +7,6 @@ pub enum ManagerAction {
     StartDownload(/*Download ID */ i64),
     UpdateDownloadStatus(/* Status */ &'static str, /*Download ID */ i64),
     ManageWorkerResult(DownloadWorker),
-    ReportNetworkWorker(/*Download ID */ i64, /*Bytes len*/ u64),
     PauseDownload(/*Download ID */ i64),
     UpdateChunks(/*Download ID */ i64),
     ValidateChunksHash(/*Download ID */ i64),
@@ -34,11 +33,6 @@ impl super::DownloadsManager {
             }
             ManagerAction::ManageWorkerResult(worker) => {
                 self_clone.manage_worker_result_action(worker).await
-            }
-            ManagerAction::ReportNetworkWorker(download_id, bytes_len) => {
-                self_clone
-                    .update_worker_network_report(download_id, bytes_len)
-                    .await;
             }
             ManagerAction::PauseDownload(download_id) => {
                 self_clone.pause_download_action(download_id).await;

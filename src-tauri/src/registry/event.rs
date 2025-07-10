@@ -17,7 +17,6 @@ pub enum RegistryAction {
     CleanDownloadedItemData(/* Download ID */ i64),
     PauseDownload(/* Download ID */ i64),
     ResumeDownload(/* Download ID */ i64),
-    CheckAvailableDiskSpace(/* Download ID */ i64),
     RecoverQueuedDownloadFromRepository,
 }
 
@@ -34,9 +33,6 @@ impl super::Registry {
             }
             RegistryAction::RecoverQueuedDownloadFromRepository => {
                 Self::recover_queued_download_from_repository_action().await;
-            }
-            RegistryAction::CheckAvailableDiskSpace(download_id) => {
-                Self::check_available_disk_space_action(download_id).await;
             }
             RegistryAction::CheckAvailablePermit => {
                 Self::check_available_permit_action().await;
