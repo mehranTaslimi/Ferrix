@@ -1,6 +1,7 @@
 use tokio::sync::mpsc;
 mod disk;
 mod path;
+mod remove;
 mod writer;
 
 pub use writer::WriteMessage;

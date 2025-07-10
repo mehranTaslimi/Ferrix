@@ -9,6 +9,12 @@ impl super::Registry {
         let db_url = Self::get_db_url();
 
         let pool = SqlitePool::connect(&db_url).await.unwrap();
+
+        sqlx::query!("PRAGMA foreign_keys = ON;")
+            .execute(&pool)
+            .await
+            .unwrap();
+
         sqlx::migrate!().run(&pool).await.unwrap();
 
         pool

@@ -27,7 +27,7 @@ export default function ActionButtons({
   };
 
   const handleDelete = async () => {
-    console.log("delete");
+    await invoke('remove_download', { id: downloadId, removeFile: true })
   };
 
   return (

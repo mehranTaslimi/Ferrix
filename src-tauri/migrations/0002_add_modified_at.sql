@@ -16,8 +16,7 @@ CREATE INDEX IF NOT EXISTS idx_downloads_modified_at ON downloads(modified_at);
 CREATE TRIGGER IF NOT EXISTS trg_downloads_modified_at
 AFTER
 UPDATE
-    ON downloads FOR EACH ROW
-    WHEN OLD.modified_at = NEW.modified_at BEGIN
+    ON downloads FOR EACH ROW BEGIN
 UPDATE
     downloads
 SET

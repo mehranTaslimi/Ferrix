@@ -283,4 +283,12 @@ GROUP BY d.id;
 
         Ok(())
     }
+
+    pub async fn delete(id: i64) -> Result<String, sqlx::Error> {
+        let pool = Registry::get_pool();
+        sqlx::query!("DELETE FROM downloads WHERE id = ? RETURNING file_path", id)
+            .fetch_one(pool)
+            .await
+            .map(|record| record.file_path)
+    }
 }

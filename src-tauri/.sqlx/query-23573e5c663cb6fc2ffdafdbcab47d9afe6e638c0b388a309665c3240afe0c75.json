@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "PRAGMA foreign_keys = ON;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "23573e5c663cb6fc2ffdafdbcab47d9afe6e638c0b388a309665c3240afe0c75"
+}

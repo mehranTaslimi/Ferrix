@@ -24,6 +24,10 @@ pub fn pause_download(id: i64) {
 
 #[tauri::command]
 pub fn resume_download(id: i64) {
-    println!("{id}");
     Registry::dispatch(RegistryAction::ResumeDownload(id));
+}
+
+#[tauri::command]
+pub fn remove_download(id: i64, remove_file: bool) {
+    Registry::dispatch(RegistryAction::RemoveDownload(id, remove_file));
 }

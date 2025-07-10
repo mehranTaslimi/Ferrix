@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DownloadItem from "../components/download-item";
 import DownloadFormModal from "../components/download-form-modal";
 import { useDownloads } from "../components/download-context";
@@ -8,11 +8,24 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DownloadIcon, Plus } from "lucide-react";
 import DownloadBar from "@/components/download-bar";
+import { listen } from "@tauri-apps/api/event";
+import { toast } from "sonner";
 
 export default function Page() {
   const { filteredDownloads, selectedMimeType, isLoading } = useDownloads();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [url, setUrl] = useState("");
+
+
+  useEffect(() => {
+    const unlisten = listen<string>('error', (ev) => {
+      toast("Error", { description: ev.payload })
+    });
+
+    return () => {
+      unlisten.then(fn => fn());
+    }
+  }, [])
 
   if (isLoading) {
     return (

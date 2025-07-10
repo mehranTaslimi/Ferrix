@@ -23,7 +23,8 @@ pub async fn run() {
             command::add_new_download,
             command::get_download_list,
             command::resume_download,
-            command::pause_download
+            command::pause_download,
+            command::remove_download
         ])
         .setup(move |app| {
             let window = app.get_webview_window("main").unwrap();

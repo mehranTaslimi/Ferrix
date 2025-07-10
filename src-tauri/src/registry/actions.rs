@@ -263,4 +263,16 @@ impl super::Registry {
     pub(super) async fn resume_download_action(download_id: i64) {
         Registry::get_manager().dispatch(ManagerAction::ValidateChunksHash(download_id));
     }
+
+    pub(super) async fn remove_download_action(download_id: i64, remove_file: bool) {
+        if let Ok(file_path) = DownloadRepository::delete(download_id).await {
+            if remove_file {
+                if let Err(err) = crate::file::File::remove_file(&file_path) {
+                    Emitter::emit_error(err.to_string());
+                }
+            }
+        } else if let Err(err) = DownloadRepository::delete(download_id).await {
+            Emitter::emit_error(err.to_string());
+        }
+    }
 }
