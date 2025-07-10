@@ -31,6 +31,7 @@ impl DownloadRepository {
             d.delay_secs,
             d.backoff_factor,
             d.timeout_secs,
+            d.supports_range,
             COALESCE(
                 (
                     SELECT SUM(c.downloaded_bytes)
@@ -91,6 +92,7 @@ impl DownloadRepository {
     d.delay_secs,
     d.backoff_factor,
     d.timeout_secs,
+    d.supports_range,
     COALESCE(
 		(
 			SELECT
@@ -127,8 +129,10 @@ GROUP BY d.id;
             "content_type",
             "extension",
             "total_bytes",
+            "supports_range",
         ];
-        let mut values = vec!["?", "?", "?", "?", "?", "?", "?", "?"];
+
+        let mut values = vec!["?", "?", "?", "?", "?", "?", "?", "?", "?"];
         let mut params = vec![
             new.url,
             new.status,
@@ -138,6 +142,7 @@ GROUP BY d.id;
             new.content_type,
             new.extension,
             new.total_bytes.to_string(),
+            new.supports_range.to_string(),
         ];
 
         if let Some(auth) = new.auth {

@@ -22,7 +22,7 @@ export default function DownloadForm() {
             await invoke("add_new_download", {
                 url: value,
                 options: {
-                    chunk_count: 0
+                    chunk_count: 5
                 }
             })
             setValue("")

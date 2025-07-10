@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS downloads (
     max_retries INTEGER NOT NULL DEFAULT 3,
     delay_secs REAL NOT NULL DEFAULT 2.0,
     backoff_factor REAL NOT NULL DEFAULT 2.0,
-    timeout_secs INTEGER NOT NULL DEFAULT 30
+    timeout_secs INTEGER NOT NULL DEFAULT 30,
+    supports_range BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS download_chunks (

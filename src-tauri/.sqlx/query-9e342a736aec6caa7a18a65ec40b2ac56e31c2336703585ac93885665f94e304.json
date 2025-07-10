@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n    d.id,\n    d.url,\n    d.total_bytes,\n    d.status,\n    d.created_at,\n    d.modified_at,\n    d.chunk_count,\n    d.file_path,\n    d.file_name,\n    d.content_type,\n    d.extension,\n    d.auth,\n    d.proxy,\n    d.headers,\n    d.cookies,\n    d.speed_limit,\n    d.max_retries,\n    d.delay_secs,\n    d.backoff_factor,\n    d.timeout_secs,\n    COALESCE(\n\t\t(\n\t\t\tSELECT\n\t\t\t\tSUM(c.downloaded_bytes)\n\t\t\tFROM\n\t\t\t\tdownload_chunks c\n\t\t\tWHERE\n\t\t\t\tc.download_id = d.id\n\t\t),\n\t\t0\n\t) AS downloaded_bytes\nFROM downloads d\nLEFT JOIN download_chunks c ON c.download_id = d.id\nWHERE d.id = ?\nGROUP BY d.id;\n            ",
+  "query": "\n            SELECT\n    d.id,\n    d.url,\n    d.total_bytes,\n    d.status,\n    d.created_at,\n    d.modified_at,\n    d.chunk_count,\n    d.file_path,\n    d.file_name,\n    d.content_type,\n    d.extension,\n    d.auth,\n    d.proxy,\n    d.headers,\n    d.cookies,\n    d.speed_limit,\n    d.max_retries,\n    d.delay_secs,\n    d.backoff_factor,\n    d.timeout_secs,\n    d.supports_range,\n    COALESCE(\n\t\t(\n\t\t\tSELECT\n\t\t\t\tSUM(c.downloaded_bytes)\n\t\t\tFROM\n\t\t\t\tdownload_chunks c\n\t\t\tWHERE\n\t\t\t\tc.download_id = d.id\n\t\t),\n\t\t0\n\t) AS downloaded_bytes\nFROM downloads d\nLEFT JOIN download_chunks c ON c.download_id = d.id\nWHERE d.id = ?\nGROUP BY d.id;\n            ",
   "describe": {
     "columns": [
       {
@@ -104,8 +104,13 @@
         "type_info": "Integer"
       },
       {
-        "name": "downloaded_bytes",
+        "name": "supports_range",
         "ordinal": 20,
+        "type_info": "Bool"
+      },
+      {
+        "name": "downloaded_bytes",
+        "ordinal": 21,
         "type_info": "Integer"
       }
     ],
@@ -133,8 +138,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "1a642f7d2077e64b76fc42b2baff53bfd20ccc73cf331fc4e1daa95b2f3a95d0"
+  "hash": "9e342a736aec6caa7a18a65ec40b2ac56e31c2336703585ac93885665f94e304"
 }

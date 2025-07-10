@@ -33,12 +33,14 @@ impl super::Client {
             .get(CONTENT_LENGTH)
             .and_then(|f| f.to_str().ok())
             .and_then(|f| f.parse::<u64>().ok())
-            .unwrap_or(0);
+            .ok_or("file doest not have size")?;
 
         let content_type = headers
             .get(CONTENT_TYPE)
             .and_then(|v| v.to_str().ok())
             .unwrap_or("application/octet-stream");
+
+        let extension = mime2ext(content_type).unwrap_or("bin");
 
         let file_name = headers
             .get(CONTENT_DISPOSITION)
@@ -46,16 +48,20 @@ impl super::Client {
             .and_then(|v| {
                 v.split(';')
                     .find_map(|part| part.trim().strip_prefix("filename="))
-                    .map(|name| name.trim_matches('"'))
+                    .map(|name| name.trim_matches('"').to_string())
             })
             .or_else(|| {
                 final_url
                     .path_segments()
-                    .and_then(|segments| segments.last())
+                    .and_then(|segments| segments.filter(|s| !s.is_empty()).last())
+                    .map(|s| s.to_string())
             })
-            .unwrap_or("");
-
-        let extension = mime2ext(content_type).unwrap_or("bin");
+            .or_else(|| {
+                final_url
+                    .domain()
+                    .map(|domain| format!("{domain}.{extension}"))
+            })
+            .unwrap_or_else(|| format!("file.{extension}"));
 
         Ok(InspectResponse {
             url: final_url.to_string(),

@@ -33,7 +33,13 @@ pub struct DownloadOptions {
 
 impl super::DownloadsManager {
     pub async fn add_new_download(url: String, options: DownloadOptions) -> Result<(), String> {
-        let client = Client::new(&url, &options.auth, &options.proxy)?;
+        let client = Client::new(
+            &url,
+            &options.auth,
+            &options.proxy,
+            &options.headers,
+            &options.cookies,
+        )?;
         let response = client.inspect().await?;
 
         let file_path = match options.file_path {
@@ -46,10 +52,13 @@ impl super::DownloadsManager {
 
         let file_name = File::get_file_name(&file_path)?;
 
-        let chunk_count = match response.supports_range {
-            true => options.chunk_count.clamp(1, 5) as u64,
-            false => 1,
+        let chunk_count = if response.supports_range {
+            options.chunk_count.clamp(1, 5) as i64
+        } else {
+            1
         };
+
+        let supports_range = if response.supports_range { 1 } else { 0 };
 
         let new_download = NewDownload {
             auth: match &options.auth {
@@ -57,7 +66,7 @@ impl super::DownloadsManager {
                 None => None,
             },
             backoff_factor: options.backoff_factor,
-            chunk_count: options.chunk_count,
+            chunk_count,
             content_type: response.content_type,
             cookies: match &options.cookies {
                 Some(val) => serde_json::to_string(val).ok(),
@@ -81,13 +90,14 @@ impl super::DownloadsManager {
             timeout_secs: options.timeout_secs,
             total_bytes: response.content_length as i64,
             url: response.url,
+            supports_range,
         };
 
         let download_id = DownloadRepository::add(new_download)
             .await
             .map_err(|e| e.to_string())?;
 
-        let range = Self::get_chunk_ranges(response.content_length, chunk_count);
+        let range = Self::get_chunk_ranges(response.content_length, chunk_count as u64);
 
         ChunkRepository::create_all(download_id, range)
             .await
@@ -176,7 +186,6 @@ impl super::DownloadsManager {
                         break;
                     }
                     WorkerOutcome::Errored | WorkerOutcome::Mixed => {
-                        println!("{result:?}");
                         break;
                     }
                 };

@@ -54,13 +54,13 @@ export default function DownloadBar({
       await invoke("add_new_download", {
         url: value.url,
         options: {
-          chunk_count: 0,
+          chunk_count: 5,
         },
       });
       form.setValue("url", "");
     } catch (error) {
       console.error("Failed to add download:", error);
-      toast("Failed to add download. Please check the URL.");
+      toast.error("Failed to add download. Please check the URL.");
     } finally {
       setIsLoading(false);
     }

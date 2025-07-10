@@ -33,12 +33,21 @@ impl super::DownloadWorker {
         let start_byte = chunk.start_byte;
         let end_byte = chunk.end_byte;
 
-        let client = Client::new(&self.download.url, &None, &None).map_err(|_| chunk_index)?;
+        let client = Client::new(
+            &self.download.url,
+            &self.download.auth,
+            &self.download.proxy,
+            &self.download.headers,
+            &self.download.cookies,
+        )
+        .map_err(|_| chunk_index)?;
 
-        let mut stream = client
-            .stream(Some((start_byte + downloaded_bytes, end_byte)))
-            .await
-            .map_err(|_| chunk_index)?;
+        let range = match self.download.supports_range {
+            true => Some((start_byte + downloaded_bytes, end_byte)),
+            false => None,
+        };
+
+        let mut stream = client.stream(range).await.map_err(|_| chunk_index)?;
 
         let cancellation_token = Arc::clone(&self.cancel_token);
 

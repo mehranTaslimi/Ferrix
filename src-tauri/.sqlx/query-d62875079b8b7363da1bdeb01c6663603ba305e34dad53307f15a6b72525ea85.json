@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM downloads WHERE id = ? RETURNING file_path",
+  "describe": {
+    "columns": [
+      {
+        "name": "file_path",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d62875079b8b7363da1bdeb01c6663603ba305e34dad53307f15a6b72525ea85"
+}

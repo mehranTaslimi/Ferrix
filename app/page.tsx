@@ -19,7 +19,7 @@ export default function Page() {
 
   useEffect(() => {
     const unlisten = listen<string>('error', (ev) => {
-      toast("Error", { description: ev.payload })
+      toast.error("Error", { description: ev.payload })
     });
 
     return () => {
