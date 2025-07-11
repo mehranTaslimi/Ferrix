@@ -39,7 +39,9 @@ impl super::DownloadsManager {
             &options.proxy,
             &options.headers,
             &options.cookies,
-        )?;
+        )
+        .map_err(|e| e.to_string())?;
+
         let response = client.inspect().await?;
 
         let file_path = match options.file_path {

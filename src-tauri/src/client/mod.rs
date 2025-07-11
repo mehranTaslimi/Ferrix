@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use tauri_plugin_http::reqwest::Client as ReqwestClient;
 
 mod auth;
@@ -17,7 +15,4 @@ pub struct Client {
     url: String,
     client: ReqwestClient,
     auth: Option<AuthType>,
-    proxy: Option<ProxyType>,
-    headers: Option<HashMap<String, String>>,
-    cookies: Option<HashMap<String, String>>,
 }
