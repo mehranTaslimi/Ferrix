@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Duration};
 use tokio::time::timeout;
 
 use crate::{
-    client::Client,
+    client::{Client, ClientError},
     file::WriteMessage,
     models::DownloadChunk,
     registry::{Registry, RegistryAction},
@@ -27,7 +27,10 @@ impl super::DownloadWorker {
         self.classify_results(results)
     }
 
-    async fn download_chunk(&self, chunk: DownloadChunk) -> Result<super::DownloadStatus, i64> {
+    async fn download_chunk(
+        &self,
+        chunk: DownloadChunk,
+    ) -> Result<super::DownloadStatus, ClientError> {
         let chunk_index = chunk.chunk_index;
         let mut downloaded_bytes = chunk.downloaded_bytes;
         let start_byte = chunk.start_byte;
@@ -35,23 +38,21 @@ impl super::DownloadWorker {
 
         let client = Client::new(
             &self.download.url,
+            self.download.timeout_secs as f64,
             &self.download.auth,
             &self.download.proxy,
             &self.download.headers,
             &self.download.cookies,
-        )
-        .map_err(|_| chunk_index)?;
+        )?;
 
         let range = match self.download.supports_range {
             true => Some((start_byte + downloaded_bytes, end_byte)),
             false => None,
         };
 
-        let mut stream = client.stream(range).await.map_err(|_| chunk_index)?;
+        let mut stream = client.stream(range).await?;
 
         let cancellation_token = Arc::clone(&self.cancel_token);
-
-        let timeout_secs = self.download.timeout_secs as u64;
 
         loop {
             tokio::select! {
@@ -61,9 +62,9 @@ impl super::DownloadWorker {
                     return Ok(super::DownloadStatus::Paused);
                 }
 
-                maybe_bytes = timeout(Duration::from_secs(timeout_secs), stream.next()) => {
+                maybe_bytes = stream.next() => {
                     match maybe_bytes {
-                        Ok(Some(Ok(bytes))) => {
+                        Some(Ok(bytes)) => {
 
                             let bytes_len = bytes.len() as u64;
 
@@ -78,21 +79,16 @@ impl super::DownloadWorker {
                                 .send(write_message)
                                 .unwrap();
 
-                            // Limiter
-
                             downloaded_bytes += bytes_len as i64;
 
                             Registry::dispatch(RegistryAction::UpdateNetworkReport(self.download.id, bytes_len));
                         },
-                        Ok(Some(Err(_))) => {
-                            return Err(chunk_index);
+                        Some(Err(err)) => {
+                            return Err(err);
                         },
-                        Ok(None) => {
+                        None => {
                             return Ok(super::DownloadStatus::Finished);
                         },
-                        Err(_) => {
-                            return Err(chunk_index);
-                        }
                     }
                 }
 

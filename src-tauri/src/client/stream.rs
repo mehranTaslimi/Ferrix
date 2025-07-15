@@ -1,15 +1,17 @@
 use std::pin::Pin;
 
-use futures_util::Stream;
+use futures_util::{Stream, StreamExt};
 use tauri::http::{header::RANGE, Method};
-use tauri_plugin_http::reqwest::Error;
 use tokio_util::bytes::Bytes;
 
 impl super::Client {
     pub async fn stream(
         &self,
         range: Option<(i64, i64)>,
-    ) -> Result<Pin<Box<dyn Stream<Item = Result<Bytes, Error>> + Send>>, String> {
+    ) -> Result<
+        Pin<Box<dyn Stream<Item = Result<Bytes, super::ClientError>> + Send>>,
+        super::ClientError,
+    > {
         let request = self.client.request(Method::GET, &self.url);
         let request = Self::auth_handler(request, &self.auth);
 
@@ -21,12 +23,12 @@ impl super::Client {
             request
         };
 
-        let response = request.send().await.map_err(|e| e.to_string())?;
+        let response = request.send().await?;
 
-        if response.status().is_success() {
-            Ok(Box::pin(response.bytes_stream()))
-        } else {
-            Err("error".to_string())
-        }
+        let stream = response
+            .bytes_stream()
+            .map(|res| res.map_err(super::ClientError::from));
+
+        return Ok(Box::pin(stream));
     }
 }

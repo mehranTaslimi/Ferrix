@@ -1,5 +1,7 @@
 use tokio::task::JoinError;
 
+use crate::client::ClientError;
+
 #[derive(Debug)]
 pub enum DownloadStatus {
     Paused,
@@ -17,7 +19,7 @@ pub enum WorkerOutcome {
 impl super::DownloadWorker {
     pub(super) fn classify_results(
         &self,
-        results: Vec<Result<Result<DownloadStatus, i64>, JoinError>>,
+        results: Vec<Result<Result<DownloadStatus, ClientError>, JoinError>>,
     ) -> WorkerOutcome {
         let mut has_finished = false;
         let mut has_paused = false;

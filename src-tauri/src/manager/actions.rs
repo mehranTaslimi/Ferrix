@@ -35,6 +35,7 @@ impl super::DownloadsManager {
     pub async fn add_new_download(url: String, options: DownloadOptions) -> Result<(), String> {
         let client = Client::new(
             &url,
+            options.timeout_secs.unwrap_or(30.0),
             &options.auth,
             &options.proxy,
             &options.headers,
@@ -42,7 +43,7 @@ impl super::DownloadsManager {
         )
         .map_err(|e| e.to_string())?;
 
-        let response = client.inspect().await?;
+        let response = client.inspect().await.map_err(|e| e.to_string())?;
 
         let file_path = match options.file_path {
             Some(path) => path,

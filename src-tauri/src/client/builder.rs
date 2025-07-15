@@ -1,17 +1,18 @@
-use std::collections::HashMap;
-use tauri_plugin_http::reqwest::{self, Client as ReqwestClient};
+use std::{collections::HashMap, time::Duration};
+use tauri_plugin_http::reqwest::Client as ReqwestClient;
 
 use crate::{client::ProxyType, emitter::Emitter};
 
 impl super::Client {
     pub fn new(
         url: &str,
+        timeout_secs: f64,
         auth: &Option<super::AuthType>,
         proxy: &Option<super::ProxyType>,
         headers: &Option<HashMap<String, String>>,
         cookies: &Option<HashMap<String, String>>,
-    ) -> Result<Self, reqwest::Error> {
-        let mut builder = ReqwestClient::builder();
+    ) -> Result<Self, super::ClientError> {
+        let mut builder = ReqwestClient::builder().timeout(Duration::from_secs_f64(timeout_secs));
 
         match headers {
             Some(custom_headers) => {

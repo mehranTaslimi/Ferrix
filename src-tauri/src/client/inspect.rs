@@ -15,14 +15,22 @@ pub struct InspectResponse {
 }
 
 impl super::Client {
-    pub async fn inspect(&self) -> Result<InspectResponse, String> {
+    pub async fn inspect(&self) -> Result<InspectResponse, super::ClientError> {
         let request = self.client.request(Method::HEAD, &self.url);
         let request = Self::auth_handler(request, &self.auth);
 
-        let response = request.send().await.map_err(|e| e.to_string())?;
+        let response = request.send().await?;
+        let status = response.status();
+        let final_url = response.url().clone();
+        let headers = response.headers().clone();
+        let body = response.text().await?;
 
-        let final_url = response.url();
-        let headers = response.headers();
+        if !status.is_success() {
+            return Err(super::ClientError::Http {
+                status,
+                message: body,
+            });
+        }
 
         let supports_range = headers
             .get(ACCEPT_RANGES)
@@ -33,7 +41,7 @@ impl super::Client {
             .get(CONTENT_LENGTH)
             .and_then(|f| f.to_str().ok())
             .and_then(|f| f.parse::<u64>().ok())
-            .ok_or("file doest not have size")?;
+            .ok_or(super::ClientError::MissingContentLength)?;
 
         let content_type = headers
             .get(CONTENT_TYPE)
