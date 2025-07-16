@@ -4,7 +4,6 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{
     file::WriteMessage,
-    manager::DownloadsManager,
     models::{Download, DownloadChunk},
 };
 
@@ -30,7 +29,6 @@ pub struct DownloadWorker {
     chunks: Vec<DownloadChunk>,
     cancel_token: Arc<CancellationToken>,
     file: Arc<UnboundedSender<WriteMessage>>,
-    manager: Arc<DownloadsManager>,
 }
 
 impl DownloadWorker {
@@ -39,14 +37,12 @@ impl DownloadWorker {
         chunks: Vec<DownloadChunk>,
         cancel_token: Arc<CancellationToken>,
         file: Arc<UnboundedSender<WriteMessage>>,
-        manager: Arc<DownloadsManager>,
     ) -> Self {
         Self {
             download,
             chunks,
             cancel_token,
             file,
-            manager,
         }
     }
 }

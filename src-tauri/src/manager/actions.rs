@@ -130,7 +130,6 @@ impl super::DownloadsManager {
             worker.chunks.clone(),
             Arc::clone(&worker.cancel_token),
             Arc::clone(&worker.file),
-            Arc::clone(self),
         );
         self.dispatch(ManagerAction::ManageWorkerResult(worker));
     }

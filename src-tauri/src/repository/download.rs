@@ -217,7 +217,7 @@ GROUP BY d.id;
 
         if let Some(status) = &update.status {
             fields.push("status = ?");
-            binds.push(status.clone().into());
+            binds.push(status.to_string());
         }
 
         if let Some(total_bytes) = update.total_bytes {
