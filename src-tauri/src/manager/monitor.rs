@@ -21,7 +21,7 @@ impl super::DownloadsManager {
                 .monitor_running
                 .swap(true, Ordering::SeqCst)
         {
-            Registry::spawn("monitor_download_speed", async move {
+            Registry::spawn(async move {
                 loop {
                     let report = Arc::clone(&Registry::get_state().report);
                     if report.is_empty() {
@@ -34,7 +34,7 @@ impl super::DownloadsManager {
                     Self::monitor_download_speed().await;
                 }
             });
-            Registry::spawn("downloaded_bytes_report", async move {
+            Registry::spawn(async move {
                 loop {
                     sleep(Duration::from_millis(100)).await;
                     let report = Arc::clone(&Registry::get_state().report);
@@ -47,7 +47,7 @@ impl super::DownloadsManager {
                     Self::report_downloaded_bytes();
                 }
             });
-            Registry::spawn("speed_report", async move {
+            Registry::spawn(async move {
                 loop {
                     sleep(Duration::from_secs(1)).await;
                     let report = Arc::clone(&Registry::get_state().report);
@@ -60,7 +60,7 @@ impl super::DownloadsManager {
                     Self::report_network_speed().await;
                 }
             });
-            Registry::spawn("disk_report", async move {
+            Registry::spawn(async move {
                 loop {
                     sleep(Duration::from_secs(1)).await;
                     let report = Arc::clone(&Registry::get_state().report);

@@ -29,11 +29,6 @@ impl super::Client {
             None => {}
         };
 
-        match auth {
-            Some(_) => {}
-            None => {}
-        }
-
         match proxy {
             Some(ProxyType::System) => {}
             Some(custom_proxy) => match Self::get_proxy(custom_proxy) {

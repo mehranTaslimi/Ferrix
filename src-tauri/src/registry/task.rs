@@ -10,14 +10,14 @@ impl super::Registry {
         num_cpus::get() * 10
     }
 
-    pub fn spawn<F, R>(task_name: &str, fut: F) -> JoinHandle<R>
+    pub fn spawn<F, R>(fut: F) -> JoinHandle<Option<R>>
     where
         F: Future<Output = R> + Send + 'static,
         R: Send + 'static,
     {
         let permit = Arc::clone(&Self::get_state().current_tasks);
         let available_permits = Arc::clone(&Self::get_state().available_permits);
-        let task_name = task_name.to_string();
+        let spawn_cancellation_token = Arc::clone(&Self::get_state().spawn_cancellation_token);
 
         tokio::spawn(async move {
             let acquired = permit
@@ -26,24 +26,22 @@ impl super::Registry {
                 .expect("failed to acquire semaphore permit");
 
             available_permits.store(permit.available_permits(), Ordering::SeqCst);
-            println!(
-                "[CREATED] {}, task_name: {}",
-                available_permits.load(Ordering::SeqCst),
-                task_name
-            );
+            println!("{}", available_permits.load(Ordering::SeqCst));
 
-            let join_handle_response = fut.await;
+            let result = tokio::select! {
+                join_handle_response = fut => {
+                    Some(join_handle_response)
+                }
+
+                _ = spawn_cancellation_token.cancelled() => {
+                    None
+                }
+            };
 
             drop(acquired);
-
             available_permits.store(permit.available_permits(), Ordering::SeqCst);
-            println!(
-                "[DROPPED] {}, task_name: {}",
-                available_permits.load(Ordering::SeqCst),
-                task_name
-            );
-
-            join_handle_response
+            println!("{}", available_permits.load(Ordering::SeqCst));
+            result
         })
     }
 }

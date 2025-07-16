@@ -8,7 +8,7 @@ use std::{
 };
 
 use dashmap::DashMap;
-use tokio::{sync::Mutex, time::interval};
+use tokio::{spawn, sync::Mutex, time::interval};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -16,12 +16,13 @@ use crate::{
     file::File,
     manager::ManagerAction,
     models::{Download, DownloadChunk},
-    registry::{Registry, RegistryAction, Report},
     repository::{chunk::ChunkRepository, download::DownloadRepository},
     worker::Worker,
 };
 
-impl super::Registry {
+use super::*;
+
+impl Registry {
     pub async fn add_download_to_queue(download_id: i64) {
         let pending_queue = Arc::clone(&Self::get_state().pending_queue);
         let mut pending_queue = pending_queue.lock().await;
@@ -30,7 +31,7 @@ impl super::Registry {
         let download = DownloadRepository::find(download_id).await.unwrap();
         Emitter::emit_event("download_item", download);
 
-        Registry::dispatch(RegistryAction::CheckAvailablePermit);
+        Self::dispatch(RegistryAction::CheckAvailablePermit);
     }
 
     pub(super) async fn recover_queued_download_from_repository_action() {
@@ -45,13 +46,13 @@ impl super::Registry {
 
         if let Ok(download_ids) = download_ids {
             for download_id in download_ids.iter() {
-                Registry::dispatch(RegistryAction::NewDownloadQueue(*download_id));
+                Self::dispatch(RegistryAction::NewDownloadQueue(*download_id));
             }
         };
     }
 
     pub(super) async fn check_available_permit_action() {
-        let state = Arc::clone(&Registry::get_state());
+        let state = Arc::clone(&Self::get_state());
         let pending_queue = Arc::clone(&state.pending_queue);
         let queue_listener_running = Arc::clone(&state.queue_listener_running);
 
@@ -59,7 +60,7 @@ impl super::Registry {
             && !queue_listener_running.swap(true, Ordering::SeqCst)
         {
             let mut interval = interval(Duration::from_secs(1));
-            Registry::spawn("check_available_permit_action", async move {
+            Self::spawn(async move {
                 loop {
                     let download_id = {
                         let pending_queue = pending_queue.lock().await;
@@ -74,9 +75,8 @@ impl super::Registry {
                                 Ok(download) => {
                                     let chunk_count = download.chunk_count as usize;
 
-                                    let available_permits = Registry::get_state()
-                                        .available_permits
-                                        .load(Ordering::SeqCst);
+                                    let available_permits =
+                                        Self::get_state().available_permits.load(Ordering::SeqCst);
                                     /*
                                         The app reserves 10 permits for other operations.
                                         Before starting a download, we check if available permits
@@ -107,9 +107,9 @@ impl super::Registry {
 
                                     if permit_available {
                                         pending_queue.lock().await.pop_front();
-                                        Registry::dispatch(
-                                            RegistryAction::AddDownloadToWorkersMap(download_id),
-                                        );
+                                        Self::dispatch(RegistryAction::AddDownloadToWorkersMap(
+                                            download_id,
+                                        ));
                                     }
                                 }
                                 Err(_) => {
@@ -139,8 +139,8 @@ impl super::Registry {
     }
 
     pub(super) async fn add_download_workers_map_action(download_id: i64) {
-        let workers = Arc::clone(&Registry::get_state().workers);
-        let manager = Arc::clone(&Registry::get_manager());
+        let workers = Arc::clone(&Self::get_state().workers);
+        let manager = Arc::clone(&Self::get_manager());
 
         let download = DownloadRepository::find(download_id).await.unwrap();
         let chunks = ChunkRepository::find_all(download_id).await.unwrap();
@@ -150,7 +150,7 @@ impl super::Registry {
             .filter(|chunk| chunk.downloaded_bytes < chunk.end_byte - chunk.start_byte)
             .collect::<Vec<_>>();
 
-        Registry::dispatch(RegistryAction::CreateDownloadReport(
+        Self::dispatch(RegistryAction::CreateDownloadReport(
             download.clone(),
             not_downloaded_chunks.clone(),
         ));
@@ -186,7 +186,7 @@ impl super::Registry {
         download: Download,
         chunks: Vec<DownloadChunk>,
     ) {
-        let report = Arc::clone(&Registry::get_state().report);
+        let report = Arc::clone(&Self::get_state().report);
 
         let chunks_wrote_bytes: DashMap<i64, AtomicU64> = chunks
             .iter()
@@ -210,7 +210,7 @@ impl super::Registry {
     }
 
     pub(super) async fn update_network_report_action(download_id: i64, bytes_len: u64) {
-        let reports = Arc::clone(&Registry::get_state().report);
+        let reports = Arc::clone(&Self::get_state().report);
         let maybe_report = reports.get(&download_id);
         if let Some(report) = maybe_report {
             report
@@ -228,7 +228,7 @@ impl super::Registry {
         chunk_index: i64,
         bytes_len: u64,
     ) {
-        let reports = Arc::clone(&Registry::get_state().report);
+        let reports = Arc::clone(&Self::get_state().report);
         let maybe_report = reports.get(&download_id);
         if let Some(report) = maybe_report {
             report
@@ -248,20 +248,20 @@ impl super::Registry {
     }
 
     pub(super) async fn clean_downloaded_item_data(download_id: i64) {
-        let reports = Arc::clone(&Registry::get_state().report);
-        let workers = Arc::clone(&Registry::get_state().workers);
+        let reports = Arc::clone(&Self::get_state().report);
+        let workers = Arc::clone(&Self::get_state().workers);
 
         reports.remove(&download_id);
         workers.remove(&download_id);
     }
 
     pub(super) async fn pause_download_action(download_id: i64) {
-        let manager = Arc::clone(&Registry::get_manager());
+        let manager = Arc::clone(&Self::get_manager());
         manager.dispatch(ManagerAction::PauseDownload(download_id));
     }
 
     pub(super) async fn resume_download_action(download_id: i64) {
-        Registry::get_manager().dispatch(ManagerAction::ValidateChunksHash(download_id));
+        Self::get_manager().dispatch(ManagerAction::ValidateChunksHash(download_id));
     }
 
     pub(super) async fn remove_download_action(download_id: i64, remove_file: bool) {
@@ -273,6 +273,45 @@ impl super::Registry {
             }
         } else if let Err(err) = DownloadRepository::delete(download_id).await {
             Emitter::emit_error(err.to_string());
+        }
+    }
+
+    pub(super) async fn close_requested_action() {
+        let queued_downloads = DownloadRepository::find_all(Some("queued"))
+            .await
+            .map(|dls| dls.iter().map(|dl| dl.id).collect::<Vec<i64>>());
+
+        if let Ok(ids) = queued_downloads {
+            for id in ids {
+                Self::get_manager().dispatch(ManagerAction::UpdateDownloadStatus("paused", id));
+            }
+        }
+
+        let workers = Arc::clone(&Self::get_state().workers);
+        let mut interval = tokio::time::interval(Duration::from_millis(500));
+
+        if !workers.is_empty() {
+            for worker in workers.iter() {
+                let id = { worker.lock().await.download.id };
+                Self::dispatch(RegistryAction::PauseDownload(id));
+            }
+
+            spawn(async move {
+                loop {
+                    if workers.is_empty() {
+                        let state = Self::get_state();
+                        state.spawn_cancellation_token.cancel();
+                        state.app_handle.exit(0);
+                        break;
+                    }
+
+                    interval.tick().await;
+                }
+            });
+        } else {
+            let state = Self::get_state();
+            state.spawn_cancellation_token.cancel();
+            state.app_handle.exit(0);
         }
     }
 }

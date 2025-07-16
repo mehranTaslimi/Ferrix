@@ -14,6 +14,7 @@ use tokio::sync::{
     mpsc::{self, UnboundedReceiver},
     Mutex, Semaphore,
 };
+use tokio_util::sync::CancellationToken;
 
 mod actions;
 mod event;
@@ -49,6 +50,7 @@ pub struct State {
     queue_listener_running: Arc<AtomicBool>,
     mpsc_sender: Arc<mpsc::UnboundedSender<RegistryAction>>,
     manager: OnceCell<Arc<DownloadsManager>>,
+    spawn_cancellation_token: Arc<CancellationToken>,
 }
 
 static STATE: OnceCell<Arc<State>> = OnceCell::new();
@@ -71,6 +73,7 @@ impl Registry {
         let manager = OnceCell::new();
         let monitor_running = Arc::new(AtomicBool::new(false));
         let bandwidth_limit = Arc::new(AtomicU64::new(0));
+        let spawn_cancellation_token = Arc::new(CancellationToken::new());
 
         let state = Arc::new(State {
             pool,
@@ -85,6 +88,7 @@ impl Registry {
             manager,
             monitor_running,
             bandwidth_limit,
+            spawn_cancellation_token,
         });
 
         STATE.set(state).unwrap();
@@ -95,7 +99,7 @@ impl Registry {
     }
 
     fn initialize_mpsc_action(mut rx: UnboundedReceiver<RegistryAction>) {
-        Self::spawn("registry_action", async move {
+        Self::spawn(async move {
             while let Some(action) = rx.recv().await {
                 Self::reducer(action).await
             }

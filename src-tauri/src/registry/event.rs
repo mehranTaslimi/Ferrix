@@ -1,10 +1,6 @@
 use std::sync::Arc;
 
-use crate::{
-    emitter::Emitter,
-    models::{Download, DownloadChunk},
-    repository::download::DownloadRepository,
-};
+use crate::models::{Download, DownloadChunk};
 
 #[derive(Debug)]
 pub enum RegistryAction {
@@ -23,6 +19,7 @@ pub enum RegistryAction {
     ResumeDownload(/* Download ID */ i64),
     RecoverQueuedDownloadFromRepository,
     RemoveDownload(/* Download ID */ i64, /* Remove File */ bool),
+    CloseRequested,
 }
 
 impl super::Registry {
@@ -65,6 +62,9 @@ impl super::Registry {
             }
             RegistryAction::RemoveDownload(download_id, remove_file) => {
                 Self::remove_download_action(download_id, remove_file).await;
+            }
+            RegistryAction::CloseRequested => {
+                Self::close_requested_action().await;
             }
         }
     }

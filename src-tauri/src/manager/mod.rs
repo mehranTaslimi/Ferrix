@@ -31,7 +31,7 @@ impl DownloadsManager {
     fn initialize_mpsc_action(self: Arc<Self>, mut rx: mpsc::UnboundedReceiver<ManagerAction>) {
         let self_clone = Arc::clone(&self);
 
-        Registry::spawn("download_manager_action", async move {
+        Registry::spawn(async move {
             while let Some(action) = rx.recv().await {
                 self_clone.reducer(action).await;
             }

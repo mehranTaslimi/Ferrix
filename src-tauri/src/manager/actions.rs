@@ -137,13 +137,13 @@ impl super::DownloadsManager {
 
     pub(super) async fn update_download_status_action(
         self: &Arc<Self>,
-        status: &str,
+        status: &'static str,
         download_id: i64,
     ) {
         DownloadRepository::update(
             download_id,
             UpdateDownload {
-                status: Some(status.to_string()),
+                status: Some(status),
                 auth: None,
                 backoff_factor: None,
                 cookies: None,
@@ -168,7 +168,7 @@ impl super::DownloadsManager {
 
         let self_clone = Arc::clone(&self);
 
-        Registry::spawn("start_download", async move {
+        Registry::spawn(async move {
             loop {
                 let result = worker.start_download().await;
                 self_clone.dispatch(ManagerAction::UpdateChunks(worker.download.id));

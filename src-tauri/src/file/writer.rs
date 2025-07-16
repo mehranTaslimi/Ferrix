@@ -29,9 +29,7 @@ impl super::File {
 
         let (tx, mut rx) = mpsc::unbounded_channel::<WriteMessage>();
 
-        let task_name = format!("file writer: {}", file_path);
-
-        Registry::spawn(&task_name, async move {
+        Registry::spawn(async move {
             while let Some((chunk_index, start_byte, downloaded_bytes, bytes)) = rx.recv().await {
                 file.seek(SeekFrom::Start(start_byte)).await.unwrap();
                 file.write_all(&bytes).await.unwrap();

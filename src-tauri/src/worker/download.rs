@@ -1,6 +1,5 @@
 use futures_util::{future::join_all, StreamExt};
-use std::{sync::Arc, time::Duration};
-use tokio::time::timeout;
+use std::sync::Arc;
 
 use crate::{
     client::{Client, ClientError},
@@ -13,14 +12,7 @@ impl super::DownloadWorker {
     pub async fn start_download(&self) -> super::WorkerOutcome {
         let mut futures = self.chunks.clone().into_iter().map(|chunk| {
             let self_clone = self.clone();
-            let task_name = format!(
-                "chunk_download: {}, {}",
-                self_clone.download.id, chunk.chunk_index
-            );
-            Registry::spawn(
-                &task_name,
-                async move { self_clone.download_chunk(chunk).await },
-            )
+            Registry::spawn(async move { self_clone.download_chunk(chunk).await })
         });
 
         let results = join_all(&mut futures).await;

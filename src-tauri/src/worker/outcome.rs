@@ -19,7 +19,7 @@ pub enum WorkerOutcome {
 impl super::DownloadWorker {
     pub(super) fn classify_results(
         &self,
-        results: Vec<Result<Result<DownloadStatus, ClientError>, JoinError>>,
+        results: Vec<Result<Option<Result<DownloadStatus, ClientError>>, JoinError>>,
     ) -> WorkerOutcome {
         let mut has_finished = false;
         let mut has_paused = false;
@@ -27,9 +27,10 @@ impl super::DownloadWorker {
 
         for result in &results {
             match result {
-                Ok(Ok(DownloadStatus::Finished)) => has_finished = true,
-                Ok(Ok(DownloadStatus::Paused)) => has_paused = true,
-                Ok(Err(_)) | Err(_) => has_error = true,
+                Ok(Some(Ok(DownloadStatus::Finished))) => has_finished = true,
+                Ok(Some(Ok(DownloadStatus::Paused))) => has_paused = true,
+                Ok(Some(Err(_))) | Err(_) => has_error = true,
+                Ok(None) => has_finished = true,
             }
         }
 
