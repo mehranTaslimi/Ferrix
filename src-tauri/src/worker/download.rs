@@ -66,13 +66,13 @@ impl DownloadWorker {
 
         let cancellation_token = Arc::clone(&self.cancel_token);
 
-        if chunk_index == 2 {
-            cancellation_token.cancel();
-            return Err(ClientError::Http {
-                status: StatusCode::BAD_GATEWAY,
-                message: "Error".to_string(),
-            });
-        }
+        // if chunk_index == 2 {
+        //     cancellation_token.cancel();
+        //     return Err(ClientError::Http {
+        //         status: StatusCode::BAD_GATEWAY,
+        //         message: "Error".to_string(),
+        //     });
+        // }
 
         let client = match Client::new(
             &self.download.url,
