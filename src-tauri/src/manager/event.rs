@@ -5,8 +5,8 @@ use crate::worker::DownloadWorker;
 #[derive(Debug)]
 pub enum ManagerAction {
     StartDownload(/*Download ID */ i64),
-    UpdateDownloadStatus(/* Status */ &'static str, /*Download ID */ i64),
-    ManageWorkerResult(DownloadWorker),
+    UpdateDownloadStatus(/* Status */ String, /*Download ID */ i64),
+    ManageWorkerResult(Arc<DownloadWorker>),
     PauseDownload(/*Download ID */ i64),
     UpdateChunks(/*Download ID */ i64),
     ValidateChunksHash(/*Download ID */ i64),

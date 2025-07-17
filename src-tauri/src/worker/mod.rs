@@ -1,3 +1,4 @@
+use md5::digest::typenum::ToInt;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_util::sync::CancellationToken;
@@ -10,10 +11,27 @@ use crate::{
 mod bandwidth;
 mod download;
 mod outcome;
-pub mod validation;
 
-use outcome::DownloadStatus;
-pub use outcome::WorkerOutcome;
+#[derive(Debug)]
+pub enum DownloadStatus {
+    Paused,
+    Completed,
+    Failed,
+    Downloading,
+    Queued,
+}
+
+impl ToString for DownloadStatus {
+    fn to_string(&self) -> String {
+        match self {
+            DownloadStatus::Paused => "paused".to_string(),
+            DownloadStatus::Completed => "completed".to_string(),
+            DownloadStatus::Failed => "failed".to_string(),
+            DownloadStatus::Downloading => "downloading".to_string(),
+            DownloadStatus::Queued => "queued".to_string(),
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Worker {
@@ -37,12 +55,12 @@ impl DownloadWorker {
         chunks: Vec<DownloadChunk>,
         cancel_token: Arc<CancellationToken>,
         file: Arc<UnboundedSender<WriteMessage>>,
-    ) -> Self {
-        Self {
+    ) -> Arc<Self> {
+        Arc::new(Self {
             download,
             chunks,
             cancel_token,
             file,
-        }
+        })
     }
 }

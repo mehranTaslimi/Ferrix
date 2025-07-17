@@ -1,44 +1,51 @@
+use std::collections::HashMap;
+
 use tokio::task::JoinError;
 
 use crate::client::ClientError;
 
 #[derive(Debug)]
-pub enum DownloadStatus {
+pub enum ChunkDownloadStatus {
     Paused,
     Finished,
 }
 
-#[derive(Debug)]
-pub enum WorkerOutcome {
+#[derive(Debug, Hash, PartialEq, Eq)]
+pub enum NormalizedDownloadStatus {
     Finished,
     Paused,
-    Errored,
-    Mixed,
+    Error,
 }
 
 impl super::DownloadWorker {
     pub(super) fn classify_results(
         &self,
-        results: Vec<Result<Option<Result<DownloadStatus, ClientError>>, JoinError>>,
-    ) -> WorkerOutcome {
-        let mut has_finished = false;
-        let mut has_paused = false;
-        let mut has_error = false;
+        results: Vec<Result<Option<(i64, Result<ChunkDownloadStatus, ClientError>)>, JoinError>>,
+    ) -> HashMap<NormalizedDownloadStatus, Vec<i64>> {
+        let mut counter: HashMap<NormalizedDownloadStatus, Vec<i64>> = HashMap::new();
 
-        for result in &results {
-            match result {
-                Ok(Some(Ok(DownloadStatus::Finished))) => has_finished = true,
-                Ok(Some(Ok(DownloadStatus::Paused))) => has_paused = true,
-                Ok(Some(Err(_))) | Err(_) => has_error = true,
-                Ok(None) => has_finished = true,
+        for result in results.iter() {
+            let (maybe_chunk_index, normalized_statuses) = match result {
+                Ok(Some((_, Ok(ChunkDownloadStatus::Finished)))) => {
+                    (None, NormalizedDownloadStatus::Finished)
+                }
+                Ok(Some((_, Ok(ChunkDownloadStatus::Paused)))) => {
+                    (None, NormalizedDownloadStatus::Paused)
+                }
+                Ok(Some((chunk_index, Err(_)))) => {
+                    (Some(chunk_index), NormalizedDownloadStatus::Error)
+                }
+                Ok(None) => (None, NormalizedDownloadStatus::Paused),
+                Err(_) => (None, NormalizedDownloadStatus::Error),
+            };
+
+            let entry = counter.entry(normalized_statuses).or_default();
+
+            if let Some(chunk_index) = maybe_chunk_index {
+                entry.push(*chunk_index);
             }
         }
 
-        match (has_finished, has_paused, has_error) {
-            (true, false, false) => WorkerOutcome::Finished,
-            (false, true, false) => WorkerOutcome::Paused,
-            (false, false, true) => WorkerOutcome::Errored,
-            _ => WorkerOutcome::Mixed,
-        }
+        counter
     }
 }

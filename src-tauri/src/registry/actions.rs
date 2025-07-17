@@ -283,7 +283,10 @@ impl Registry {
 
         if let Ok(ids) = queued_downloads {
             for id in ids {
-                Self::get_manager().dispatch(ManagerAction::UpdateDownloadStatus("paused", id));
+                Self::get_manager().dispatch(ManagerAction::UpdateDownloadStatus(
+                    "paused".to_string(),
+                    id,
+                ));
             }
         }
 

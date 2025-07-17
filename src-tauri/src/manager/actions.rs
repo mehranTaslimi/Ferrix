@@ -13,7 +13,7 @@ use crate::{
     models::{NewDownload, UpdateChunk, UpdateDownload},
     registry::{Registry, RegistryAction},
     repository::{chunk::ChunkRepository, download::DownloadRepository},
-    worker::{DownloadWorker, WorkerOutcome},
+    worker::DownloadWorker,
 };
 
 #[derive(Debug, Deserialize)]
@@ -121,7 +121,7 @@ impl super::DownloadsManager {
         let worker = worker.lock().await;
 
         self.dispatch(ManagerAction::UpdateDownloadStatus(
-            "downloading",
+            "downloading".to_string(),
             download_id,
         ));
 
@@ -136,7 +136,7 @@ impl super::DownloadsManager {
 
     pub(super) async fn update_download_status_action(
         self: &Arc<Self>,
-        status: &'static str,
+        status: String,
         download_id: i64,
     ) {
         DownloadRepository::update(
@@ -162,36 +162,18 @@ impl super::DownloadsManager {
         Emitter::emit_event("download_item", download);
     }
 
-    pub(super) async fn manage_worker_result_action(self: &Arc<Self>, worker: DownloadWorker) {
+    pub(super) async fn manage_worker_result_action(self: &Arc<Self>, worker: Arc<DownloadWorker>) {
         Self::start_monitoring();
 
         let self_clone = Arc::clone(&self);
 
         Registry::spawn(async move {
-            loop {
-                let result = worker.start_download().await;
-                self_clone.dispatch(ManagerAction::UpdateChunks(worker.download.id));
-
-                match result {
-                    WorkerOutcome::Finished => {
-                        self_clone.dispatch(ManagerAction::UpdateDownloadStatus(
-                            "completed",
-                            worker.download.id,
-                        ));
-                        break;
-                    }
-                    WorkerOutcome::Paused => {
-                        self_clone.dispatch(ManagerAction::UpdateDownloadStatus(
-                            "paused",
-                            worker.download.id,
-                        ));
-                        break;
-                    }
-                    WorkerOutcome::Errored | WorkerOutcome::Mixed => {
-                        break;
-                    }
-                };
-            }
+            let status = worker.start_download().await;
+            self_clone.dispatch(ManagerAction::UpdateDownloadStatus(
+                status.to_string(),
+                worker.download.id,
+            ));
+            self_clone.dispatch(ManagerAction::UpdateChunks(worker.download.id));
         });
     }
 
@@ -255,7 +237,7 @@ impl super::DownloadsManager {
 
     pub(super) async fn validate_chunks_hash_action(self: &Arc<Self>, download_id: i64) {
         self.dispatch(ManagerAction::UpdateDownloadStatus(
-            "validating",
+            "validating".to_string(),
             download_id,
         ));
 

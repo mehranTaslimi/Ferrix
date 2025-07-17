@@ -83,7 +83,7 @@ pub struct NewDownload {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateDownload {
-    pub status: Option<&'static str>,
+    pub status: Option<String>,
     pub total_bytes: Option<i64>,
     pub speed_limit: Option<i64>,
     pub auth: Option<String>,
