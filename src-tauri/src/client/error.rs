@@ -16,3 +16,15 @@ pub enum ClientError {
     #[error("Missing or invalid Content-Length header")]
     MissingContentLength,
 }
+
+impl ClientError {
+    pub fn is_retryable(&self) -> bool {
+        match self {
+            ClientError::Reqwest(e) => e.is_timeout() || e.is_connect() || e.is_request(),
+            ClientError::Http { status, .. } => {
+                matches!(status.as_u16(), 408 | 429 | 500..=504)
+            }
+            _ => false,
+        }
+    }
+}

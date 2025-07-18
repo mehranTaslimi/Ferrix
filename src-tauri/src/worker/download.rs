@@ -1,5 +1,5 @@
 use futures_util::{future::join_all, StreamExt};
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tauri::http::StatusCode;
 
 use crate::{
@@ -14,10 +14,10 @@ use super::*;
 
 impl DownloadWorker {
     pub async fn start_download(self: &Arc<Self>) -> DownloadStatus {
-        // let backoff_factor = self.download.backoff_factor;
-        // let max_retries = self.download.max_retries as u64;
-        // let retries = 0u64;
-        // let delay_secs = self.download.delay_secs;
+        let backoff_factor = self.download.backoff_factor;
+        let max_retries = self.download.max_retries as u64;
+        let mut retries = 0u64;
+        let delay_secs = self.download.delay_secs;
 
         loop {
             let mut futures = self.chunks.clone().into_iter().map(|chunk| {
@@ -29,8 +29,6 @@ impl DownloadWorker {
 
             let results = join_all(&mut futures).await;
             let classify_results = self.classify_results(results);
-
-            println!("{classify_results:?}");
 
             if classify_results
                 .keys()
@@ -52,6 +50,19 @@ impl DownloadWorker {
             {
                 return DownloadStatus::Paused;
             }
+
+            if classify_results
+                .keys()
+                .any(|s| *s == NormalizedDownloadStatus::Retry)
+            {
+                if retries == max_retries {
+                    return DownloadStatus::Failed;
+                }
+
+                retries += 1;
+                tokio::time::sleep(Duration::from_secs_f64(delay_secs)).await;
+                continue;
+            }
         }
     }
 
@@ -66,13 +77,12 @@ impl DownloadWorker {
 
         let cancellation_token = Arc::clone(&self.cancel_token);
 
-        // if chunk_index == 2 {
-        //     cancellation_token.cancel();
-        //     return Err(ClientError::Http {
-        //         status: StatusCode::BAD_GATEWAY,
-        //         message: "Error".to_string(),
-        //     });
-        // }
+        if chunk_index == 2 {
+            return Err(ClientError::Http {
+                status: StatusCode::GATEWAY_TIMEOUT,
+                message: "Error".to_string(),
+            });
+        }
 
         let client = match Client::new(
             &self.download.url,
@@ -84,7 +94,9 @@ impl DownloadWorker {
         ) {
             Ok(c) => c,
             Err(err) => {
-                cancellation_token.cancel();
+                if !err.is_retryable() {
+                    cancellation_token.cancel();
+                }
                 return Err(err);
             }
         };
@@ -125,7 +137,9 @@ impl DownloadWorker {
                             Registry::dispatch(RegistryAction::UpdateNetworkReport(self.download.id, bytes_len));
                         },
                         Some(Err(err)) => {
-                            cancellation_token.cancel();
+                            if !err.is_retryable() {
+                                cancellation_token.cancel();
+                            }
                             return Err(err);
                         },
                         None => {
