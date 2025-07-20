@@ -5,6 +5,7 @@ use tauri::http::StatusCode;
 use crate::{
     client::{Client, ClientError},
     file::WriteMessage,
+    manager,
     models::DownloadChunk,
     registry::{Registry, RegistryAction},
     worker::outcome::NormalizedDownloadStatus,
@@ -17,7 +18,6 @@ impl DownloadWorker {
         let backoff_factor = self.download.backoff_factor;
         let max_retries = self.download.max_retries as u64;
         let mut retries = 0u64;
-        let delay_secs = self.download.delay_secs;
 
         loop {
             let mut futures = self.chunks.clone().into_iter().map(|chunk| {
@@ -59,8 +59,15 @@ impl DownloadWorker {
                     return DownloadStatus::Failed;
                 }
 
+                self.manager
+                    .dispatch(manager::ManagerAction::UpdateDownloadStatus(
+                        DownloadStatus::Error.to_string(),
+                        self.download.id,
+                    ));
+
                 retries += 1;
-                tokio::time::sleep(Duration::from_secs_f64(delay_secs)).await;
+                let wait_time = backoff_factor.powf(retries as f64);
+                tokio::time::sleep(Duration::from_secs_f64(wait_time)).await;
                 continue;
             }
         }

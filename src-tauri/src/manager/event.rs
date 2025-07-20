@@ -20,6 +20,7 @@ impl super::DownloadsManager {
     }
 
     pub(super) async fn reducer(self: &Arc<Self>, action: ManagerAction) {
+        println!("Manager: {action:?}");
         let self_clone = Arc::clone(&self);
 
         match action {

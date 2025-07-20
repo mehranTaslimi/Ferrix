@@ -186,7 +186,7 @@ impl Registry {
         download: Download,
         chunks: Vec<DownloadChunk>,
     ) {
-        let report = Arc::clone(&Self::get_state().report);
+        let report = Arc::clone(&Self::get_state().reports);
 
         let chunks_wrote_bytes: DashMap<i64, AtomicU64> = chunks
             .iter()
@@ -210,7 +210,7 @@ impl Registry {
     }
 
     pub(super) async fn update_network_report_action(download_id: i64, bytes_len: u64) {
-        let reports = Arc::clone(&Self::get_state().report);
+        let reports = Arc::clone(&Self::get_state().reports);
         let maybe_report = reports.get(&download_id);
         if let Some(report) = maybe_report {
             report
@@ -228,7 +228,7 @@ impl Registry {
         chunk_index: i64,
         bytes_len: u64,
     ) {
-        let reports = Arc::clone(&Self::get_state().report);
+        let reports = Arc::clone(&Self::get_state().reports);
         let maybe_report = reports.get(&download_id);
         if let Some(report) = maybe_report {
             report
@@ -248,7 +248,7 @@ impl Registry {
     }
 
     pub(super) async fn clean_downloaded_item_data(download_id: i64) {
-        let reports = Arc::clone(&Self::get_state().report);
+        let reports = Arc::clone(&Self::get_state().reports);
         let workers = Arc::clone(&Self::get_state().workers);
 
         reports.remove(&download_id);

@@ -14,7 +14,7 @@ struct SpeedAndRemaining {
 
 impl super::DownloadsManager {
     pub(super) fn start_monitoring() {
-        let report = Arc::clone(&Registry::get_state().report);
+        let report = Arc::clone(&Registry::get_state().reports);
 
         if !report.is_empty()
             && !Registry::get_state()
@@ -23,7 +23,7 @@ impl super::DownloadsManager {
         {
             Registry::spawn(async move {
                 loop {
-                    let report = Arc::clone(&Registry::get_state().report);
+                    let report = Arc::clone(&Registry::get_state().reports);
                     if report.is_empty() {
                         Registry::get_state()
                             .monitor_running
@@ -37,7 +37,7 @@ impl super::DownloadsManager {
             Registry::spawn(async move {
                 loop {
                     sleep(Duration::from_millis(100)).await;
-                    let report = Arc::clone(&Registry::get_state().report);
+                    let report = Arc::clone(&Registry::get_state().reports);
                     if report.is_empty() {
                         Registry::get_state()
                             .monitor_running
@@ -50,7 +50,7 @@ impl super::DownloadsManager {
             Registry::spawn(async move {
                 loop {
                     sleep(Duration::from_secs(1)).await;
-                    let report = Arc::clone(&Registry::get_state().report);
+                    let report = Arc::clone(&Registry::get_state().reports);
                     if report.is_empty() {
                         Registry::get_state()
                             .monitor_running
@@ -63,7 +63,7 @@ impl super::DownloadsManager {
             Registry::spawn(async move {
                 loop {
                     sleep(Duration::from_secs(1)).await;
-                    let report = Arc::clone(&Registry::get_state().report);
+                    let report = Arc::clone(&Registry::get_state().reports);
                     if report.is_empty() {
                         Registry::get_state()
                             .monitor_running
@@ -77,7 +77,7 @@ impl super::DownloadsManager {
     }
 
     fn report_downloaded_bytes() {
-        let reports = Arc::clone(&Registry::get_state().report);
+        let reports = Arc::clone(&Registry::get_state().reports);
 
         reports.iter().for_each(|report| {
             let download_id = report.key();
@@ -90,7 +90,7 @@ impl super::DownloadsManager {
     }
 
     async fn report_network_speed() {
-        let reports = Arc::clone(&Registry::get_state().report);
+        let reports = Arc::clone(&Registry::get_state().reports);
 
         for report in reports.iter() {
             let download_id = report.key();
@@ -129,7 +129,7 @@ impl super::DownloadsManager {
     }
 
     async fn report_disk_speed() {
-        let reports = Arc::clone(&Registry::get_state().report);
+        let reports = Arc::clone(&Registry::get_state().reports);
 
         for report in reports.iter() {
             let download_id = report.key();

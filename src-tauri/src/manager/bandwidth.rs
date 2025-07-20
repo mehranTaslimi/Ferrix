@@ -14,7 +14,7 @@ impl super::DownloadsManager {
             count as u64
         };
 
-        let reports = Arc::clone(&Registry::get_state().report);
+        let reports = Arc::clone(&Registry::get_state().reports);
         let bandwidth_limit = Arc::clone(&Registry::get_state().bandwidth_limit);
 
         let download_speed = reports

@@ -44,7 +44,7 @@ pub struct State {
     pub available_permits: Arc<AtomicUsize>,
     pub pending_queue: Arc<Mutex<VecDeque<i64>>>,
     pub workers: Arc<DashMap<i64, Arc<Mutex<Worker>>>>,
-    pub report: Arc<DashMap<i64, Report>>,
+    pub reports: Arc<DashMap<i64, Report>>,
     pub monitor_running: Arc<AtomicBool>,
     pub bandwidth_limit: Arc<AtomicU64>,
     queue_listener_running: Arc<AtomicBool>,
@@ -66,7 +66,7 @@ impl Registry {
         let pending_queue = Arc::new(Mutex::new(VecDeque::new()));
         let workers = Arc::new(DashMap::new());
         let app_handle = Arc::new(app_handle);
-        let report = Arc::new(DashMap::new());
+        let reports = Arc::new(DashMap::new());
         let (tx, rx) = mpsc::unbounded_channel::<RegistryAction>();
         let mpsc_sender = Arc::new(tx);
         let queue_listener_running = Arc::new(AtomicBool::new(false));
@@ -82,7 +82,7 @@ impl Registry {
             available_permits,
             pending_queue,
             workers,
-            report,
+            reports,
             mpsc_sender,
             queue_listener_running,
             manager,

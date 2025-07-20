@@ -31,4 +31,5 @@ export enum Status {
   Paused = "paused",
   Failed = "failed",
   Writing = "writing",
+  Error = "error",
 }

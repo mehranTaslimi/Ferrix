@@ -5,6 +5,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{
     file::WriteMessage,
+    manager::DownloadsManager,
     models::{Download, DownloadChunk},
 };
 
@@ -19,6 +20,7 @@ pub enum DownloadStatus {
     Failed,
     Downloading,
     Queued,
+    Error,
 }
 
 impl ToString for DownloadStatus {
@@ -29,6 +31,7 @@ impl ToString for DownloadStatus {
             DownloadStatus::Failed => "failed".to_string(),
             DownloadStatus::Downloading => "downloading".to_string(),
             DownloadStatus::Queued => "queued".to_string(),
+            DownloadStatus::Error => "error".to_string(),
         }
     }
 }
@@ -47,6 +50,7 @@ pub struct DownloadWorker {
     chunks: Vec<DownloadChunk>,
     cancel_token: Arc<CancellationToken>,
     file: Arc<UnboundedSender<WriteMessage>>,
+    manager: Arc<DownloadsManager>,
 }
 
 impl DownloadWorker {
@@ -55,12 +59,14 @@ impl DownloadWorker {
         chunks: Vec<DownloadChunk>,
         cancel_token: Arc<CancellationToken>,
         file: Arc<UnboundedSender<WriteMessage>>,
+        manager: Arc<DownloadsManager>,
     ) -> Arc<Self> {
         Arc::new(Self {
             download,
             chunks,
             cancel_token,
             file,
+            manager,
         })
     }
 }

@@ -130,6 +130,7 @@ impl super::DownloadsManager {
             worker.chunks.clone(),
             Arc::clone(&worker.cancel_token),
             Arc::clone(&worker.file),
+            Arc::clone(self),
         );
         self.dispatch(ManagerAction::ManageWorkerResult(worker));
     }
@@ -190,7 +191,7 @@ impl super::DownloadsManager {
     pub(super) async fn update_chunks_action(self: &Arc<Self>, download_id: i64) {
         let workers = Arc::clone(&Registry::get_state().workers);
         let maybe_worker = workers.get(&download_id);
-        let reports = Arc::clone(&Registry::get_state().report);
+        let reports = Arc::clone(&Registry::get_state().reports);
 
         if let Some(worker) = maybe_worker {
             let worker = worker.lock().await.clone();
@@ -212,13 +213,14 @@ impl super::DownloadsManager {
                         })
                         .unwrap_or(0);
 
-                    let expected_hash =
-                        Self::compute_partial_hash(&file_path, start_byte, wrote_bytes).ok();
+                    //TODO: pref issue
+                    // let expected_hash =
+                    //     Self::compute_partial_hash(&file_path, start_byte, wrote_bytes).ok();
 
                     UpdateChunk {
                         downloaded_bytes: Some(wrote_bytes as i64),
                         error_message: None,
-                        expected_hash,
+                        expected_hash: Some(String::new()),
                         has_error: Some(false),
                         chunk_index,
                     }
@@ -236,29 +238,32 @@ impl super::DownloadsManager {
     }
 
     pub(super) async fn validate_chunks_hash_action(self: &Arc<Self>, download_id: i64) {
-        self.dispatch(ManagerAction::UpdateDownloadStatus(
-            "validating".to_string(),
-            download_id,
-        ));
+        //TODO: perf issue
+        // self.dispatch(ManagerAction::UpdateDownloadStatus(
+        //     "validating".to_string(),
+        //     download_id,
+        // ));
 
-        let download = DownloadRepository::find(download_id).await.unwrap();
+        // let download = DownloadRepository::find(download_id).await.unwrap();
 
-        if download.downloaded_bytes == 0 {
-            Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
-            return;
-        }
+        // if download.downloaded_bytes == 0 {
+        //     Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
+        //     return;
+        // }
 
-        let chunks = ChunkRepository::find_all(download_id).await.unwrap();
+        // let chunks = ChunkRepository::find_all(download_id).await.unwrap();
 
-        let file_path = download.file_path;
+        // let file_path = download.file_path;
 
-        let invalid_chunks = Self::validate_chunks_hash(&file_path, chunks);
+        // let invalid_chunks = Self::validate_chunks_hash(&file_path, chunks);
 
-        if !invalid_chunks.is_empty() {
-            self.dispatch(ManagerAction::ResetChunks(download_id, invalid_chunks));
-        } else {
-            Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
-        }
+        // if !invalid_chunks.is_empty() {
+        //     self.dispatch(ManagerAction::ResetChunks(download_id, invalid_chunks));
+        // } else {
+        //     Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
+        // }
+
+        Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
     }
 
     pub(super) async fn reset_chunks_action(

@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, Download, HardDrive } from "lucide-react";
 import { Status } from "./types";
 import StatusIndicator from "./status-indicator";
+import clsx from "clsx";
 
 function getStatusColor(status: Status) {
   switch (status) {
@@ -14,6 +15,8 @@ function getStatusColor(status: Status) {
     case Status.Completed:
       return "bg-green-500";
     case Status.Failed:
+      return "bg-red-500";
+    case Status.Error:
       return "bg-red-500";
     case Status.Paused:
       return "bg-yellow-500";
@@ -187,7 +190,9 @@ function StatusAndSpeed({
               </span>
             </div>
 
-            <Progress value={downloadProgress} className="h-2 bg-muted/30" />
+            <Progress value={downloadProgress} className={clsx("h-2 bg-muted/30", {
+              "[&>div]:bg-red-600/50": status === Status.Error || status === Status.Failed
+            })} />
           </>
         )}
       </div>
