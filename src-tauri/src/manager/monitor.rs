@@ -1,10 +1,9 @@
-use crate::{emitter::Emitter, registry::Registry};
+use crate::{emitter::Emitter, monitors_spawn, registry::Registry};
 use serde::{Deserialize, Serialize};
 use std::{
     sync::{atomic::Ordering, Arc},
     time::Duration,
 };
-use tokio::time::sleep;
 
 #[derive(Clone, Serialize, Deserialize)]
 struct SpeedAndRemaining {
@@ -14,66 +13,20 @@ struct SpeedAndRemaining {
 
 impl super::DownloadsManager {
     pub(super) fn start_monitoring() {
-        let report = Arc::clone(&Registry::get_state().reports);
-
-        if !report.is_empty()
-            && !Registry::get_state()
-                .monitor_running
-                .swap(true, Ordering::SeqCst)
-        {
-            Registry::spawn(async move {
-                loop {
-                    let report = Arc::clone(&Registry::get_state().reports);
-                    if report.is_empty() {
-                        Registry::get_state()
-                            .monitor_running
-                            .store(false, Ordering::SeqCst);
-                        break;
-                    }
-                    sleep(Duration::from_secs(1)).await;
-                    Self::monitor_download_speed().await;
-                }
-            });
-            Registry::spawn(async move {
-                loop {
-                    sleep(Duration::from_millis(100)).await;
-                    let report = Arc::clone(&Registry::get_state().reports);
-                    if report.is_empty() {
-                        Registry::get_state()
-                            .monitor_running
-                            .store(false, Ordering::SeqCst);
-                        break;
-                    }
-                    Self::report_downloaded_bytes();
-                }
-            });
-            Registry::spawn(async move {
-                loop {
-                    sleep(Duration::from_secs(1)).await;
-                    let report = Arc::clone(&Registry::get_state().reports);
-                    if report.is_empty() {
-                        Registry::get_state()
-                            .monitor_running
-                            .store(false, Ordering::SeqCst);
-                        break;
-                    }
-                    Self::report_network_speed().await;
-                }
-            });
-            Registry::spawn(async move {
-                loop {
-                    sleep(Duration::from_secs(1)).await;
-                    let report = Arc::clone(&Registry::get_state().reports);
-                    if report.is_empty() {
-                        Registry::get_state()
-                            .monitor_running
-                            .store(false, Ordering::SeqCst);
-                        break;
-                    }
-                    Self::report_disk_speed().await;
-                }
-            });
-        }
+        monitors_spawn!(
+            ("monitor_download_speed", Duration::from_secs(1), {
+                Self::monitor_download_speed().await;
+            }),
+            ("report_downloaded_bytes", Duration::from_millis(100), {
+                Self::report_downloaded_bytes();
+            }),
+            ("report_network_speed", Duration::from_secs(1), {
+                Self::report_network_speed().await;
+            }),
+            ("report_disk_speed", Duration::from_secs(1), {
+                Self::report_disk_speed().await;
+            })
+        );
     }
 
     fn report_downloaded_bytes() {

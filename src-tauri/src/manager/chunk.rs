@@ -3,6 +3,7 @@ use std::{
     fs::File,
     io::{Read, Seek, SeekFrom},
 };
+use tauri_plugin_http::reqwest::dns;
 
 use crate::models::DownloadChunk;
 
@@ -72,5 +73,14 @@ impl super::DownloadsManager {
             })
             .map(|chunk| chunk.chunk_index)
             .collect::<Vec<i64>>()
+    }
+
+    pub(super) async fn update_chunks(download_id: i64) {
+
+        // in function bayad chunk haro update kone
+        // bayad har 5 saniye call beshe
+        // akhar download ham call mishe
+
+        // chunk hash va downloaded bytes ro set mikone
     }
 }

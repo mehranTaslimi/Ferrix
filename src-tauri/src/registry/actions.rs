@@ -8,7 +8,7 @@ use std::{
 };
 
 use dashmap::DashMap;
-use tokio::{spawn, sync::Mutex, time::interval};
+use tokio::{spawn, sync::Mutex};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -16,6 +16,7 @@ use crate::{
     file::File,
     manager::ManagerAction,
     models::{Download, DownloadChunk},
+    queue_spawn,
     repository::{chunk::ChunkRepository, download::DownloadRepository},
     worker::Worker,
 };
@@ -52,90 +53,65 @@ impl Registry {
     }
 
     pub(super) async fn check_available_permit_action() {
-        let state = Arc::clone(&Self::get_state());
-        let pending_queue = Arc::clone(&state.pending_queue);
-        let queue_listener_running = Arc::clone(&state.queue_listener_running);
+        queue_spawn!("check_available_permit_action", {
+            let state = Arc::clone(&Self::get_state());
+            let pending_queue = Arc::clone(&state.pending_queue);
 
-        if !pending_queue.lock().await.is_empty()
-            && !queue_listener_running.swap(true, Ordering::SeqCst)
-        {
-            let mut interval = interval(Duration::from_secs(1));
-            Self::spawn(async move {
-                loop {
-                    let download_id = {
-                        let pending_queue = pending_queue.lock().await;
-                        pending_queue.front().cloned()
-                    };
+            let download_id = {
+                let pending_queue = pending_queue.lock().await;
+                pending_queue.front().cloned()
+            };
 
-                    match download_id {
-                        Some(download_id) => {
-                            let download_result = DownloadRepository::find(download_id).await;
+            if let Some(download_id) = download_id {
+                let download_result = DownloadRepository::find(download_id).await;
 
-                            match download_result {
-                                Ok(download) => {
-                                    let chunk_count = download.chunk_count as usize;
+                match download_result {
+                    Ok(download) => {
+                        let chunk_count = download.chunk_count as usize;
 
-                                    let available_permits =
-                                        Self::get_state().available_permits.load(Ordering::SeqCst);
-                                    /*
-                                        The app reserves 10 permits for other operations.
-                                        Before starting a download, we check if available permits
-                                        are sufficient: the required `chunk_count` plus 5 extra permits as buffer.
-                                        If enough permits are available, the ID is popped from the queue
-                                        and the download is dispatched.
-                                    */
+                        let available_permits =
+                            Self::get_state().available_permits.load(Ordering::SeqCst);
+                        /*
+                            The app reserves 10 permits for other operations.
+                            Before starting a download, we check if available permits
+                            are sufficient: the required `chunk_count` plus 5 extra permits as buffer.
+                            If enough permits are available, the ID is popped from the queue
+                            and the download is dispatched.
+                        */
 
-                                    let remaining_bytes = download
-                                        .total_bytes
-                                        .saturating_sub(download.downloaded_bytes)
-                                        as u64;
+                        let remaining_bytes = download
+                            .total_bytes
+                            .saturating_sub(download.downloaded_bytes)
+                            as u64;
 
-                                    let has_disk_space = match File::check_disk_space(
-                                        &download.file_path,
-                                        remaining_bytes,
-                                    ) {
-                                        Ok(is_available) => is_available,
-                                        Err(e) => {
-                                            Emitter::emit_error(e);
-                                            false
-                                        }
-                                    };
-
-                                    let permit_available = has_disk_space
-                                        && (available_permits >= 10
-                                            && available_permits - 5 >= chunk_count);
-
-                                    if permit_available {
-                                        pending_queue.lock().await.pop_front();
-                                        Self::dispatch(RegistryAction::AddDownloadToWorkersMap(
-                                            download_id,
-                                        ));
-                                    }
+                        let has_disk_space =
+                            match File::check_disk_space(&download.file_path, remaining_bytes) {
+                                Ok(is_available) => is_available,
+                                Err(e) => {
+                                    Emitter::emit_error(e);
+                                    false
                                 }
-                                Err(_) => {
-                                    /*
-                                        This section handles the case where a download is removed or cancelled from the queue.
-                                        The ID is removed from the queued list, and in the next loop iteration,
-                                        if the queue is empty, the loop will break and the listener will stop.
-                                    */
-                                    pending_queue.lock().await.pop_front();
-                                }
-                            }
-                        }
-                        None => {
-                            /*
-                                This `None` match means the queue is empty.
-                                There’s no reason to continue the loop, so we break it.
-                            */
-                            queue_listener_running.store(false, Ordering::SeqCst);
-                            break;
+                            };
+
+                        let permit_available = has_disk_space
+                            && (available_permits >= 10 && available_permits - 5 >= chunk_count);
+
+                        if permit_available {
+                            pending_queue.lock().await.pop_front();
+                            Self::dispatch(RegistryAction::AddDownloadToWorkersMap(download_id));
                         }
                     }
-
-                    interval.tick().await;
+                    Err(_) => {
+                        /*
+                            This section handles the case where a download is removed or cancelled from the queue.
+                            The ID is removed from the queued list, and in the next loop iteration,
+                            if the queue is empty, the loop will break and the listener will stop.
+                        */
+                        pending_queue.lock().await.pop_front();
+                    }
                 }
-            });
-        }
+            }
+        });
     }
 
     pub(super) async fn add_download_workers_map_action(download_id: i64) {

@@ -84,13 +84,6 @@ impl DownloadWorker {
 
         let cancellation_token = Arc::clone(&self.cancel_token);
 
-        if chunk_index == 2 {
-            return Err(ClientError::Http {
-                status: StatusCode::GATEWAY_TIMEOUT,
-                message: "Error".to_string(),
-            });
-        }
-
         let client = match Client::new(
             &self.download.url,
             self.download.timeout_secs as f64,

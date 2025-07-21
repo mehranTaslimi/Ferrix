@@ -47,10 +47,10 @@ pub struct State {
     pub reports: Arc<DashMap<i64, Report>>,
     pub monitor_running: Arc<AtomicBool>,
     pub bandwidth_limit: Arc<AtomicU64>,
+    pub spawn_cancellation_token: Arc<CancellationToken>,
     queue_listener_running: Arc<AtomicBool>,
     mpsc_sender: Arc<mpsc::UnboundedSender<RegistryAction>>,
     manager: OnceCell<Arc<DownloadsManager>>,
-    spawn_cancellation_token: Arc<CancellationToken>,
 }
 
 static STATE: OnceCell<Arc<State>> = OnceCell::new();

@@ -3,7 +3,6 @@ use std::{
     sync::{atomic::Ordering, Arc},
 };
 
-use log::info;
 use tokio::task::JoinHandle;
 
 impl super::Registry {
