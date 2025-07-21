@@ -1,4 +1,3 @@
-use md5::digest::typenum::ToInt;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_util::sync::CancellationToken;
@@ -12,6 +11,8 @@ use crate::{
 mod bandwidth;
 mod download;
 mod outcome;
+
+pub use outcome::ChunkDownloadStatus;
 
 #[derive(Debug)]
 pub enum DownloadStatus {

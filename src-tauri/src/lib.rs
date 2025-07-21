@@ -10,6 +10,7 @@ mod models;
 mod registry;
 mod repository;
 mod worker;
+
 #[macro_use]
 mod macros;
 

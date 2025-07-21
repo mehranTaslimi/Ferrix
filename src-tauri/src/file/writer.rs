@@ -1,8 +1,12 @@
-use crate::registry::{Registry, RegistryAction};
+use std::io::SeekFrom;
+
 use tokio::fs;
 use tokio::fs::OpenOptions;
-use tokio::io::{AsyncSeekExt, AsyncWriteExt, SeekFrom};
+use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 use tokio::sync::mpsc;
+
+use crate::registry::{Registry, RegistryAction};
+use crate::spawn;
 
 pub type WriteMessage = (i64, u64, u64, Vec<u8>);
 
@@ -29,7 +33,7 @@ impl super::File {
 
         let (tx, mut rx) = mpsc::unbounded_channel::<WriteMessage>();
 
-        Registry::spawn(async move {
+        spawn!("file_writer", {
             while let Some((chunk_index, start_byte, downloaded_bytes, bytes)) = rx.recv().await {
                 file.seek(SeekFrom::Start(start_byte)).await.unwrap();
                 file.write_all(&bytes).await.unwrap();

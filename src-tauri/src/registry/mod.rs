@@ -1,4 +1,4 @@
-use crate::{emitter::Emitter, manager::DownloadsManager, worker::Worker};
+use crate::{emitter::Emitter, manager::DownloadsManager, spawn, worker::Worker};
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use sqlx::SqlitePool;
@@ -19,7 +19,6 @@ use tokio_util::sync::CancellationToken;
 mod actions;
 mod event;
 mod pool;
-mod task;
 
 pub use event::RegistryAction;
 
@@ -99,7 +98,7 @@ impl Registry {
     }
 
     fn initialize_mpsc_action(mut rx: UnboundedReceiver<RegistryAction>) {
-        Self::spawn(async move {
+        spawn!("registry_mpsc", {
             while let Some(action) = rx.recv().await {
                 Self::reducer(action).await
             }
@@ -122,5 +121,9 @@ impl Registry {
             .manager
             .get()
             .expect("manager not initialized")
+    }
+
+    fn detect_max_concurrent_tasks() -> usize {
+        num_cpus::get() * 10
     }
 }

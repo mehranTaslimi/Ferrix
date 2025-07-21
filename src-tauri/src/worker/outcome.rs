@@ -22,19 +22,19 @@ pub enum NormalizedDownloadStatus {
 impl super::DownloadWorker {
     pub(super) fn classify_results(
         &self,
-        results: Vec<Result<Option<(i64, Result<ChunkDownloadStatus, ClientError>)>, JoinError>>,
+        results: Vec<Result<(i64, Result<ChunkDownloadStatus, ClientError>), JoinError>>,
     ) -> HashMap<NormalizedDownloadStatus, Vec<i64>> {
         let mut counter: HashMap<NormalizedDownloadStatus, Vec<i64>> = HashMap::new();
 
         for result in results.iter() {
             let (maybe_chunk_index, normalized_statuses) = match result {
-                Ok(Some((_, Ok(ChunkDownloadStatus::Finished)))) => {
+                Ok((_, Ok(ChunkDownloadStatus::Finished))) => {
                     (None, NormalizedDownloadStatus::Finished)
                 }
-                Ok(Some((_, Ok(ChunkDownloadStatus::Paused)))) => {
+                Ok((_, Ok(ChunkDownloadStatus::Paused))) => {
                     (None, NormalizedDownloadStatus::Paused)
                 }
-                Ok(Some((chunk_index, Err(err)))) => {
+                Ok((chunk_index, Err(err))) => {
                     if err.is_retryable() {
                         warn!("Chunk {} failed but is retryable: {:?}", chunk_index, err);
                         (Some(chunk_index), NormalizedDownloadStatus::Retry)
@@ -43,7 +43,6 @@ impl super::DownloadWorker {
                         (Some(chunk_index), NormalizedDownloadStatus::Error)
                     }
                 }
-                Ok(None) => (None, NormalizedDownloadStatus::Paused),
                 Err(_) => (None, NormalizedDownloadStatus::Error),
             };
 

@@ -13,6 +13,7 @@ use crate::{
     models::{NewDownload, UpdateChunk, UpdateDownload},
     registry::{Registry, RegistryAction},
     repository::{chunk::ChunkRepository, download::DownloadRepository},
+    spawn,
     worker::DownloadWorker,
 };
 
@@ -119,12 +120,6 @@ impl super::DownloadsManager {
     pub(super) async fn start_download_action(self: &Arc<Self>, download_id: i64) {
         let worker = Registry::get_state().workers.get(&download_id).unwrap();
         let worker = worker.lock().await;
-
-        self.dispatch(ManagerAction::UpdateDownloadStatus(
-            "downloading".to_string(),
-            download_id,
-        ));
-
         let worker = DownloadWorker::new(
             worker.download.clone(),
             worker.chunks.clone(),
@@ -168,7 +163,7 @@ impl super::DownloadsManager {
 
         let self_clone = Arc::clone(&self);
 
-        Registry::spawn(async move {
+        spawn!("manage_worker_result_action", {
             let status = worker.start_download().await;
             self_clone.dispatch(ManagerAction::UpdateDownloadStatus(
                 status.to_string(),

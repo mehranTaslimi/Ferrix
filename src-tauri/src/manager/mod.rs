@@ -10,7 +10,7 @@ mod monitor;
 pub use actions::DownloadOptions;
 pub use event::ManagerAction;
 
-use crate::registry::Registry;
+use crate::spawn;
 
 #[derive(Debug)]
 pub struct DownloadsManager {
@@ -31,7 +31,7 @@ impl DownloadsManager {
     fn initialize_mpsc_action(self: Arc<Self>, mut rx: mpsc::UnboundedReceiver<ManagerAction>) {
         let self_clone = Arc::clone(&self);
 
-        Registry::spawn(async move {
+        spawn!("manager_mpsc", {
             while let Some(action) = rx.recv().await {
                 self_clone.reducer(action).await;
             }

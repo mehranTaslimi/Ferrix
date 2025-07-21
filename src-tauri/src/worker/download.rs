@@ -1,8 +1,8 @@
 use futures_util::{future::join_all, StreamExt};
 use std::{sync::Arc, time::Duration};
-use tauri::http::StatusCode;
 
 use crate::{
+    chunk_spawn,
     client::{Client, ClientError},
     file::WriteMessage,
     manager,
@@ -20,13 +20,13 @@ impl DownloadWorker {
         let mut retries = 0u64;
 
         loop {
-            let mut futures = self.chunks.clone().into_iter().map(|chunk| {
-                let self_clone = Arc::clone(self);
-                Registry::spawn(async move {
-                    (chunk.chunk_index, self_clone.download_chunk(chunk).await)
-                })
-            });
+            self.manager
+                .dispatch(manager::ManagerAction::UpdateDownloadStatus(
+                    DownloadStatus::Downloading.to_string(),
+                    self.download.id,
+                ));
 
+            let mut futures = chunk_spawn!(self);
             let results = join_all(&mut futures).await;
             let classify_results = self.classify_results(results);
 
@@ -108,47 +108,36 @@ impl DownloadWorker {
 
         let mut stream = client.stream(range).await?;
 
-        loop {
-            tokio::select! {
+        while let Some(bytes) = stream.next().await {
+            match bytes {
+                Ok(bytes) => {
+                    let bytes_len = bytes.len() as u64;
 
-                _ = cancellation_token.cancelled() => {
-                    return Ok(outcome::ChunkDownloadStatus::Paused);
+                    let write_message: WriteMessage = (
+                        chunk_index,
+                        (start_byte + downloaded_bytes) as u64,
+                        bytes_len,
+                        bytes.to_vec(),
+                    );
+
+                    self.file.send(write_message).unwrap();
+
+                    downloaded_bytes += bytes_len as i64;
+
+                    Registry::dispatch(RegistryAction::UpdateNetworkReport(
+                        self.download.id,
+                        bytes_len,
+                    ));
                 }
-
-                maybe_bytes = stream.next() => {
-                    match maybe_bytes {
-                        Some(Ok(bytes)) => {
-
-                            let bytes_len = bytes.len() as u64;
-
-                            let write_message: WriteMessage = (
-                                chunk_index,
-                                (start_byte + downloaded_bytes) as u64,
-                                bytes_len,
-                                bytes.to_vec(),
-                            );
-
-                            self.file
-                                .send(write_message)
-                                .unwrap();
-
-                            downloaded_bytes += bytes_len as i64;
-
-                            Registry::dispatch(RegistryAction::UpdateNetworkReport(self.download.id, bytes_len));
-                        },
-                        Some(Err(err)) => {
-                            if !err.is_retryable() {
-                                cancellation_token.cancel();
-                            }
-                            return Err(err);
-                        },
-                        None => {
-                            return Ok(outcome::ChunkDownloadStatus::Finished);
-                        },
+                Err(err) => {
+                    if !err.is_retryable() {
+                        cancellation_token.cancel();
                     }
+                    return Err(err);
                 }
-
             }
         }
+
+        Ok(outcome::ChunkDownloadStatus::Finished)
     }
 }

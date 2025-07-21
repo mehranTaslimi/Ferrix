@@ -3,9 +3,9 @@ macro_rules! spawn {
     ($name:literal, $body:block) => {{
         let state = $crate::registry::Registry::get_state();
 
-        let permit = Arc::clone(&state.current_tasks);
-        let available_permits = Arc::clone(&state.available_permits);
-        let spawn_cancellation_token = Arc::clone(&state.spawn_cancellation_token);
+        let permit = ::std::sync::Arc::clone(&state.current_tasks);
+        let available_permits = ::std::sync::Arc::clone(&state.available_permits);
+        let spawn_cancellation_token = ::std::sync::Arc::clone(&state.spawn_cancellation_token);
 
         tokio::spawn(async move {
             let acquired = permit.acquire().await.unwrap();
@@ -57,7 +57,7 @@ macro_rules! monitors_spawn {
         let state = $crate::registry::Registry::get_state();
 
         let should_create = {
-            let reports = Arc::clone(&state.reports);
+            let reports = ::std::sync::Arc::clone(&state.reports);
             move || {
                 if !reports.is_empty()
                     && !state
@@ -76,7 +76,7 @@ macro_rules! monitors_spawn {
         if should_create() {
             $(
                 let should_break = async move || {
-                    let reports = Arc::clone(&state.reports);
+                    let reports = ::std::sync::Arc::clone(&state.reports);
                     if reports.is_empty() {
                         state
                             .monitor_running
@@ -98,7 +98,7 @@ macro_rules! queue_spawn {
         let state = $crate::registry::Registry::get_state();
 
         let should_create = async move || {
-            let pending_queue = Arc::clone(&state.pending_queue);
+            let pending_queue = ::std::sync::Arc::clone(&state.pending_queue);
             if !pending_queue.lock().await.is_empty()
                 && !state
                     .queue_listener_running
@@ -115,7 +115,7 @@ macro_rules! queue_spawn {
         if should_create().await {
             let duration = ::std::time::Duration::from_secs(1);
             let should_break = async move || {
-                let pending_queue = Arc::clone(&state.pending_queue);
+                let pending_queue = ::std::sync::Arc::clone(&state.pending_queue);
                 if pending_queue.lock().await.is_empty() {
                     state
                         .queue_listener_running
@@ -126,5 +126,53 @@ macro_rules! queue_spawn {
             };
             $crate::loop_spawn!($name, should_break, duration, $body);
         };
+    }};
+}
+
+#[macro_export]
+macro_rules! chunk_spawn {
+    ($worker:ident) => {{
+        let futures = $worker.chunks.clone().into_iter().map(|chunk| {
+            let worker_clone = ::std::sync::Arc::clone(&$worker);
+            let chunk_index = chunk.chunk_index;
+            tokio::spawn(async move {
+                let state = $crate::registry::Registry::get_state();
+                let permit = ::std::sync::Arc::clone(&state.current_tasks);
+                let available_permits = ::std::sync::Arc::clone(&state.available_permits);
+                let spawn_cancellation_token =
+                    ::std::sync::Arc::clone(&state.spawn_cancellation_token);
+                let acquired = permit.acquire().await.unwrap();
+
+                available_permits.store(
+                    permit.available_permits(),
+                    ::std::sync::atomic::Ordering::SeqCst,
+                );
+                println!("[CREATED]: {} {}", "download_chunk", chunk_index);
+
+                let result = tokio::select! {
+                    _ = spawn_cancellation_token.cancelled() => {
+                        Ok($crate::worker::ChunkDownloadStatus::Paused)
+                    }
+                    _ = worker_clone.cancel_token.cancelled() => {
+                        Ok($crate::worker::ChunkDownloadStatus::Paused)
+                    }
+                    status = worker_clone.download_chunk(chunk) => {
+                        status
+                    }
+                };
+
+                drop(acquired);
+
+                available_permits.store(
+                    permit.available_permits(),
+                    ::std::sync::atomic::Ordering::SeqCst,
+                );
+                println!("[DROPPED]: {} {}", "download_chunk", chunk_index);
+
+                (chunk_index, result)
+            })
+        });
+
+        futures
     }};
 }
