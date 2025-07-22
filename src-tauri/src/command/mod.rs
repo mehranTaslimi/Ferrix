@@ -1,7 +1,7 @@
 use crate::{
+    dispatch,
     manager::{DownloadOptions, DownloadsManager},
     models::Download,
-    registry::{Registry, RegistryAction},
     repository::download::DownloadRepository,
 };
 
@@ -19,15 +19,15 @@ pub async fn get_download_list() -> Result<Vec<Download>, String> {
 
 #[tauri::command]
 pub fn pause_download(id: i64) {
-    Registry::dispatch(RegistryAction::PauseDownload(id));
+    dispatch!(registry, PauseDownload, (id));
 }
 
 #[tauri::command]
 pub fn resume_download(id: i64) {
-    Registry::dispatch(RegistryAction::ResumeDownload(id));
+    dispatch!(registry, ResumeDownload, (id));
 }
 
 #[tauri::command]
 pub fn remove_download(id: i64, remove_file: bool) {
-    Registry::dispatch(RegistryAction::RemoveDownload(id, remove_file));
+    dispatch!(registry, RemoveDownload, (id, remove_file));
 }

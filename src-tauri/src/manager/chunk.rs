@@ -3,7 +3,6 @@ use std::{
     fs::File,
     io::{Read, Seek, SeekFrom},
 };
-use tauri_plugin_http::reqwest::dns;
 
 use crate::models::DownloadChunk;
 

@@ -4,17 +4,16 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc,
     },
-    time::Duration,
 };
 
 use dashmap::DashMap;
-use tokio::{spawn, sync::Mutex};
+use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 
 use crate::{
+    dispatch,
     emitter::Emitter,
     file::File,
-    manager::ManagerAction,
     models::{Download, DownloadChunk},
     queue_spawn,
     repository::{chunk::ChunkRepository, download::DownloadRepository},
@@ -32,7 +31,7 @@ impl Registry {
         let download = DownloadRepository::find(download_id).await.unwrap();
         Emitter::emit_event("download_item", download);
 
-        Self::dispatch(RegistryAction::CheckAvailablePermit);
+        dispatch!(registry, CheckAvailablePermit);
     }
 
     pub(super) async fn recover_queued_download_from_repository_action() {
@@ -47,7 +46,7 @@ impl Registry {
 
         if let Ok(download_ids) = download_ids {
             for download_id in download_ids.iter() {
-                Self::dispatch(RegistryAction::NewDownloadQueue(*download_id));
+                dispatch!(registry, NewDownloadQueue, (*download_id));
             }
         };
     }
@@ -98,7 +97,7 @@ impl Registry {
 
                         if permit_available {
                             pending_queue.lock().await.pop_front();
-                            Self::dispatch(RegistryAction::AddDownloadToWorkersMap(download_id));
+                            dispatch!(registry, AddDownloadToWorkersMap, (download_id));
                         }
                     }
                     Err(_) => {
@@ -116,8 +115,6 @@ impl Registry {
 
     pub(super) async fn add_download_workers_map_action(download_id: i64) {
         let workers = Arc::clone(&Self::get_state().workers);
-        let manager = Arc::clone(&Self::get_manager());
-
         let download = DownloadRepository::find(download_id).await.unwrap();
         let chunks = ChunkRepository::find_all(download_id).await.unwrap();
 
@@ -126,10 +123,11 @@ impl Registry {
             .filter(|chunk| chunk.downloaded_bytes < chunk.end_byte - chunk.start_byte)
             .collect::<Vec<_>>();
 
-        Self::dispatch(RegistryAction::CreateDownloadReport(
-            download.clone(),
-            not_downloaded_chunks.clone(),
-        ));
+        dispatch!(
+            registry,
+            CreateDownloadReport,
+            (download.clone(), not_downloaded_chunks.clone(),)
+        );
 
         let file = match File::new(
             download_id,
@@ -155,7 +153,7 @@ impl Registry {
             })),
         );
 
-        manager.dispatch(ManagerAction::StartDownload(download_id));
+        dispatch!(manager, StartDownload, (download_id));
     }
 
     pub(super) async fn create_download_report_action(
@@ -232,12 +230,11 @@ impl Registry {
     }
 
     pub(super) async fn pause_download_action(download_id: i64) {
-        let manager = Arc::clone(&Self::get_manager());
-        manager.dispatch(ManagerAction::PauseDownload(download_id));
+        dispatch!(manager, PauseDownload, (download_id));
     }
 
     pub(super) async fn resume_download_action(download_id: i64) {
-        Self::get_manager().dispatch(ManagerAction::ValidateChunksHash(download_id));
+        dispatch!(manager, ValidateChunksHash, (download_id));
     }
 
     pub(super) async fn remove_download_action(download_id: i64, remove_file: bool) {
@@ -253,44 +250,6 @@ impl Registry {
     }
 
     pub(super) async fn close_requested_action() {
-        let queued_downloads = DownloadRepository::find_all(Some("queued"))
-            .await
-            .map(|dls| dls.iter().map(|dl| dl.id).collect::<Vec<i64>>());
-
-        if let Ok(ids) = queued_downloads {
-            for id in ids {
-                Self::get_manager().dispatch(ManagerAction::UpdateDownloadStatus(
-                    "paused".to_string(),
-                    id,
-                ));
-            }
-        }
-
-        let workers = Arc::clone(&Self::get_state().workers);
-        let mut interval = tokio::time::interval(Duration::from_millis(500));
-
-        if !workers.is_empty() {
-            for worker in workers.iter() {
-                let id = { worker.lock().await.download.id };
-                Self::dispatch(RegistryAction::PauseDownload(id));
-            }
-
-            spawn(async move {
-                loop {
-                    if workers.is_empty() {
-                        let state = Self::get_state();
-                        state.spawn_cancellation_token.cancel();
-                        state.app_handle.exit(0);
-                        break;
-                    }
-
-                    interval.tick().await;
-                }
-            });
-        } else {
-            let state = Self::get_state();
-            state.spawn_cancellation_token.cancel();
-            state.app_handle.exit(0);
-        }
+        //
     }
 }

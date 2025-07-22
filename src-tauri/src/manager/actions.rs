@@ -7,11 +7,11 @@ use serde::Deserialize;
 
 use crate::{
     client::{AuthType, Client, ProxyType},
+    dispatch,
     emitter::Emitter,
     file::File,
-    manager::ManagerAction,
     models::{NewDownload, UpdateChunk, UpdateDownload},
-    registry::{Registry, RegistryAction},
+    registry::Registry,
     repository::{chunk::ChunkRepository, download::DownloadRepository},
     spawn,
     worker::DownloadWorker,
@@ -112,7 +112,7 @@ impl super::DownloadsManager {
                     .join(", ")
             })?;
 
-        Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
+        dispatch!(registry, NewDownloadQueue, (download_id));
 
         Ok(())
     }
@@ -125,9 +125,9 @@ impl super::DownloadsManager {
             worker.chunks.clone(),
             Arc::clone(&worker.cancel_token),
             Arc::clone(&worker.file),
-            Arc::clone(self),
         );
-        self.dispatch(ManagerAction::ManageWorkerResult(worker));
+
+        dispatch!(manager, ManageWorkerResult, (worker));
     }
 
     pub(super) async fn update_download_status_action(
@@ -160,16 +160,14 @@ impl super::DownloadsManager {
 
     pub(super) async fn manage_worker_result_action(self: &Arc<Self>, worker: Arc<DownloadWorker>) {
         Self::start_monitoring();
-
-        let self_clone = Arc::clone(&self);
-
         spawn!("manage_worker_result_action", {
             let status = worker.start_download().await;
-            self_clone.dispatch(ManagerAction::UpdateDownloadStatus(
-                status.to_string(),
-                worker.download.id,
-            ));
-            self_clone.dispatch(ManagerAction::UpdateChunks(worker.download.id));
+            dispatch!(
+                manager,
+                UpdateDownloadStatus,
+                (status.to_string(), worker.download.id)
+            );
+            dispatch!(manager, UpdateChunks, (worker.download.id));
         });
     }
 
@@ -229,7 +227,7 @@ impl super::DownloadsManager {
             }
         }
 
-        Registry::dispatch(RegistryAction::CleanDownloadedItemData(download_id));
+        dispatch!(registry, CleanDownloadedItemData, (download_id));
     }
 
     pub(super) async fn validate_chunks_hash_action(self: &Arc<Self>, download_id: i64) {
@@ -258,7 +256,7 @@ impl super::DownloadsManager {
         //     Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
         // }
 
-        Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
+        dispatch!(registry, NewDownloadQueue, (download_id));
     }
 
     pub(super) async fn reset_chunks_action(
@@ -282,7 +280,6 @@ impl super::DownloadsManager {
                 Emitter::emit_error(err.to_string());
             });
         }
-
-        Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
+        dispatch!(registry, NewDownloadQueue, (download_id));
     }
 }

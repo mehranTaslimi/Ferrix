@@ -5,8 +5,7 @@ use tokio::fs::OpenOptions;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 use tokio::sync::mpsc;
 
-use crate::registry::{Registry, RegistryAction};
-use crate::spawn;
+use crate::{dispatch, spawn};
 
 pub type WriteMessage = (i64, u64, u64, Vec<u8>);
 
@@ -39,11 +38,11 @@ impl super::File {
                 file.write_all(&bytes).await.unwrap();
                 file.flush().await.unwrap();
 
-                Registry::dispatch(RegistryAction::UpdateDiskReport(
-                    download_id,
-                    chunk_index,
-                    downloaded_bytes,
-                ));
+                dispatch!(
+                    registry,
+                    UpdateDiskReport,
+                    (download_id, chunk_index, downloaded_bytes)
+                );
             }
         });
 

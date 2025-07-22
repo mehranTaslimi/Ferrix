@@ -1,4 +1,4 @@
-use crate::{emitter::Emitter, manager::DownloadsManager, spawn, worker::Worker};
+use crate::{dispatch, emitter::Emitter, manager::DownloadsManager, spawn, worker::Worker};
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use sqlx::SqlitePool;
@@ -94,7 +94,7 @@ impl Registry {
         Self::initialize_mpsc_action(rx);
         Self::initialize_manager();
 
-        Self::dispatch(RegistryAction::RecoverQueuedDownloadFromRepository);
+        dispatch!(registry, RecoverQueuedDownloadFromRepository);
     }
 
     fn initialize_mpsc_action(mut rx: UnboundedReceiver<RegistryAction>) {
@@ -116,7 +116,7 @@ impl Registry {
         STATE.get().expect("STATE not initialized")
     }
 
-    fn get_manager() -> &'static Arc<DownloadsManager> {
+    pub fn get_manager() -> &'static Arc<DownloadsManager> {
         Self::get_state()
             .manager
             .get()

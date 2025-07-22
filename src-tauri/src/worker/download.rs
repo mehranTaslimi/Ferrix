@@ -4,10 +4,9 @@ use std::{sync::Arc, time::Duration};
 use crate::{
     chunk_spawn,
     client::{Client, ClientError},
+    dispatch,
     file::WriteMessage,
-    manager,
     models::DownloadChunk,
-    registry::{Registry, RegistryAction},
     worker::outcome::NormalizedDownloadStatus,
 };
 
@@ -20,11 +19,11 @@ impl DownloadWorker {
         let mut retries = 0u64;
 
         loop {
-            self.manager
-                .dispatch(manager::ManagerAction::UpdateDownloadStatus(
-                    DownloadStatus::Downloading.to_string(),
-                    self.download.id,
-                ));
+            dispatch!(
+                manager,
+                UpdateDownloadStatus,
+                (DownloadStatus::Downloading.to_string(), self.download.id)
+            );
 
             let mut futures = chunk_spawn!(self);
             let results = join_all(&mut futures).await;
@@ -59,11 +58,20 @@ impl DownloadWorker {
                     return DownloadStatus::Failed;
                 }
 
-                self.manager
-                    .dispatch(manager::ManagerAction::UpdateDownloadStatus(
-                        DownloadStatus::Error.to_string(),
-                        self.download.id,
-                    ));
+                let indexes = classify_results
+                    .get(&NormalizedDownloadStatus::Retry)
+                    .cloned()
+                    .unwrap_or_default();
+
+                let retries_indexes = Arc::clone(&self.retries_indexes);
+                let mut retries_indexes = retries_indexes.lock().await;
+                *retries_indexes = indexes;
+
+                dispatch!(
+                    manager,
+                    UpdateDownloadStatus,
+                    (DownloadStatus::Error.to_string(), self.download.id,)
+                );
 
                 retries += 1;
                 let wait_time = backoff_factor.powf(retries as f64);
@@ -101,6 +109,13 @@ impl DownloadWorker {
             }
         };
 
+        // if chunk_index == 2 {
+        //     return Err(ClientError::Http {
+        //         status: StatusCode::INTERNAL_SERVER_ERROR,
+        //         message: "error".to_string(),
+        //     });
+        // }
+
         let range = match self.download.supports_range {
             true => Some((start_byte + downloaded_bytes, end_byte)),
             false => None,
@@ -124,10 +139,7 @@ impl DownloadWorker {
 
                     downloaded_bytes += bytes_len as i64;
 
-                    Registry::dispatch(RegistryAction::UpdateNetworkReport(
-                        self.download.id,
-                        bytes_len,
-                    ));
+                    dispatch!(registry, UpdateNetworkReport, (self.download.id, bytes_len));
                 }
                 Err(err) => {
                     if !err.is_retryable() {

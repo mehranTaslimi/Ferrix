@@ -53,7 +53,7 @@ pub async fn run() {
         .on_window_event(|_, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
-                Registry::dispatch(registry::RegistryAction::CloseRequested);
+                dispatch!(registry, CloseRequested);
             }
         })
         .run(tauri::generate_context!())

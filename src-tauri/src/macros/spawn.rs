@@ -132,9 +132,24 @@ macro_rules! queue_spawn {
 #[macro_export]
 macro_rules! chunk_spawn {
     ($worker:ident) => {{
-        let futures = $worker.chunks.clone().into_iter().map(|chunk| {
+        let retries_indexes = Arc::clone(&$worker.retries_indexes);
+        let retries_indexes = retries_indexes.lock().await;
+
+        let mut chunks = $worker.chunks.clone().into_iter();
+
+        if !retries_indexes.is_empty() {
+            chunks = chunks
+                .filter(|chunk| retries_indexes.contains(&chunk.chunk_index))
+                .collect::<Vec<_>>()
+                .into_iter();
+        }
+
+        println!("{retries_indexes:?}");
+
+        let futures = chunks.map(|chunk| {
             let worker_clone = ::std::sync::Arc::clone(&$worker);
             let chunk_index = chunk.chunk_index;
+
             tokio::spawn(async move {
                 let state = $crate::registry::Registry::get_state();
                 let permit = ::std::sync::Arc::clone(&state.current_tasks);

@@ -1,10 +1,10 @@
+use futures_util::lock::Mutex;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_util::sync::CancellationToken;
 
 use crate::{
     file::WriteMessage,
-    manager::DownloadsManager,
     models::{Download, DownloadChunk},
 };
 
@@ -20,7 +20,7 @@ pub enum DownloadStatus {
     Completed,
     Failed,
     Downloading,
-    Queued,
+    // Queued,
     Error,
 }
 
@@ -31,7 +31,7 @@ impl ToString for DownloadStatus {
             DownloadStatus::Completed => "completed".to_string(),
             DownloadStatus::Failed => "failed".to_string(),
             DownloadStatus::Downloading => "downloading".to_string(),
-            DownloadStatus::Queued => "queued".to_string(),
+            // DownloadStatus::Queued => "queued".to_string(),
             DownloadStatus::Error => "error".to_string(),
         }
     }
@@ -51,7 +51,7 @@ pub struct DownloadWorker {
     chunks: Vec<DownloadChunk>,
     cancel_token: Arc<CancellationToken>,
     file: Arc<UnboundedSender<WriteMessage>>,
-    manager: Arc<DownloadsManager>,
+    retries_indexes: Arc<Mutex<Vec<i64>>>,
 }
 
 impl DownloadWorker {
@@ -60,14 +60,15 @@ impl DownloadWorker {
         chunks: Vec<DownloadChunk>,
         cancel_token: Arc<CancellationToken>,
         file: Arc<UnboundedSender<WriteMessage>>,
-        manager: Arc<DownloadsManager>,
     ) -> Arc<Self> {
+        let retries_indexes = Arc::new(Mutex::new(vec![]));
+
         Arc::new(Self {
             download,
             chunks,
             cancel_token,
             file,
-            manager,
+            retries_indexes,
         })
     }
 }
