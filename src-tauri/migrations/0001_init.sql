@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS downloads (
     delay_secs REAL NOT NULL DEFAULT 2.0,
     backoff_factor REAL NOT NULL DEFAULT 2.0,
     timeout_secs INTEGER NOT NULL DEFAULT 30,
-    supports_range BOOLEAN NOT NULL DEFAULT FALSE
+    supports_range BOOLEAN NOT NULL DEFAULT FALSE,
+    error_message TEXT
 );
 
 CREATE TABLE IF NOT EXISTS download_chunks (
@@ -28,8 +29,6 @@ CREATE TABLE IF NOT EXISTS download_chunks (
     end_byte INTEGER NOT NULL,
     downloaded_bytes INTEGER NOT NULL DEFAULT 0,
     expected_hash TEXT DEFAULT NULL,
-    error_message TEXT,
-    has_error BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (download_id, chunk_index)
 );
 
@@ -38,5 +37,3 @@ CREATE INDEX IF NOT EXISTS idx_downloads_status ON downloads(status);
 CREATE INDEX IF NOT EXISTS idx_downloads_created_at ON downloads(created_at);
 
 CREATE INDEX IF NOT EXISTS idx_download_chunks_download_id ON download_chunks(download_id);
-
-CREATE INDEX IF NOT EXISTS idx_download_chunks_has_error ON download_chunks(has_error);

@@ -4,17 +4,20 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ClientError {
-    #[error("Network error: {0}")]
+    #[error("{0}")]
     Reqwest(#[from] reqwest::Error),
 
-    #[error("Request failed with status {status}: {message}")]
+    #[error("{status}: {message}")]
     Http { status: StatusCode, message: String },
 
-    #[error("Deserialization error: {0}")]
+    #[error("{0}")]
     Deserialize(#[from] serde_json::Error),
 
-    #[error("Missing or invalid Content-Length header")]
+    #[error("missing or invalid Content-Length header")]
     MissingContentLength,
+
+    #[error("timeout error")]
+    StreamTimeout,
 }
 
 impl ClientError {
@@ -24,6 +27,7 @@ impl ClientError {
             ClientError::Http { status, .. } => {
                 matches!(status.as_u16(), 408 | 429 | 500..=504)
             }
+            ClientError::StreamTimeout => true,
             _ => false,
         }
     }

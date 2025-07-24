@@ -7,7 +7,7 @@ use std::{
 };
 
 use dashmap::DashMap;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -145,7 +145,7 @@ impl Registry {
 
         workers.insert(
             download.id,
-            Arc::new(Mutex::new(Worker {
+            Arc::new(RwLock::new(Worker {
                 download,
                 chunks: not_downloaded_chunks.clone(),
                 cancel_token: Arc::new(CancellationToken::new()),

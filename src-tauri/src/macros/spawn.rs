@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! spawn {
-    ($name:literal, $body:block) => {{
+    ($name:expr, $body:block) => {{
         let state = $crate::registry::Registry::get_state();
 
         let permit = ::std::sync::Arc::clone(&state.current_tasks);
@@ -126,68 +126,5 @@ macro_rules! queue_spawn {
             };
             $crate::loop_spawn!($name, should_break, duration, $body);
         };
-    }};
-}
-
-#[macro_export]
-macro_rules! chunk_spawn {
-    ($worker:ident) => {{
-        let retries_indexes = Arc::clone(&$worker.retries_indexes);
-        let retries_indexes = retries_indexes.lock().await;
-
-        let mut chunks = $worker.chunks.clone().into_iter();
-
-        if !retries_indexes.is_empty() {
-            chunks = chunks
-                .filter(|chunk| retries_indexes.contains(&chunk.chunk_index))
-                .collect::<Vec<_>>()
-                .into_iter();
-        }
-
-        println!("{retries_indexes:?}");
-
-        let futures = chunks.map(|chunk| {
-            let worker_clone = ::std::sync::Arc::clone(&$worker);
-            let chunk_index = chunk.chunk_index;
-
-            tokio::spawn(async move {
-                let state = $crate::registry::Registry::get_state();
-                let permit = ::std::sync::Arc::clone(&state.current_tasks);
-                let available_permits = ::std::sync::Arc::clone(&state.available_permits);
-                let spawn_cancellation_token =
-                    ::std::sync::Arc::clone(&state.spawn_cancellation_token);
-                let acquired = permit.acquire().await.unwrap();
-
-                available_permits.store(
-                    permit.available_permits(),
-                    ::std::sync::atomic::Ordering::SeqCst,
-                );
-                println!("[CREATED]: {} {}", "download_chunk", chunk_index);
-
-                let result = tokio::select! {
-                    _ = spawn_cancellation_token.cancelled() => {
-                        Ok($crate::worker::ChunkDownloadStatus::Paused)
-                    }
-                    _ = worker_clone.cancel_token.cancelled() => {
-                        Ok($crate::worker::ChunkDownloadStatus::Paused)
-                    }
-                    status = worker_clone.download_chunk(chunk) => {
-                        status
-                    }
-                };
-
-                drop(acquired);
-
-                available_permits.store(
-                    permit.available_permits(),
-                    ::std::sync::atomic::Ordering::SeqCst,
-                );
-                println!("[DROPPED]: {} {}", "download_chunk", chunk_index);
-
-                (chunk_index, result)
-            })
-        });
-
-        futures
     }};
 }

@@ -12,7 +12,7 @@ use std::{
 use tauri::AppHandle;
 use tokio::sync::{
     mpsc::{self, UnboundedReceiver},
-    Mutex, Semaphore,
+    Mutex, RwLock, Semaphore,
 };
 use tokio_util::sync::CancellationToken;
 
@@ -42,7 +42,7 @@ pub struct State {
     pub app_handle: Arc<AppHandle>,
     pub available_permits: Arc<AtomicUsize>,
     pub pending_queue: Arc<Mutex<VecDeque<i64>>>,
-    pub workers: Arc<DashMap<i64, Arc<Mutex<Worker>>>>,
+    pub workers: Arc<DashMap<i64, Arc<RwLock<Worker>>>>,
     pub reports: Arc<DashMap<i64, Report>>,
     pub monitor_running: Arc<AtomicBool>,
     pub bandwidth_limit: Arc<AtomicU64>,

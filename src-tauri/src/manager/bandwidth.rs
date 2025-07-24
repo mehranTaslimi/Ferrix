@@ -8,7 +8,7 @@ impl super::DownloadsManager {
         let chunk_count = {
             let mut count = 1;
             for worker in workers.iter() {
-                let worker = worker.lock().await;
+                let worker = worker.read().await;
                 count += worker.download.chunk_count
             }
             count as u64

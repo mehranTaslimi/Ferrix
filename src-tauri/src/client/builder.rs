@@ -6,13 +6,14 @@ use crate::{client::ProxyType, emitter::Emitter};
 impl super::Client {
     pub fn new(
         url: &str,
-        timeout_secs: f64,
         auth: &Option<super::AuthType>,
         proxy: &Option<super::ProxyType>,
         headers: &Option<HashMap<String, String>>,
         cookies: &Option<HashMap<String, String>>,
     ) -> Result<Self, super::ClientError> {
-        let mut builder = ReqwestClient::builder().timeout(Duration::from_secs_f64(timeout_secs));
+        let mut builder = ReqwestClient::builder()
+            .timeout(Duration::from_secs(10))
+            .connect_timeout(Duration::from_secs(10));
 
         match headers {
             Some(custom_headers) => {

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO download_chunks (download_id, chunk_index, start_byte, end_byte)\n            VALUES (?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "f0b8efcda1b8e34f4fdd84263a5020dcaa4e724ffa82d1a4bbb0374ee97f68ef"
+}

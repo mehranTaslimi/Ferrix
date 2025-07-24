@@ -1,155 +1,183 @@
-use futures_util::{future::join_all, StreamExt};
+use futures_util::StreamExt;
 use std::{sync::Arc, time::Duration};
+use tokio::time::timeout;
 
 use crate::{
-    chunk_spawn,
     client::{Client, ClientError},
     dispatch,
     file::WriteMessage,
-    models::DownloadChunk,
-    worker::outcome::NormalizedDownloadStatus,
+    spawn,
+    worker::status::ChunkDownloadStatus,
 };
 
 use super::*;
 
 impl DownloadWorker {
-    pub async fn start_download(self: &Arc<Self>) -> DownloadStatus {
-        let backoff_factor = self.download.backoff_factor;
-        let max_retries = self.download.max_retries as u64;
-        let mut retries = 0u64;
+    pub async fn start_download(self: &Arc<Self>) {
+        let worker = self.data.read().await;
 
-        loop {
-            dispatch!(
-                manager,
-                UpdateDownloadStatus,
-                (DownloadStatus::Downloading.to_string(), self.download.id)
-            );
+        let chunks = worker.chunks.clone();
+        let cancel_token = Arc::clone(&worker.cancel_token);
+        let max_retries = worker.download.max_retries;
+        let backoff_factor = worker.download.backoff_factor;
 
-            let mut futures = chunk_spawn!(self);
-            let results = join_all(&mut futures).await;
-            let classify_results = self.classify_results(results);
+        for chunk in chunks {
+            let worker_clone = Arc::clone(self);
+            let cancel_token = Arc::clone(&cancel_token);
 
-            if classify_results
-                .keys()
-                .all(|s| *s == NormalizedDownloadStatus::Finished)
-            {
-                return DownloadStatus::Completed;
-            }
+            spawn!("download_chunk", {
+                let max_retries = max_retries;
+                let backoff_factor = backoff_factor;
+                let mut retries = 0;
 
-            if classify_results
-                .keys()
-                .any(|s| *s == NormalizedDownloadStatus::Error)
-            {
-                return DownloadStatus::Failed;
-            }
+                loop {
+                    worker_clone
+                        .update_chunk_status(
+                            chunk.chunk_index,
+                            status::ChunkDownloadStatus::Downloading,
+                        )
+                        .await;
 
-            if classify_results
-                .keys()
-                .any(|s| *s == NormalizedDownloadStatus::Paused)
-            {
-                return DownloadStatus::Paused;
-            }
+                    let result = tokio::select! {
+                        status = worker_clone.download_chunk(&chunk) => {
+                            match status {
+                                Ok(()) => ChunkDownloadStatus::Finished,
+                                Err(err) => {
+                                    if err.is_retryable() {
+                                        ChunkDownloadStatus::Trying(err.to_string())
+                                    } else {
+                                        ChunkDownloadStatus::Errored(err.to_string())
+                                    }
+                                }
+                            }
+                        },
+                        _ = cancel_token.cancelled() => ChunkDownloadStatus::Paused,
+                    };
 
-            if classify_results
-                .keys()
-                .any(|s| *s == NormalizedDownloadStatus::Retry)
-            {
-                if retries == max_retries {
-                    return DownloadStatus::Failed;
+                    match result {
+                        ChunkDownloadStatus::Finished => {
+                            worker_clone
+                                .update_chunk_status(
+                                    chunk.chunk_index,
+                                    status::ChunkDownloadStatus::Finished,
+                                )
+                                .await;
+                            break;
+                        }
+                        ChunkDownloadStatus::Paused => {
+                            worker_clone
+                                .update_chunk_status(
+                                    chunk.chunk_index,
+                                    status::ChunkDownloadStatus::Paused,
+                                )
+                                .await;
+                            break;
+                        }
+                        ChunkDownloadStatus::Trying(err) => {
+                            if retries < max_retries {
+                                worker_clone
+                                    .update_chunk_status(
+                                        chunk.chunk_index,
+                                        status::ChunkDownloadStatus::Trying(err),
+                                    )
+                                    .await;
+                            } else {
+                                worker_clone
+                                    .update_chunk_status(
+                                        chunk.chunk_index,
+                                        status::ChunkDownloadStatus::Errored(err),
+                                    )
+                                    .await;
+
+                                cancel_token.cancel();
+
+                                break;
+                            }
+                        }
+                        ChunkDownloadStatus::Errored(err) => {
+                            worker_clone
+                                .update_chunk_status(
+                                    chunk.chunk_index,
+                                    status::ChunkDownloadStatus::Errored(err),
+                                )
+                                .await;
+                            cancel_token.cancel();
+                            break;
+                        }
+                        _ => {}
+                    }
+
+                    retries += 1;
+                    let wait_time = backoff_factor.powf(retries as f64);
+                    tokio::time::sleep(Duration::from_secs_f64(wait_time)).await;
                 }
-
-                let indexes = classify_results
-                    .get(&NormalizedDownloadStatus::Retry)
-                    .cloned()
-                    .unwrap_or_default();
-
-                let retries_indexes = Arc::clone(&self.retries_indexes);
-                let mut retries_indexes = retries_indexes.lock().await;
-                *retries_indexes = indexes;
-
-                dispatch!(
-                    manager,
-                    UpdateDownloadStatus,
-                    (DownloadStatus::Error.to_string(), self.download.id,)
-                );
-
-                retries += 1;
-                let wait_time = backoff_factor.powf(retries as f64);
-                tokio::time::sleep(Duration::from_secs_f64(wait_time)).await;
-                continue;
-            }
+            });
         }
     }
 
-    async fn download_chunk(
-        self: &Arc<Self>,
-        chunk: DownloadChunk,
-    ) -> Result<outcome::ChunkDownloadStatus, ClientError> {
-        let chunk_index = chunk.chunk_index;
+    async fn download_chunk(self: &Arc<Self>, chunk: &DownloadChunk) -> Result<(), ClientError> {
         let mut downloaded_bytes = chunk.downloaded_bytes;
         let start_byte = chunk.start_byte;
         let end_byte = chunk.end_byte;
 
-        let cancellation_token = Arc::clone(&self.cancel_token);
+        let (client, range, timeout_secs, file) = {
+            let w = self.data.read().await;
 
-        let client = match Client::new(
-            &self.download.url,
-            self.download.timeout_secs as f64,
-            &self.download.auth,
-            &self.download.proxy,
-            &self.download.headers,
-            &self.download.cookies,
-        ) {
-            Ok(c) => c,
-            Err(err) => {
-                if !err.is_retryable() {
-                    cancellation_token.cancel();
+            let range = match &w.download.supports_range {
+                true => Some((start_byte + downloaded_bytes, end_byte)),
+                false => None,
+            };
+
+            let client = match Client::new(
+                &w.download.url,
+                &w.download.auth,
+                &w.download.proxy,
+                &w.download.headers,
+                &w.download.cookies,
+            ) {
+                Ok(c) => c,
+                Err(err) => {
+                    return Err(err);
                 }
-                return Err(err);
-            }
-        };
+            };
 
-        // if chunk_index == 2 {
-        //     return Err(ClientError::Http {
-        //         status: StatusCode::INTERNAL_SERVER_ERROR,
-        //         message: "error".to_string(),
-        //     });
-        // }
+            let file = Arc::clone(&w.file);
 
-        let range = match self.download.supports_range {
-            true => Some((start_byte + downloaded_bytes, end_byte)),
-            false => None,
+            let timeout_secs = w.download.timeout_secs;
+
+            (client, range, timeout_secs, file)
         };
 
         let mut stream = client.stream(range).await?;
 
-        while let Some(bytes) = stream.next().await {
-            match bytes {
-                Ok(bytes) => {
+        loop {
+            match timeout(Duration::from_secs(timeout_secs as u64), stream.next()).await {
+                Ok(Some(Ok(bytes))) => {
                     let bytes_len = bytes.len() as u64;
 
                     let write_message: WriteMessage = (
-                        chunk_index,
+                        chunk.chunk_index,
                         (start_byte + downloaded_bytes) as u64,
                         bytes_len,
                         bytes.to_vec(),
                     );
 
-                    self.file.send(write_message).unwrap();
+                    file.send(write_message).unwrap();
 
                     downloaded_bytes += bytes_len as i64;
 
-                    dispatch!(registry, UpdateNetworkReport, (self.download.id, bytes_len));
+                    dispatch!(registry, UpdateNetworkReport, (self.download_id, bytes_len));
                 }
-                Err(err) => {
-                    if !err.is_retryable() {
-                        cancellation_token.cancel();
-                    }
+                Ok(Some(Err(err))) => {
                     return Err(err);
+                }
+                Ok(None) => {
+                    return Ok(());
+                }
+                Err(_) => {
+                    return Err(ClientError::StreamTimeout);
                 }
             }
         }
-
-        Ok(outcome::ChunkDownloadStatus::Finished)
     }
 }

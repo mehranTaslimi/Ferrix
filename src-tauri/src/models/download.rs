@@ -30,6 +30,7 @@ pub struct DownloadRaw {
     pub backoff_factor: f64,
     pub timeout_secs: i64,
     pub supports_range: bool,
+    pub error_message: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -57,6 +58,7 @@ pub struct Download {
     pub timeout_secs: i64,
     pub file_exist: bool,
     pub supports_range: bool,
+    pub error_message: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,6 +96,7 @@ pub struct UpdateDownload {
     pub delay_secs: Option<f64>,
     pub backoff_factor: Option<f64>,
     pub timeout_secs: Option<i64>,
+    pub error_message: Option<String>,
 }
 
 impl TryFrom<DownloadRaw> for Download {
@@ -145,6 +148,7 @@ impl TryFrom<DownloadRaw> for Download {
             backoff_factor: raw.backoff_factor,
             timeout_secs: raw.timeout_secs,
             supports_range: raw.supports_range,
+            error_message: raw.error_message,
             auth,
             proxy,
             headers,

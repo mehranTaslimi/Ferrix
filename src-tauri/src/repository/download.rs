@@ -32,6 +32,7 @@ impl DownloadRepository {
             d.backoff_factor,
             d.timeout_secs,
             d.supports_range,
+            d.error_message,
             COALESCE(
                 (
                     SELECT SUM(c.downloaded_bytes)
@@ -93,6 +94,7 @@ impl DownloadRepository {
     d.backoff_factor,
     d.timeout_secs,
     d.supports_range,
+    d.error_message,
     COALESCE(
 		(
 			SELECT
@@ -190,6 +192,11 @@ GROUP BY d.id;
             values.push("?");
             params.push(timeout_secs.to_string());
         }
+        if let Some(timeout_secs) = new.timeout_secs {
+            fields.push("speed_limit");
+            values.push("?");
+            params.push(timeout_secs.to_string());
+        }
 
         let query = format!(
             "INSERT INTO downloads ({}) VALUES ({})",
@@ -268,6 +275,10 @@ GROUP BY d.id;
         if let Some(timeout_secs) = update.timeout_secs {
             fields.push("timeout_secs = ?");
             binds.push(timeout_secs.to_string());
+        }
+        if let Some(error_message) = update.error_message {
+            fields.push("error_message = ?");
+            binds.push(error_message.to_string());
         }
 
         if fields.is_empty() {

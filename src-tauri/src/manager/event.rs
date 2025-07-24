@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
-use crate::worker::DownloadWorker;
+use crate::worker::DownloadStatus;
 
 #[derive(Debug)]
 pub enum ManagerAction {
     StartDownload(/*Download ID */ i64),
-    UpdateDownloadStatus(/* Status */ String, /*Download ID */ i64),
-    ManageWorkerResult(Arc<DownloadWorker>),
+    UpdateDownloadStatus(
+        /* Status */ DownloadStatus,
+        /* Error Message */ Option<String>,
+        /*Download ID */ i64,
+    ),
     PauseDownload(/*Download ID */ i64),
     UpdateChunks(/*Download ID */ i64),
     ValidateChunksHash(/*Download ID */ i64),
@@ -20,20 +23,16 @@ impl super::DownloadsManager {
     }
 
     pub(super) async fn reducer(self: &Arc<Self>, action: ManagerAction) {
-        // println!("Manager: {action:?}");
         let self_clone = Arc::clone(&self);
 
         match action {
             ManagerAction::StartDownload(download_id) => {
                 self_clone.start_download_action(download_id).await;
             }
-            ManagerAction::UpdateDownloadStatus(status, download_id) => {
+            ManagerAction::UpdateDownloadStatus(status, error_message, download_id) => {
                 self_clone
-                    .update_download_status_action(status, download_id)
+                    .update_download_status_action(status, error_message, download_id)
                     .await;
-            }
-            ManagerAction::ManageWorkerResult(worker) => {
-                self_clone.manage_worker_result_action(worker).await
             }
             ManagerAction::PauseDownload(download_id) => {
                 self_clone.pause_download_action(download_id).await;

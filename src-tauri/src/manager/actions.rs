@@ -13,8 +13,7 @@ use crate::{
     models::{NewDownload, UpdateChunk, UpdateDownload},
     registry::Registry,
     repository::{chunk::ChunkRepository, download::DownloadRepository},
-    spawn,
-    worker::DownloadWorker,
+    worker::{DownloadStatus, DownloadWorker},
 };
 
 #[derive(Debug, Deserialize)]
@@ -36,7 +35,6 @@ impl super::DownloadsManager {
     pub async fn add_new_download(url: String, options: DownloadOptions) -> Result<(), String> {
         let client = Client::new(
             &url,
-            options.timeout_secs.unwrap_or(30.0),
             &options.auth,
             &options.proxy,
             &options.headers,
@@ -118,27 +116,26 @@ impl super::DownloadsManager {
     }
 
     pub(super) async fn start_download_action(self: &Arc<Self>, download_id: i64) {
-        let worker = Registry::get_state().workers.get(&download_id).unwrap();
-        let worker = worker.lock().await;
-        let worker = DownloadWorker::new(
-            worker.download.clone(),
-            worker.chunks.clone(),
-            Arc::clone(&worker.cancel_token),
-            Arc::clone(&worker.file),
-        );
+        Self::start_monitoring();
+        let download_worker = DownloadWorker::new(download_id);
 
-        dispatch!(manager, ManageWorkerResult, (worker));
+        if let Ok(d) = download_worker {
+            d.start_download().await;
+        }
     }
 
     pub(super) async fn update_download_status_action(
         self: &Arc<Self>,
-        status: String,
+        status: DownloadStatus,
+        error_message: Option<String>,
         download_id: i64,
     ) {
+        println!("{status:?}");
         DownloadRepository::update(
             download_id,
             UpdateDownload {
-                status: Some(status),
+                status: Some(status.to_string()),
+                error_message,
                 auth: None,
                 backoff_factor: None,
                 cookies: None,
@@ -158,25 +155,12 @@ impl super::DownloadsManager {
         Emitter::emit_event("download_item", download);
     }
 
-    pub(super) async fn manage_worker_result_action(self: &Arc<Self>, worker: Arc<DownloadWorker>) {
-        Self::start_monitoring();
-        spawn!("manage_worker_result_action", {
-            let status = worker.start_download().await;
-            dispatch!(
-                manager,
-                UpdateDownloadStatus,
-                (status.to_string(), worker.download.id)
-            );
-            dispatch!(manager, UpdateChunks, (worker.download.id));
-        });
-    }
-
     pub(super) async fn pause_download_action(self: &Arc<Self>, download_id: i64) {
         let workers = Arc::clone(&Registry::get_state().workers);
         let maybe_worker = workers.get(&download_id);
 
         if let Some(worker) = maybe_worker {
-            let worker = worker.lock().await;
+            let worker = worker.read().await;
             worker.cancel_token.cancel();
         }
     }
@@ -187,14 +171,11 @@ impl super::DownloadsManager {
         let reports = Arc::clone(&Registry::get_state().reports);
 
         if let Some(worker) = maybe_worker {
-            let worker = worker.lock().await.clone();
-            let file_path = worker.download.file_path.clone();
-
+            let worker = worker.read().await.clone();
             let update_chunks = worker
                 .chunks
                 .iter()
                 .map(|chunk| {
-                    let start_byte = chunk.start_byte as u64;
                     let chunk_index = chunk.chunk_index;
 
                     let wrote_bytes = reports
@@ -206,15 +187,9 @@ impl super::DownloadsManager {
                         })
                         .unwrap_or(0);
 
-                    //TODO: pref issue
-                    // let expected_hash =
-                    //     Self::compute_partial_hash(&file_path, start_byte, wrote_bytes).ok();
-
                     UpdateChunk {
                         downloaded_bytes: Some(wrote_bytes as i64),
-                        error_message: None,
                         expected_hash: Some(String::new()),
-                        has_error: Some(false),
                         chunk_index,
                     }
                 })
@@ -269,9 +244,7 @@ impl super::DownloadsManager {
             .map(|chunk_index| UpdateChunk {
                 chunk_index,
                 downloaded_bytes: Some(0),
-                error_message: Some("invalid chunk hash".to_string()),
                 expected_hash: None,
-                has_error: Some(true),
             })
             .collect::<Vec<UpdateChunk>>();
 

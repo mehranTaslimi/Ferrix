@@ -50,7 +50,7 @@ impl ChunkRepository {
 
         sqlx::query!(
             r#"
-            INSERT INTO download_chunks ( download_id, chunk_index, start_byte, end_byte )
+            INSERT INTO download_chunks (download_id, chunk_index, start_byte, end_byte)
             VALUES (?, ?, ?, ?)
             "#,
             download_id,
@@ -93,19 +93,9 @@ impl ChunkRepository {
             binds.push(bytes.to_string());
         }
 
-        if let Some(msg) = &chunk.error_message {
-            fields.push("error_message = ?");
-            binds.push(msg.to_string());
-        }
-
         if let Some(hash) = &chunk.expected_hash {
             fields.push("expected_hash = ?");
             binds.push(hash.to_string());
-        }
-
-        if let Some(err) = chunk.has_error {
-            fields.push("has_error = ?");
-            binds.push(err.to_string());
         }
 
         if fields.is_empty() {

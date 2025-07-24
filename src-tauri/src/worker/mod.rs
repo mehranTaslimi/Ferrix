@@ -1,41 +1,21 @@
+use dashmap::DashMap;
 use futures_util::lock::Mutex;
 use std::sync::Arc;
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::{mpsc::UnboundedSender, RwLock};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
+    emitter::Emitter,
     file::WriteMessage,
     models::{Download, DownloadChunk},
+    registry::Registry,
 };
 
 mod bandwidth;
 mod download;
-mod outcome;
+mod status;
 
-pub use outcome::ChunkDownloadStatus;
-
-#[derive(Debug)]
-pub enum DownloadStatus {
-    Paused,
-    Completed,
-    Failed,
-    Downloading,
-    // Queued,
-    Error,
-}
-
-impl ToString for DownloadStatus {
-    fn to_string(&self) -> String {
-        match self {
-            DownloadStatus::Paused => "paused".to_string(),
-            DownloadStatus::Completed => "completed".to_string(),
-            DownloadStatus::Failed => "failed".to_string(),
-            DownloadStatus::Downloading => "downloading".to_string(),
-            // DownloadStatus::Queued => "queued".to_string(),
-            DownloadStatus::Error => "error".to_string(),
-        }
-    }
-}
+pub use status::DownloadStatus;
 
 #[derive(Clone, Debug)]
 pub struct Worker {
@@ -47,28 +27,28 @@ pub struct Worker {
 
 #[derive(Debug, Clone)]
 pub struct DownloadWorker {
-    pub download: Download,
-    chunks: Vec<DownloadChunk>,
-    cancel_token: Arc<CancellationToken>,
-    file: Arc<UnboundedSender<WriteMessage>>,
-    retries_indexes: Arc<Mutex<Vec<i64>>>,
+    pub download_id: i64,
+    data: Arc<RwLock<Worker>>,
+    chunks_status: Arc<DashMap<i64, status::ChunkDownloadStatus>>,
+    last_status: Arc<Mutex<status::DownloadStatus>>,
 }
 
 impl DownloadWorker {
-    pub fn new(
-        download: Download,
-        chunks: Vec<DownloadChunk>,
-        cancel_token: Arc<CancellationToken>,
-        file: Arc<UnboundedSender<WriteMessage>>,
-    ) -> Arc<Self> {
-        let retries_indexes = Arc::new(Mutex::new(vec![]));
+    pub fn new(download_id: i64) -> Result<Arc<Self>, ()> {
+        let worker = Registry::get_state().workers.get(&download_id);
+        let chunks_status = Arc::new(DashMap::new());
 
-        Arc::new(Self {
-            download,
-            chunks,
-            cancel_token,
-            file,
-            retries_indexes,
-        })
+        match worker {
+            Some(worker) => Ok(Arc::new(Self {
+                download_id,
+                data: Arc::clone(&worker),
+                chunks_status,
+                last_status: Arc::new(Mutex::new(status::DownloadStatus::Queued)),
+            })),
+            None => {
+                Emitter::emit_error("download not found");
+                Err(())
+            }
+        }
     }
 }

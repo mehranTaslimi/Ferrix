@@ -9,8 +9,6 @@ pub struct DownloadChunk {
     pub end_byte: i64,
     pub downloaded_bytes: i64,
     pub expected_hash: Option<String>,
-    pub error_message: Option<String>,
-    pub has_error: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,7 +23,5 @@ pub struct NewChunk {
 pub struct UpdateChunk {
     pub chunk_index: i64,
     pub downloaded_bytes: Option<i64>,
-    pub error_message: Option<String>,
     pub expected_hash: Option<String>,
-    pub has_error: Option<bool>,
 }
