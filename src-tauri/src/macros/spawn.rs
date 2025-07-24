@@ -10,15 +10,11 @@ macro_rules! spawn {
         tokio::spawn(async move {
             let acquired = permit.acquire().await.unwrap();
 
-            available_permits.store(
+            let count = available_permits.swap(
                 permit.available_permits(),
                 ::std::sync::atomic::Ordering::SeqCst,
             );
-            println!(
-                "🔵 {} {}",
-                available_permits.load(::std::sync::atomic::Ordering::SeqCst),
-                $name
-            );
+            log::debug!("🔵 {} {}", count, $name);
 
             tokio::select! {
                 _ = async move $body => {}
@@ -27,15 +23,11 @@ macro_rules! spawn {
 
             drop(acquired);
 
-            available_permits.store(
+            let count = available_permits.swap(
                 permit.available_permits(),
                 ::std::sync::atomic::Ordering::SeqCst,
             );
-            println!(
-                "⚪️ {} {}",
-                available_permits.load(::std::sync::atomic::Ordering::SeqCst),
-                $name
-            );
+            log::debug!("⚪️ {} {}", count, $name);
         });
     }};
 }

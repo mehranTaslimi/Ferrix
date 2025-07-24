@@ -9,7 +9,7 @@ use std::{
         Arc,
     },
 };
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tokio::sync::{
     mpsc::{self, UnboundedReceiver},
     Mutex, RwLock, Semaphore,
@@ -58,13 +58,13 @@ pub struct Registry;
 
 impl Registry {
     pub async fn new(app_handle: AppHandle) {
-        let pool = Self::init_db().await;
         let max_concurrent_tasks = Self::detect_max_concurrent_tasks();
         let current_tasks = Arc::new(Semaphore::new(max_concurrent_tasks));
         let available_permits = Arc::new(AtomicUsize::new(0));
         let pending_queue = Arc::new(Mutex::new(VecDeque::new()));
         let workers = Arc::new(DashMap::new());
         let app_handle = Arc::new(app_handle);
+        let pool = Self::init_db(&app_handle.path().app_data_dir()).await;
         let reports = Arc::new(DashMap::new());
         let (tx, rx) = mpsc::unbounded_channel::<RegistryAction>();
         let mpsc_sender = Arc::new(tx);

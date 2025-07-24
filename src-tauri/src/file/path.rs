@@ -1,10 +1,16 @@
-use dirs_next;
 use std::path::Path;
+use tauri::Manager;
 use tokio::fs;
+
+use crate::registry::Registry;
 
 impl super::File {
     pub async fn get_default_path(file_name: &str) -> Result<String, String> {
-        let home_dir = dirs_next::home_dir().ok_or("cannot find home directory".to_string())?;
+        let home_dir = Registry::get_state()
+            .app_handle
+            .path()
+            .home_dir()
+            .map_err(|e| e.to_string())?;
 
         let mut download_dir = home_dir
             .join("Downloads".to_string())

@@ -29,7 +29,6 @@ impl super::Registry {
     }
 
     pub(super) async fn reducer(action: RegistryAction) {
-        // println!("Registry: {action:?}");
         match action {
             RegistryAction::NewDownloadQueue(download_id) => {
                 Self::add_download_to_queue(download_id).await;

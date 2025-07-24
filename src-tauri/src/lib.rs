@@ -19,7 +19,12 @@ use crate::registry::Registry;
 #[tokio::main]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
-    env_logger::builder().format_timestamp(None).init();
+    dotenvy::dotenv().ok();
+    env_logger::builder()
+        .format_module_path(false)
+        .format_level(false)
+        .format_timestamp(None)
+        .init();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
