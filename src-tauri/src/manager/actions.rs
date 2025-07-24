@@ -117,7 +117,7 @@ impl super::DownloadsManager {
 
     pub(super) async fn start_download_action(self: &Arc<Self>, download_id: i64) {
         Self::start_monitoring();
-        let download_worker = DownloadWorker::new(download_id);
+        let download_worker = DownloadWorker::new(download_id).await;
 
         if let Ok(d) = download_worker {
             d.start_download().await;
@@ -130,7 +130,13 @@ impl super::DownloadsManager {
         error_message: Option<String>,
         download_id: i64,
     ) {
-        println!("{status:?}");
+        match status {
+            DownloadStatus::Failed | DownloadStatus::Completed | DownloadStatus::Paused => {
+                dispatch!(registry, CleanDownloadedItemData, (download_id));
+            }
+            _ => {}
+        }
+
         DownloadRepository::update(
             download_id,
             UpdateDownload {
@@ -171,7 +177,7 @@ impl super::DownloadsManager {
         let reports = Arc::clone(&Registry::get_state().reports);
 
         if let Some(worker) = maybe_worker {
-            let worker = worker.read().await.clone();
+            let worker = worker.write().await;
             let update_chunks = worker
                 .chunks
                 .iter()

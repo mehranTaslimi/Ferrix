@@ -11,9 +11,7 @@ impl super::Client {
         headers: &Option<HashMap<String, String>>,
         cookies: &Option<HashMap<String, String>>,
     ) -> Result<Self, super::ClientError> {
-        let mut builder = ReqwestClient::builder()
-            .timeout(Duration::from_secs(10))
-            .connect_timeout(Duration::from_secs(10));
+        let mut builder = ReqwestClient::builder().connect_timeout(Duration::from_secs(10));
 
         match headers {
             Some(custom_headers) => {

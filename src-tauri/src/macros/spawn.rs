@@ -14,7 +14,11 @@ macro_rules! spawn {
                 permit.available_permits(),
                 ::std::sync::atomic::Ordering::SeqCst,
             );
-            println!("[CREATED]: {}", $name);
+            println!(
+                "🔵 {} {}",
+                available_permits.load(::std::sync::atomic::Ordering::SeqCst),
+                $name
+            );
 
             tokio::select! {
                 _ = async move $body => {}
@@ -27,7 +31,11 @@ macro_rules! spawn {
                 permit.available_permits(),
                 ::std::sync::atomic::Ordering::SeqCst,
             );
-            println!("[DROPPED]: {}", $name);
+            println!(
+                "⚪️ {} {}",
+                available_permits.load(::std::sync::atomic::Ordering::SeqCst),
+                $name
+            );
         });
     }};
 }

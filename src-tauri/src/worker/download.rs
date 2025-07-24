@@ -1,6 +1,6 @@
 use futures_util::StreamExt;
 use std::{sync::Arc, time::Duration};
-use tokio::time::timeout;
+use tokio::time::{sleep, timeout};
 
 use crate::{
     client::{Client, ClientError},
@@ -59,17 +59,14 @@ impl DownloadWorker {
                             worker_clone
                                 .update_chunk_status(
                                     chunk.chunk_index,
-                                    status::ChunkDownloadStatus::Finished,
+                                    ChunkDownloadStatus::Finished,
                                 )
                                 .await;
                             break;
                         }
                         ChunkDownloadStatus::Paused => {
                             worker_clone
-                                .update_chunk_status(
-                                    chunk.chunk_index,
-                                    status::ChunkDownloadStatus::Paused,
-                                )
+                                .update_chunk_status(chunk.chunk_index, ChunkDownloadStatus::Paused)
                                 .await;
                             break;
                         }
@@ -78,14 +75,14 @@ impl DownloadWorker {
                                 worker_clone
                                     .update_chunk_status(
                                         chunk.chunk_index,
-                                        status::ChunkDownloadStatus::Trying(err),
+                                        ChunkDownloadStatus::Trying(err),
                                     )
                                     .await;
                             } else {
                                 worker_clone
                                     .update_chunk_status(
                                         chunk.chunk_index,
-                                        status::ChunkDownloadStatus::Errored(err),
+                                        ChunkDownloadStatus::Errored(err),
                                     )
                                     .await;
 
@@ -98,7 +95,7 @@ impl DownloadWorker {
                             worker_clone
                                 .update_chunk_status(
                                     chunk.chunk_index,
-                                    status::ChunkDownloadStatus::Errored(err),
+                                    ChunkDownloadStatus::Errored(err),
                                 )
                                 .await;
                             cancel_token.cancel();
@@ -109,7 +106,7 @@ impl DownloadWorker {
 
                     retries += 1;
                     let wait_time = backoff_factor.powf(retries as f64);
-                    tokio::time::sleep(Duration::from_secs_f64(wait_time)).await;
+                    sleep(Duration::from_secs_f64(wait_time)).await;
                 }
             });
         }

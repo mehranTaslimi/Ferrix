@@ -1,7 +1,6 @@
 use dashmap::DashMap;
-use futures_util::lock::Mutex;
 use std::sync::Arc;
-use tokio::sync::{mpsc::UnboundedSender, RwLock};
+use tokio::sync::{mpsc::UnboundedSender, Notify, RwLock};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -30,21 +29,28 @@ pub struct DownloadWorker {
     pub download_id: i64,
     data: Arc<RwLock<Worker>>,
     chunks_status: Arc<DashMap<i64, status::ChunkDownloadStatus>>,
-    last_status: Arc<Mutex<status::DownloadStatus>>,
+    notify: Arc<Notify>,
 }
 
 impl DownloadWorker {
-    pub fn new(download_id: i64) -> Result<Arc<Self>, ()> {
+    pub async fn new(download_id: i64) -> Result<Arc<Self>, ()> {
         let worker = Registry::get_state().workers.get(&download_id);
         let chunks_status = Arc::new(DashMap::new());
+        let notify = Arc::new(Notify::new());
 
         match worker {
-            Some(worker) => Ok(Arc::new(Self {
-                download_id,
-                data: Arc::clone(&worker),
-                chunks_status,
-                last_status: Arc::new(Mutex::new(status::DownloadStatus::Queued)),
-            })),
+            Some(worker) => {
+                let w = Arc::new(Self {
+                    download_id,
+                    data: Arc::clone(&worker),
+                    chunks_status,
+                    notify,
+                });
+
+                w.start_status_listener().await;
+
+                Ok(w)
+            }
             None => {
                 Emitter::emit_error("download not found");
                 Err(())
