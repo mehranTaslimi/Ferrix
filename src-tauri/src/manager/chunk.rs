@@ -1,10 +1,12 @@
+use log::debug;
 use md5::{Digest, Md5};
 use std::{
     fs::File,
     io::{Read, Seek, SeekFrom},
+    sync::{atomic::Ordering, Arc},
 };
 
-use crate::models::DownloadChunk;
+use crate::{models::DownloadChunk, registry::Registry};
 
 impl super::DownloadsManager {
     pub(super) fn get_chunk_ranges(content_length: u64, chunk_count: u64) -> Vec<(u64, u64)> {
@@ -26,6 +28,30 @@ impl super::DownloadsManager {
 
         ranges
     }
+
+    // pub(super) async fn update_chunks_monitor() {
+    //     let reports = Arc::clone(&Registry::get_state().reports);
+
+    //     reports.iter().for_each(|r| {
+    //         let total_downloaded_bytes = r.total_downloaded_bytes.load(Ordering::Relaxed);
+    //         let last_chunk_percent = r.last_update_chunk_percent.load(Ordering::Relaxed);
+    //         if total_downloaded_bytes == 0 {
+    //             return;
+    //         }
+
+    //         let percent = ((total_downloaded_bytes * 100) / r.total_bytes) as u8;
+    //         let is_checkpoint = percent % 5 == 0;
+
+    //         if last_chunk_percent == percent || !is_checkpoint {
+    //             return;
+    //         }
+
+    //         debug!("Updating chunk monitor for {}", percent);
+
+    //         r.last_update_chunk_percent
+    //             .store(percent, Ordering::Relaxed);
+    //     });
+    // }
 
     pub(super) fn compute_partial_hash(
         file_path: &str,
@@ -72,14 +98,5 @@ impl super::DownloadsManager {
             })
             .map(|chunk| chunk.chunk_index)
             .collect::<Vec<i64>>()
-    }
-
-    pub(super) async fn update_chunks(download_id: i64) {
-
-        // in function bayad chunk haro update kone
-        // bayad har 5 saniye call beshe
-        // akhar download ham call mishe
-
-        // chunk hash va downloaded bytes ro set mikone
     }
 }

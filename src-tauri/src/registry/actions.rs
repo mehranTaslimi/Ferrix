@@ -169,7 +169,7 @@ impl Registry {
 
         report.insert(
             download.id,
-            Report {
+            Arc::new(Report {
                 total_downloaded_bytes: AtomicU64::new(download.downloaded_bytes as u64),
                 downloaded_bytes: AtomicU64::new(0),
                 total_wrote_bytes: AtomicU64::new(download.downloaded_bytes as u64),
@@ -179,7 +179,9 @@ impl Registry {
                 chunks_wrote_bytes,
                 total_bytes: download.total_bytes as u64,
                 speed_bps: AtomicU64::new(0),
-            },
+                last_update_chunk_percent: AtomicU8::new(0),
+                stable_speed: AtomicBool::new(false),
+            }),
         );
     }
 

@@ -1,5 +1,8 @@
 use futures_util::StreamExt;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{atomic::Ordering, Arc},
+    time::Duration,
+};
 use tokio::time::{sleep, timeout};
 
 use crate::{
@@ -113,7 +116,13 @@ impl DownloadWorker {
     }
 
     async fn download_chunk(self: &Arc<Self>, chunk: &DownloadChunk) -> Result<(), ClientError> {
-        let mut downloaded_bytes = chunk.downloaded_bytes;
+        let report = Arc::clone(&self.report);
+
+        let mut downloaded_bytes = match report.chunks_wrote_bytes.get(&chunk.chunk_index) {
+            Some(bytes) => bytes.load(Ordering::SeqCst) as i64,
+            None => 0,
+        };
+
         let start_byte = chunk.start_byte;
         let end_byte = chunk.end_byte;
 
@@ -160,6 +169,8 @@ impl DownloadWorker {
                     );
 
                     file.send(write_message).unwrap();
+
+                    self.limiter(bytes_len).await;
 
                     downloaded_bytes += bytes_len as i64;
 

@@ -1,11 +1,12 @@
 use crate::{dispatch, emitter::Emitter, manager::DownloadsManager, spawn, worker::Worker};
+use atomic_float::AtomicF64;
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use sqlx::SqlitePool;
 use std::{
     collections::VecDeque,
     sync::{
-        atomic::{AtomicBool, AtomicU64, AtomicUsize},
+        atomic::{AtomicBool, AtomicU64, AtomicU8, AtomicUsize},
         Arc,
     },
 };
@@ -33,6 +34,8 @@ pub struct Report {
     pub chunks_wrote_bytes: DashMap<i64, AtomicU64>,
     pub total_bytes: u64,
     pub speed_bps: AtomicU64,
+    pub last_update_chunk_percent: AtomicU8,
+    pub stable_speed: AtomicBool,
 }
 
 #[derive(Debug)]
@@ -43,9 +46,10 @@ pub struct State {
     pub available_permits: Arc<AtomicUsize>,
     pub pending_queue: Arc<Mutex<VecDeque<i64>>>,
     pub workers: Arc<DashMap<i64, Arc<RwLock<Worker>>>>,
-    pub reports: Arc<DashMap<i64, Report>>,
+    pub reports: Arc<DashMap<i64, Arc<Report>>>,
     pub monitor_running: Arc<AtomicBool>,
-    pub bandwidth_limit: Arc<AtomicU64>,
+    pub bandwidth_limit: Arc<AtomicF64>,
+    pub download_speed: Arc<AtomicF64>,
     pub spawn_cancellation_token: Arc<CancellationToken>,
     queue_listener_running: Arc<AtomicBool>,
     mpsc_sender: Arc<mpsc::UnboundedSender<RegistryAction>>,
@@ -71,22 +75,24 @@ impl Registry {
         let queue_listener_running = Arc::new(AtomicBool::new(false));
         let manager = OnceCell::new();
         let monitor_running = Arc::new(AtomicBool::new(false));
-        let bandwidth_limit = Arc::new(AtomicU64::new(0));
+        let bandwidth_limit = Arc::new(AtomicF64::new(0.0));
         let spawn_cancellation_token = Arc::new(CancellationToken::new());
+        let download_speed = Arc::new(AtomicF64::new(0.0));
 
         let state = Arc::new(State {
             pool,
-            app_handle,
-            current_tasks,
-            available_permits,
-            pending_queue,
-            workers,
             reports,
-            mpsc_sender,
-            queue_listener_running,
+            workers,
             manager,
+            app_handle,
+            mpsc_sender,
+            current_tasks,
+            pending_queue,
+            download_speed,
             monitor_running,
             bandwidth_limit,
+            available_permits,
+            queue_listener_running,
             spawn_cancellation_token,
         });
 
