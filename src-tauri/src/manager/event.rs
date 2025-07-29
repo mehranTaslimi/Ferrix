@@ -11,9 +11,10 @@ pub enum ManagerAction {
         /*Download ID */ i64,
     ),
     PauseDownload(/*Download ID */ i64),
-    UpdateChunks(/*Download ID */ i64),
-    ValidateChunksHash(/*Download ID */ i64),
-    ResetChunks(/*Download ID */ i64, /* Chunk Index */ Vec<i64>),
+    UpdateChunks(
+        /*Download ID */ i64,
+        /* Clean After Update */ bool,
+    ),
 }
 
 impl super::DownloadsManager {
@@ -37,15 +38,9 @@ impl super::DownloadsManager {
             ManagerAction::PauseDownload(download_id) => {
                 self_clone.pause_download_action(download_id).await;
             }
-            ManagerAction::UpdateChunks(download_id) => {
-                self_clone.update_chunks_action(download_id).await;
-            }
-            ManagerAction::ValidateChunksHash(download_id) => {
-                self_clone.validate_chunks_hash_action(download_id).await;
-            }
-            ManagerAction::ResetChunks(download_id, chunk_index) => {
+            ManagerAction::UpdateChunks(download_id, clean_after_update) => {
                 self_clone
-                    .reset_chunks_action(download_id, chunk_index)
+                    .update_chunks_action(download_id, clean_after_update)
                     .await;
             }
         }

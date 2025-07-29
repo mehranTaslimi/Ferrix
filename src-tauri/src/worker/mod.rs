@@ -1,4 +1,3 @@
-use chrono::Duration;
 use dashmap::DashMap;
 use std::{sync::Arc, time::Instant};
 use tokio::sync::{mpsc::UnboundedSender, Mutex, Notify, RwLock};
@@ -14,6 +13,7 @@ use crate::{
 mod bandwidth;
 mod download;
 mod status;
+mod validation;
 
 pub use status::DownloadStatus;
 

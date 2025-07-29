@@ -3,6 +3,7 @@ use std::{
     sync::{atomic::Ordering, Arc},
 };
 
+use futures_util::future::join_all;
 use serde::Deserialize;
 
 use crate::{
@@ -132,7 +133,7 @@ impl super::DownloadsManager {
     ) {
         match status {
             DownloadStatus::Failed | DownloadStatus::Completed | DownloadStatus::Paused => {
-                dispatch!(registry, CleanDownloadedItemData, (download_id));
+                dispatch!(manager, UpdateChunks, (download_id, true));
             }
             _ => {}
         }
@@ -171,36 +172,43 @@ impl super::DownloadsManager {
         }
     }
 
-    pub(super) async fn update_chunks_action(self: &Arc<Self>, download_id: i64) {
+    pub(super) async fn update_chunks_action(
+        self: &Arc<Self>,
+        download_id: i64,
+        clean_after_update: bool,
+    ) {
         let workers = Arc::clone(&Registry::get_state().workers);
         let maybe_worker = workers.get(&download_id);
         let reports = Arc::clone(&Registry::get_state().reports);
 
         if let Some(worker) = maybe_worker {
             let worker = worker.write().await;
-            let update_chunks = worker
-                .chunks
-                .iter()
-                .map(|chunk| {
-                    let chunk_index = chunk.chunk_index;
+            let update_chunks_futures = worker.chunks.iter().map(|chunk| {
+                let chunk_index = chunk.chunk_index;
+                let wrote_bytes = reports
+                    .get(&download_id)
+                    .and_then(|r| {
+                        r.chunks_wrote_bytes
+                            .get(&chunk_index)
+                            .map(|v| v.load(Ordering::Relaxed))
+                    })
+                    .unwrap_or(0);
 
-                    let wrote_bytes = reports
-                        .get(&download_id)
-                        .and_then(|r| {
-                            r.chunks_wrote_bytes
-                                .get(&chunk_index)
-                                .map(|v| v.load(Ordering::Relaxed))
-                        })
-                        .unwrap_or(0);
+                async move {
+                    let expected_hash = Self::hash_chunk(download_id, chunk_index)
+                        .await
+                        .ok()
+                        .map(|h| h.to_string());
 
                     UpdateChunk {
                         downloaded_bytes: Some(wrote_bytes as i64),
-                        expected_hash: Some(String::new()),
+                        expected_hash,
                         chunk_index,
                     }
-                })
-                .collect::<Vec<_>>();
+                }
+            });
 
+            let update_chunks = join_all(update_chunks_futures).await;
             if let Err(errors) = ChunkRepository::update_all(download_id, update_chunks).await {
                 errors.iter().for_each(|err| {
                     Emitter::emit_error(err.to_string());
@@ -208,57 +216,8 @@ impl super::DownloadsManager {
             }
         }
 
-        dispatch!(registry, CleanDownloadedItemData, (download_id));
-    }
-
-    pub(super) async fn validate_chunks_hash_action(self: &Arc<Self>, download_id: i64) {
-        //TODO: perf issue
-        // self.dispatch(ManagerAction::UpdateDownloadStatus(
-        //     "validating".to_string(),
-        //     download_id,
-        // ));
-
-        // let download = DownloadRepository::find(download_id).await.unwrap();
-
-        // if download.downloaded_bytes == 0 {
-        //     Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
-        //     return;
-        // }
-
-        // let chunks = ChunkRepository::find_all(download_id).await.unwrap();
-
-        // let file_path = download.file_path;
-
-        // let invalid_chunks = Self::validate_chunks_hash(&file_path, chunks);
-
-        // if !invalid_chunks.is_empty() {
-        //     self.dispatch(ManagerAction::ResetChunks(download_id, invalid_chunks));
-        // } else {
-        //     Registry::dispatch(RegistryAction::NewDownloadQueue(download_id));
-        // }
-
-        dispatch!(registry, NewDownloadQueue, (download_id));
-    }
-
-    pub(super) async fn reset_chunks_action(
-        self: &Arc<Self>,
-        download_id: i64,
-        chunks_index: Vec<i64>,
-    ) {
-        let update_chunks = chunks_index
-            .into_iter()
-            .map(|chunk_index| UpdateChunk {
-                chunk_index,
-                downloaded_bytes: Some(0),
-                expected_hash: None,
-            })
-            .collect::<Vec<UpdateChunk>>();
-
-        if let Err(errors) = ChunkRepository::update_all(download_id, update_chunks).await {
-            errors.iter().for_each(|err| {
-                Emitter::emit_error(err.to_string());
-            });
+        if clean_after_update {
+            dispatch!(registry, CleanDownloadedItemData, (download_id));
         }
-        dispatch!(registry, NewDownloadQueue, (download_id));
     }
 }

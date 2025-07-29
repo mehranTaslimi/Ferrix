@@ -1,12 +1,16 @@
-use log::debug;
-use md5::{Digest, Md5};
 use std::{
-    fs::File,
-    io::{Read, Seek, SeekFrom},
     sync::{atomic::Ordering, Arc},
+    time::Instant,
 };
 
-use crate::{models::DownloadChunk, registry::Registry};
+use anyhow::{Context, Result};
+use blake3::{Hash, Hasher};
+
+use crate::{dispatch, registry::Registry};
+
+const PROGRESS_UPDATE_THRESHOLD: u8 = 5;
+const TIME_UPDATE_THRESHOLD: u64 = 10;
+const TIME_MAX_STALE: u64 = 300;
 
 impl super::DownloadsManager {
     pub(super) fn get_chunk_ranges(content_length: u64, chunk_count: u64) -> Vec<(u64, u64)> {
@@ -29,74 +33,67 @@ impl super::DownloadsManager {
         ranges
     }
 
-    // pub(super) async fn update_chunks_monitor() {
-    //     let reports = Arc::clone(&Registry::get_state().reports);
+    pub(super) async fn update_chunks_monitor() {
+        let reports = Arc::clone(&Registry::get_state().reports);
 
-    //     reports.iter().for_each(|r| {
-    //         let total_downloaded_bytes = r.total_downloaded_bytes.load(Ordering::Relaxed);
-    //         let last_chunk_percent = r.last_update_chunk_percent.load(Ordering::Relaxed);
-    //         if total_downloaded_bytes == 0 {
-    //             return;
-    //         }
+        for r in reports.iter() {
+            let total_downloaded_bytes = r.total_downloaded_bytes.load(Ordering::Relaxed);
+            let last_update_downloaded_bytes =
+                r.last_update_downloaded_bytes.load(Ordering::Relaxed);
 
-    //         let percent = ((total_downloaded_bytes * 100) / r.total_bytes) as u8;
-    //         let is_checkpoint = percent % 5 == 0;
+            let last_update_time = Arc::clone(&r.last_update_time);
+            let mut last_update_time = last_update_time.lock().await;
 
-    //         if last_chunk_percent == percent || !is_checkpoint {
-    //             return;
-    //         }
+            let percent = (100 * total_downloaded_bytes / r.total_bytes) as u8;
+            let last_percent = (100 * last_update_downloaded_bytes / r.total_bytes) as u8;
+            let is_five_percent =
+                percent as i8 - last_percent as i8 >= PROGRESS_UPDATE_THRESHOLD as i8;
 
-    //         debug!("Updating chunk monitor for {}", percent);
+            let elapsed = last_update_time.elapsed().as_secs();
+            let more_than_ten_seconds = elapsed >= TIME_UPDATE_THRESHOLD;
+            let more_than_five_minutes = elapsed >= TIME_MAX_STALE;
 
-    //         r.last_update_chunk_percent
-    //             .store(percent, Ordering::Relaxed);
-    //     });
-    // }
+            if more_than_five_minutes || (is_five_percent && more_than_ten_seconds) {
+                dispatch!(manager, UpdateChunks, (*r.key(), false));
 
-    pub(super) fn compute_partial_hash(
-        file_path: &str,
-        start_byte: u64,
-        wrote_bytes: u64,
-    ) -> Result<String, String> {
-        let mut file = File::open(file_path).map_err(|e| e.to_string())?;
-
-        file.seek(SeekFrom::Start(start_byte))
-            .map_err(|e| e.to_string())?;
-
-        let mut hasher = Md5::new();
-        let mut remaining = wrote_bytes as usize;
-        let mut buffer = vec![0; 8192];
-
-        while remaining > 0 {
-            let read_size = std::cmp::min(buffer.len(), remaining);
-            let n = file
-                .read(&mut buffer[..read_size])
-                .map_err(|e| e.to_string())?;
-            if n == 0 {
-                break;
+                *last_update_time = Instant::now();
+                r.last_update_downloaded_bytes
+                    .store(total_downloaded_bytes, Ordering::Relaxed);
             }
-            hasher.update(&buffer[..n]);
-            remaining -= n;
         }
-
-        Ok(format!("{:x}", hasher.finalize()))
     }
 
-    pub fn validate_chunks_hash(file_path: &str, chunks: Vec<DownloadChunk>) -> Vec<i64> {
-        chunks
-            .into_iter()
-            .filter(|chunk| chunk.downloaded_bytes > 0)
-            .filter(|chunk| {
-                let hash = Self::compute_partial_hash(
-                    &file_path,
-                    chunk.start_byte as u64,
-                    chunk.downloaded_bytes as u64,
-                )
-                .ok();
+    pub async fn hash_chunk(download_id: i64, chunk_index: i64) -> Result<Hash> {
+        let reports = Arc::clone(&Registry::get_state().reports);
 
-                Some(hash) != Some(chunk.expected_hash.clone())
-            })
-            .map(|chunk| chunk.chunk_index)
-            .collect::<Vec<i64>>()
+        let report = reports
+            .get(&download_id)
+            .with_context(|| format!("report not found for download id {}", download_id))?;
+
+        let buffer = report.buffer.get(&chunk_index).with_context(|| {
+            format!(
+                "buffer not found for download id {} with chunk index {}",
+                download_id, chunk_index
+            )
+        })?;
+
+        let buffer_lock = buffer.lock().await;
+
+        if buffer_lock.len() < 2048 {
+            return Err(anyhow::anyhow!(
+                "buffer for download id {} with chunk index {} must be at least 2048 bytes",
+                download_id,
+                chunk_index
+            ));
+        }
+
+        let start = &buffer_lock[..1024];
+        let end = &buffer_lock[buffer_lock.len() - 1024..];
+
+        let mut hasher = Hasher::new();
+        hasher.update(start);
+        hasher.update(end);
+
+        Ok(hasher.finalize())
     }
 }

@@ -88,14 +88,22 @@ impl ChunkRepository {
         let mut fields = Vec::new();
         let mut binds: Vec<String> = Vec::new();
 
-        if let Some(bytes) = chunk.downloaded_bytes {
-            fields.push("downloaded_bytes = ?");
-            binds.push(bytes.to_string());
-        }
+        match &chunk.expected_hash {
+            Some(hash) => {
+                fields.push("expected_hash = ?".to_string());
+                fields.push("downloaded_bytes = ?".to_string());
+                binds.push(hash.to_string());
 
-        if let Some(hash) = &chunk.expected_hash {
-            fields.push("expected_hash = ?");
-            binds.push(hash.to_string());
+                if let Some(bytes) = chunk.downloaded_bytes {
+                    binds.push(bytes.to_string());
+                } else {
+                    binds.push("0".to_string());
+                }
+            }
+            None => {
+                fields.push("expected_hash = NULL".to_string());
+                fields.push("downloaded_bytes = 0".to_string());
+            }
         }
 
         if fields.is_empty() {

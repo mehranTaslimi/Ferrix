@@ -48,7 +48,6 @@ sqlx = { version = "0.8.5", features = [
 ] }
 once_cell = "1.19.0"
 chrono = { version = "0.4", features = ["serde"] }
-md-5 = "0.10.6"
 tokio-util = "0.7.15"
 window-vibrancy = "0.6.0"
 num_cpus = "1.17.0"
@@ -61,3 +60,5 @@ log = "0.4"
 env_logger = "0.11.8"
 dotenvy = "0.15"
 atomic_float = "1.0"
+blake3 = "1.8.2"
+anyhow = "1.0.98"

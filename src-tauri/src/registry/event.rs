@@ -20,6 +20,11 @@ pub enum RegistryAction {
     RecoverQueuedDownloadFromRepository,
     RemoveDownload(/* Download ID */ i64, /* Remove File */ bool),
     CloseRequested,
+    UpdateChunkBuffer(
+        /* Download ID */ i64,
+        /* Chunk Index */ i64,
+        /* Bytes */ Vec<u8>,
+    ),
 }
 
 impl super::Registry {
@@ -65,6 +70,9 @@ impl super::Registry {
             }
             RegistryAction::CloseRequested => {
                 Self::close_requested_action().await;
+            }
+            RegistryAction::UpdateChunkBuffer(download_id, chunk_index, bytes) => {
+                Self::update_chunk_buffer_action(download_id, chunk_index, bytes).await;
             }
         }
     }

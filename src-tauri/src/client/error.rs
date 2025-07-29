@@ -18,6 +18,9 @@ pub enum ClientError {
 
     #[error("timeout error")]
     StreamTimeout,
+
+    #[error("unexpected chunk hash")]
+    UnexpectedChunkHash,
 }
 
 impl ClientError {
@@ -27,7 +30,7 @@ impl ClientError {
             ClientError::Http { status, .. } => {
                 matches!(status.as_u16(), 408 | 429 | 500..=504)
             }
-            ClientError::StreamTimeout => true,
+            ClientError::StreamTimeout | ClientError::UnexpectedChunkHash => true,
             _ => false,
         }
     }

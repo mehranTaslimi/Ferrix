@@ -6,16 +6,17 @@ use sqlx::SqlitePool;
 use std::{
     collections::VecDeque,
     sync::{
-        atomic::{AtomicBool, AtomicU64, AtomicU8, AtomicUsize},
+        atomic::{AtomicBool, AtomicU64, AtomicUsize},
         Arc,
     },
+    time::Instant,
 };
 use tauri::{AppHandle, Manager};
 use tokio::sync::{
     mpsc::{self, UnboundedReceiver},
     Mutex, RwLock, Semaphore,
 };
-use tokio_util::sync::CancellationToken;
+use tokio_util::{bytes::BytesMut, sync::CancellationToken};
 
 mod actions;
 mod event;
@@ -34,8 +35,10 @@ pub struct Report {
     pub chunks_wrote_bytes: DashMap<i64, AtomicU64>,
     pub total_bytes: u64,
     pub speed_bps: AtomicU64,
-    pub last_update_chunk_percent: AtomicU8,
+    pub last_update_downloaded_bytes: AtomicU64,
+    pub last_update_time: Arc<Mutex<Instant>>,
     pub stable_speed: AtomicBool,
+    pub buffer: Arc<DashMap<i64, Arc<Mutex<BytesMut>>>>,
 }
 
 #[derive(Debug)]

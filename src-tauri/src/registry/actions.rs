@@ -123,12 +123,6 @@ impl Registry {
             .filter(|chunk| chunk.downloaded_bytes < chunk.end_byte - chunk.start_byte)
             .collect::<Vec<_>>();
 
-        dispatch!(
-            registry,
-            CreateDownloadReport,
-            (download.clone(), not_downloaded_chunks.clone(),)
-        );
-
         let file = match File::new(
             download_id,
             &download.file_path,
@@ -146,14 +140,18 @@ impl Registry {
         workers.insert(
             download.id,
             Arc::new(RwLock::new(Worker {
-                download,
+                download: download.clone(),
                 chunks: not_downloaded_chunks.clone(),
                 cancel_token: Arc::new(CancellationToken::new()),
                 file,
             })),
         );
 
-        dispatch!(manager, StartDownload, (download_id));
+        dispatch!(
+            registry,
+            CreateDownloadReport,
+            (download, not_downloaded_chunks.clone())
+        );
     }
 
     pub(super) async fn create_download_report_action(
@@ -167,6 +165,14 @@ impl Registry {
             .map(|f| (f.chunk_index, AtomicU64::new(f.downloaded_bytes as u64)))
             .collect();
 
+        let buffer = match File::get_chunks_bytes_from_file(download.id).await {
+            Ok(b) => b,
+            Err(err) => {
+                Emitter::emit_error(err.to_string());
+                return;
+            }
+        };
+
         report.insert(
             download.id,
             Arc::new(Report {
@@ -179,10 +185,14 @@ impl Registry {
                 chunks_wrote_bytes,
                 total_bytes: download.total_bytes as u64,
                 speed_bps: AtomicU64::new(0),
-                last_update_chunk_percent: AtomicU8::new(0),
+                last_update_downloaded_bytes: AtomicU64::new(download.downloaded_bytes as u64),
                 stable_speed: AtomicBool::new(false),
+                last_update_time: Arc::new(Mutex::new(Instant::now())),
+                buffer: Arc::new(buffer),
             }),
         );
+
+        dispatch!(manager, StartDownload, (download.id));
     }
 
     pub(super) async fn update_network_report_action(download_id: i64, bytes_len: u64) {
@@ -236,7 +246,7 @@ impl Registry {
     }
 
     pub(super) async fn resume_download_action(download_id: i64) {
-        dispatch!(manager, ValidateChunksHash, (download_id));
+        dispatch!(registry, NewDownloadQueue, (download_id));
     }
 
     pub(super) async fn remove_download_action(download_id: i64, remove_file: bool) {
@@ -253,5 +263,20 @@ impl Registry {
 
     pub(super) async fn close_requested_action() {
         //
+    }
+
+    pub(super) async fn update_chunk_buffer_action(
+        download_id: i64,
+        chunk_index: i64,
+        bytes: Vec<u8>,
+    ) {
+        let reports = Arc::clone(&Self::get_state().reports);
+        let maybe_report = reports.get(&download_id);
+
+        if let Some(report) = maybe_report {
+            if let Some(buffer) = report.buffer.get(&chunk_index) {
+                let mut buffer = buffer.lock().await;
+            }
+        }
     }
 }
