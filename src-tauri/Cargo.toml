@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Awesome Download Manager App"
 authors = ["Mehran Taslimi"]
 edition = "2021"
+license = "MIT OR Apache-2.0"
 
 [profile.dev]
 incremental = true
