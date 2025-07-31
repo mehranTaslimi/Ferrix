@@ -88,7 +88,6 @@ function StatusAndSpeed({
     };
   }, [id]);
 
-  // Update local state when prop changes (for initial load)
   useEffect(() => {
     setDownloadedBytes(initialDownloadedBytes);
     setWroteBytes(initialDownloadedBytes);
@@ -151,12 +150,13 @@ function StatusAndSpeed({
     return kb.toFixed(1) + " KB/s";
   }, [speedAndRemaining.diskSpeed]);
 
+  const isWriting = status === Status.Writing;
+  const isDownloading = status === Status.Downloading;
+
   return (
     <div className="space-y-3">
-      {/* Progress Section */}
       <div className="space-y-2">
-        {status === Status.Writing ? (
-          // Show write progress when writing
+        {isWriting ? (
           <>
             <div className="flex justify-between items-center">
               <div className="flex gap-2">
@@ -177,14 +177,12 @@ function StatusAndSpeed({
             />
           </>
         ) : (
-          // Show download progress for other statuses
           <>
             <div className="flex justify-between items-center">
               <div className="flex gap-2">
                 <span className="text-sm font-medium">{downloadProgress}%</span>
                 <StatusIndicator status={status} />
               </div>
-
               <span className="text-xs text-muted-foreground">
                 {(downloadedBytes / (1024 * 1024)).toFixed(1)} MB
               </span>
@@ -197,8 +195,7 @@ function StatusAndSpeed({
         )}
       </div>
 
-      {/* Speed and Time Info */}
-      {status === Status.Downloading && (
+      {isDownloading && (
         <div className="flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50">
             <Download className="w-3 h-3 text-blue-500" />
@@ -215,8 +212,7 @@ function StatusAndSpeed({
         </div>
       )}
 
-      {/* Show only disk speed when writing */}
-      {status === Status.Writing && (
+      {isWriting && (
         <div className="flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50">
             <HardDrive className="w-3 h-3 text-purple-500" />

@@ -31,11 +31,12 @@ function getFileIcon(extension: Extension) {
 }
 
 function DownloadItem({ download }: { download: DownloadType }) {
+  const isDownloadCompleted = download.status === Status.Completed;
+
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 border-0 shadow-sm bg-gradient-to-br from-card to-card/50">
       <CardContent className="px-6">
         <div className="space-y-2">
-          {/* Header */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="flex-shrink-0 p-2 rounded-lg bg-muted/50">
@@ -56,13 +57,14 @@ function DownloadItem({ download }: { download: DownloadType }) {
             <ActionButtons downloadId={download.id} status={download.status} />
           </div>
 
-          {/* Progress and Speed Section - Handled by StatusAndSpeed component */}
-          <StatusAndSpeed
-            id={download.id}
-            totalBytes={download.total_bytes}
-            downloadedBytes={download.downloaded_bytes}
-            status={download.status}
-          />
+          {!isDownloadCompleted && (
+            <StatusAndSpeed
+              id={download.id}
+              totalBytes={download.total_bytes}
+              downloadedBytes={download.downloaded_bytes}
+              status={download.status}
+            />
+          )}
         </div>
       </CardContent>
     </Card>

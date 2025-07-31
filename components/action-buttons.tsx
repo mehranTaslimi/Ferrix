@@ -1,11 +1,10 @@
 import { Status } from "./types";
 import React, { ReactNode } from "react";
 import { Button } from "./ui/button";
-import { Delete, Pause, Play, X } from "lucide-react";
+import { Pause, Play, X } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
-const buttonClassName =
-  "h-9 w-9 font-medium transition-all duration-200 hover:scale-[1.02] bg-transparent";
+const buttonClassName = "h-9 w-9 font-medium transition-all duration-200";
 
 interface ActionButtonsProps {
   status: Status;
