@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DownloadItem from "../components/download-item";
-import DownloadFormModal from "../components/download-form-modal";
+import DownloadSettingSheet from "../components/download-setting/download-setting-sheet";
 import { useDownloads } from "../components/download-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,16 +16,15 @@ export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [url, setUrl] = useState("");
 
-
   useEffect(() => {
-    const unlisten = listen<string>('error', (ev) => {
-      toast.error("Error", { description: ev.payload })
+    const unlisten = listen<string>("error", (ev) => {
+      toast.error("Error", { description: ev.payload });
     });
 
     return () => {
-      unlisten.then(fn => fn());
-    }
-  }, [])
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -42,7 +41,7 @@ export default function Page() {
 
   return (
     <div className="container mx-auto max-w-5xl">
-      <div className="mb-8 sticky z-2 top-0 bg-background">
+      <div className="mb-3 sticky z-2 top-0 bg-background">
         <DownloadBar
           setUrl={setUrl}
           url={url}
@@ -53,17 +52,6 @@ export default function Page() {
       </div>
 
       <div className="space-y-4 px-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
-            Downloads ({filteredDownloads.length})
-            {selectedMimeType && (
-              <span className="text-sm font-normal text-muted-foreground ml-2">
-                • Filtered
-              </span>
-            )}
-          </h2>
-        </div>
-
         {filteredDownloads.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
@@ -93,7 +81,7 @@ export default function Page() {
         )}
       </div>
 
-      <DownloadFormModal
+      <DownloadSettingSheet
         setUrl={setUrl}
         url={url}
         open={isModalOpen}
