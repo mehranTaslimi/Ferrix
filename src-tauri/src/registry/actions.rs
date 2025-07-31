@@ -7,7 +7,10 @@ use std::{
 };
 
 use dashmap::DashMap;
-use tokio::sync::{Mutex, RwLock};
+use tokio::{
+    sync::{Mutex, RwLock},
+    time::sleep,
+};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -23,7 +26,7 @@ use crate::{
 use super::*;
 
 impl Registry {
-    pub async fn add_download_to_queue(download_id: i64) {
+    pub(super) async fn add_download_to_queue_actions(download_id: i64) {
         let pending_queue = Arc::clone(&Self::get_state().pending_queue);
         let mut pending_queue = pending_queue.lock().await;
         pending_queue.push_back(download_id);
@@ -35,20 +38,17 @@ impl Registry {
     }
 
     pub(super) async fn recover_queued_download_from_repository_action() {
-        let download_ids = DownloadRepository::find_all(Some("queued"))
-            .await
-            .map(|downloads| {
-                downloads
-                    .iter()
-                    .map(|download| download.id)
-                    .collect::<Vec<i64>>()
-            });
+        if let Ok(downlods) = DownloadRepository::find_all(None).await {
+            let ids = downlods
+                .into_iter()
+                .filter(|d| d.status == "downloading" || d.status == "queued")
+                .map(|d| d.id)
+                .collect::<Vec<i64>>();
 
-        if let Ok(download_ids) = download_ids {
-            for download_id in download_ids.iter() {
-                dispatch!(registry, NewDownloadQueue, (*download_id));
+            for id in ids {
+                dispatch!(registry, NewDownloadQueue, (id));
             }
-        };
+        }
     }
 
     pub(super) async fn check_available_permit_action() {
@@ -262,13 +262,15 @@ impl Registry {
     }
 
     pub(super) async fn close_requested_action() {
-        //
+        Self::get_state().spawn_cancellation_token.cancel();
+        let app_handle = Arc::clone(&Registry::get_state().app_handle);
+        app_handle.exit(0);
     }
 
     pub(super) async fn update_chunk_buffer_action(
         download_id: i64,
         chunk_index: i64,
-        bytes: Vec<u8>,
+        _bytes: Vec<u8>,
     ) {
         let reports = Arc::clone(&Self::get_state().reports);
         let maybe_report = reports.get(&download_id);

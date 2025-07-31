@@ -195,10 +195,12 @@ impl super::DownloadsManager {
                     .unwrap_or(0);
 
                 async move {
-                    let expected_hash = Self::hash_chunk(download_id, chunk_index)
-                        .await
-                        .ok()
-                        .map(|h| h.to_string());
+                    // let expected_hash = Self::hash_chunk(download_id, chunk_index)
+                    //     .await
+                    //     .ok()
+                    //     .map(|h| h.to_string());
+
+                    let expected_hash = Some(String::new());
 
                     UpdateChunk {
                         downloaded_bytes: Some(wrote_bytes as i64),

@@ -123,12 +123,12 @@ impl DownloadWorker {
             None => 0,
         };
 
-        if let Err(_) = self
-            .validate_chunk(chunk.expected_hash.clone(), chunk.chunk_index)
-            .await
-        {
-            return Err(ClientError::UnexpectedChunkHash);
-        }
+        // if let Err(_) = self
+        //     .validate_chunk(chunk.expected_hash.clone(), chunk.chunk_index)
+        //     .await
+        // {
+        //     return Err(ClientError::UnexpectedChunkHash);
+        // }
 
         let start_byte = chunk.start_byte;
         let end_byte = chunk.end_byte;

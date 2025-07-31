@@ -36,7 +36,7 @@ impl super::Registry {
     pub(super) async fn reducer(action: RegistryAction) {
         match action {
             RegistryAction::NewDownloadQueue(download_id) => {
-                Self::add_download_to_queue(download_id).await;
+                Self::add_download_to_queue_actions(download_id).await;
             }
             RegistryAction::RecoverQueuedDownloadFromRepository => {
                 Self::recover_queued_download_from_repository_action().await;
