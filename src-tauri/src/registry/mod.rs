@@ -1,6 +1,7 @@
 use crate::{dispatch, emitter::Emitter, manager::DownloadsManager, spawn, worker::Worker};
 use atomic_float::AtomicF64;
 use dashmap::DashMap;
+use log::debug;
 use once_cell::sync::OnceCell;
 use sqlx::SqlitePool;
 use std::{
@@ -103,13 +104,16 @@ impl Registry {
         Self::initialize_mpsc_action(rx);
         Self::initialize_manager();
 
-        dispatch!(registry, RecoverQueuedDownloadFromRepository);
+        dispatch!(registry, RecoverDownloads);
     }
 
     fn initialize_mpsc_action(mut rx: UnboundedReceiver<RegistryAction>) {
         spawn!("registry_mpsc", {
             while let Some(action) = rx.recv().await {
-                Self::reducer(action).await
+                if let Err(err) = Self::reducer(action).await {
+                    debug!("{}", err.to_string());
+                    Emitter::emit_error(err.to_string());
+                }
             }
         });
     }

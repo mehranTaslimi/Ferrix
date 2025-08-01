@@ -15,7 +15,7 @@ impl File {
         download_id: i64,
         file_path: &str,
         total_bytes: u64,
-    ) -> Result<mpsc::UnboundedSender<WriteMessage>, String> {
+    ) -> anyhow::Result<mpsc::UnboundedSender<WriteMessage>> {
         Self::setup_file_writer(download_id, file_path, total_bytes).await
     }
 }

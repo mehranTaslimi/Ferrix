@@ -111,7 +111,7 @@ impl super::DownloadsManager {
                     .join(", ")
             })?;
 
-        dispatch!(registry, NewDownloadQueue, (download_id));
+        dispatch!(registry, NewDownload, (download_id));
 
         Ok(())
     }

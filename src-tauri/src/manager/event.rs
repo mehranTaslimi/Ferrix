@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use anyhow::Context;
+
 use crate::worker::DownloadStatus;
 
 #[derive(Debug)]
@@ -18,9 +20,11 @@ pub enum ManagerAction {
 }
 
 impl super::DownloadsManager {
-    pub fn dispatch(self: &Arc<Self>, action: ManagerAction) {
+    pub fn dispatch(self: &Arc<Self>, action: ManagerAction) -> anyhow::Result<()> {
         let mpsc_sender = Arc::clone(&self.mpsc_sender);
-        mpsc_sender.send(action).unwrap()
+        mpsc_sender
+            .send(action)
+            .context("failed to dispatch manager action: receiver might be closed")
     }
 
     pub(super) async fn reducer(self: &Arc<Self>, action: ManagerAction) {

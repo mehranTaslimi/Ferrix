@@ -14,20 +14,17 @@ impl super::File {
         download_id: i64,
         file_path: &str,
         total_bytes: u64,
-    ) -> Result<mpsc::UnboundedSender<WriteMessage>, String> {
+    ) -> anyhow::Result<mpsc::UnboundedSender<WriteMessage>> {
         let file_exists = fs::metadata(file_path).await.is_ok();
 
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
             .open(file_path)
-            .await
-            .map_err(|e| e.to_string())?;
+            .await?;
 
         if !file_exists {
-            file.set_len(total_bytes as u64)
-                .await
-                .map_err(|e| e.to_string())?;
+            file.set_len(total_bytes as u64).await?;
         }
 
         let (tx, mut rx) = mpsc::unbounded_channel::<WriteMessage>();
@@ -45,7 +42,7 @@ impl super::File {
                 );
                 dispatch!(
                     registry,
-                    UpdateChunkBuffer,
+                    UpdateChunkBufferReport,
                     (download_id, chunk_index, bytes)
                 );
             }
