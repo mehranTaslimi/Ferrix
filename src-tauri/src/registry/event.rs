@@ -1,13 +1,12 @@
-use std::sync::Arc;
+use super::actions::{DownloadActions, ReportActions, SystemActions};
 
-use crate::models::{Download, DownloadChunk};
+use anyhow::Context;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub enum RegistryAction {
-    NewDownloadQueue(/*Download ID */ i64),
+    NewDownload(/*Download ID */ i64),
     CheckAvailablePermit,
-    AddDownloadToWorkersMap(/*Download ID */ i64),
-    CreateDownloadReport(Download, Vec<DownloadChunk>),
     UpdateNetworkReport(/*Download ID */ i64, /*Bytes len*/ u64),
     UpdateDiskReport(
         /* Download ID */ i64,
@@ -17,10 +16,11 @@ pub enum RegistryAction {
     CleanDownloadedItemData(/* Download ID */ i64),
     PauseDownload(/* Download ID */ i64),
     ResumeDownload(/* Download ID */ i64),
-    RecoverQueuedDownloadFromRepository,
+    RecoverDownloads,
     RemoveDownload(/* Download ID */ i64, /* Remove File */ bool),
     CloseRequested,
-    UpdateChunkBuffer(
+    PrepareDownloadData(/* Download ID */ i64),
+    UpdateChunkBufferReport(
         /* Download ID */ i64,
         /* Chunk Index */ i64,
         /* Bytes */ Vec<u8>,
@@ -28,52 +28,42 @@ pub enum RegistryAction {
 }
 
 impl super::Registry {
-    pub fn dispatch(action: RegistryAction) {
+    pub fn dispatch(action: RegistryAction) -> anyhow::Result<()> {
         let mpsc_sender = Arc::clone(&Self::get_state().mpsc_sender);
-        mpsc_sender.send(action).unwrap()
+        mpsc_sender
+            .send(action)
+            .context("failed to dispatch registry action: receiver might be closed")
     }
 
-    pub(super) async fn reducer(action: RegistryAction) {
+    pub(super) async fn reducer(action: RegistryAction) -> anyhow::Result<()> {
+        use RegistryAction::*;
+
         match action {
-            RegistryAction::NewDownloadQueue(download_id) => {
-                Self::add_download_to_queue_actions(download_id).await;
+            // Download
+            PauseDownload(download_id) => Self::pause_download(download_id).await,
+            ResumeDownload(download_id) => Self::resume_download(download_id).await,
+            RemoveDownload(download_id, remove_file) => {
+                Self::remove_download(download_id, remove_file).await
             }
-            RegistryAction::RecoverQueuedDownloadFromRepository => {
-                Self::recover_queued_download_from_repository_action().await;
+            NewDownload(download_id) => Self::new_download(download_id).await,
+            RecoverDownloads => Self::recover_downloads().await,
+            PrepareDownloadData(download_id) => Self::prepare_download_data(download_id).await,
+            CleanDownloadedItemData(download_id) => Self::clean_download_data(download_id).await,
+
+            // Report
+            UpdateNetworkReport(download_id, bytes_len) => {
+                Self::update_network_report(download_id, bytes_len).await
             }
-            RegistryAction::CheckAvailablePermit => {
-                Self::check_available_permit_action().await;
+            UpdateDiskReport(download_id, chunk_index, bytes_len) => {
+                Self::update_disk_report(download_id, chunk_index, bytes_len).await
             }
-            RegistryAction::AddDownloadToWorkersMap(download_id) => {
-                Self::add_download_workers_map_action(download_id).await;
+            UpdateChunkBufferReport(download_id, chunk_index, bytes) => {
+                Self::update_chunk_buffer_report(download_id, chunk_index, bytes).await
             }
-            RegistryAction::CreateDownloadReport(download, download_chunk) => {
-                Self::create_download_report_action(download, download_chunk).await;
-            }
-            RegistryAction::UpdateNetworkReport(download_id, bytes_len) => {
-                Self::update_network_report_action(download_id, bytes_len).await;
-            }
-            RegistryAction::UpdateDiskReport(download_id, chunk_index, bytes_len) => {
-                Self::update_disk_report_action(download_id, chunk_index, bytes_len).await;
-            }
-            RegistryAction::CleanDownloadedItemData(download_id) => {
-                Self::clean_downloaded_item_data(download_id).await;
-            }
-            RegistryAction::PauseDownload(download_id) => {
-                Self::pause_download_action(download_id).await;
-            }
-            RegistryAction::ResumeDownload(download_id) => {
-                Self::resume_download_action(download_id).await;
-            }
-            RegistryAction::RemoveDownload(download_id, remove_file) => {
-                Self::remove_download_action(download_id, remove_file).await;
-            }
-            RegistryAction::CloseRequested => {
-                Self::close_requested_action().await;
-            }
-            RegistryAction::UpdateChunkBuffer(download_id, chunk_index, bytes) => {
-                Self::update_chunk_buffer_action(download_id, chunk_index, bytes).await;
-            }
+
+            // System
+            CheckAvailablePermit => Self::check_available_permit().await,
+            CloseRequested => Self::close_request().await,
         }
     }
 }
