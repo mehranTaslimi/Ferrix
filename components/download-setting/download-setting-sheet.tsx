@@ -150,9 +150,9 @@ export default function DownloadSettingSheet({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="h-full flex flex-col gap-2"
+            className="h-full flex flex-col gap-2 overflow-y-auto"
           >
-            <Tabs defaultValue="basic" className="flex-1 overflow-hidden">
+            <Tabs defaultValue="basic" className="flex-1">
               <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10">
                 <TabsTrigger value="basic">Basic</TabsTrigger>
                 <TabsTrigger value="advanced">Advanced</TabsTrigger>
