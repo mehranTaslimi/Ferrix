@@ -1,88 +1,92 @@
-"use client"
+"use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
-import { invoke } from "@tauri-apps/api/core"
-import { listen } from "@tauri-apps/api/event"
-import type { DownloadType } from "./types"
+import {
+    createContext,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+    type ReactNode,
+} from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import type { DownloadType } from "./types";
+import { labelForMime } from "@/utils/mime-utils";
 
 interface DownloadContextType {
-    downloads: DownloadType[]
-    filteredDownloads: DownloadType[]
-    selectedMimeType: string | null
-    isLoading: boolean
-    setSelectedMimeType: (mimeType: string | null) => void
+    downloads: DownloadType[];
+    filteredDownloads: DownloadType[];
+    selectedMimeType: string | null;
+    isLoading: boolean;
+    setSelectedMimeType: (mimeType: string | null) => void;
+    removeDownload: (id: number, removeFile?: boolean) => Promise<void>;
 }
 
-const DownloadContext = createContext<DownloadContextType | undefined>(undefined)
+const DownloadContext = createContext<DownloadContextType | undefined>(undefined);
 
 export function useDownloads() {
-    const context = useContext(DownloadContext)
-    if (context === undefined) {
-        throw new Error("useDownloads must be used within a DownloadProvider")
-    }
-    return context
+    const ctx = useContext(DownloadContext);
+    if (!ctx) throw new Error("useDownloads must be used within a DownloadProvider");
+    return ctx;
 }
 
 export function DownloadProvider({ children }: { children: ReactNode }) {
-    const [downloads, setDownloads] = useState<DownloadType[]>([])
-    const [selectedMimeType, setSelectedMimeType] = useState<string | null>(null)
-    const [isLoading, setIsLoading] = useState(true)
+    const [downloads, setDownloads] = useState<DownloadType[]>([]);
+    const [selectedMimeType, setSelectedMimeType] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const norm = (mime?: string) =>
+        (mime || "application/octet-stream").toLowerCase();
 
     useEffect(() => {
-        listen("error", (ev) => {
-            console.log(ev)
-        })
-    }, [])
+        const stopError = listen("error", (ev) => {
+            console.log(ev);
+        });
 
-    useEffect(() => {
-
-        const unlisten = listen<DownloadType>("download_item", (ev) => {
+        const stopItem = listen<DownloadType>("download_item", (ev) => {
             setDownloads((prev) => {
-                const clone = structuredClone(prev)
-                const index = clone.map((i) => i.id).indexOf(ev.payload.id)
+                const clone = structuredClone(prev);
+                const idx = clone.findIndex((i) => i.id === ev.payload.id);
+                if (idx > -1) clone[idx] = ev.payload;
+                else clone.unshift(ev.payload);
+                return clone;
+            });
+        });
 
-                if (index > -1) {
-                    clone[index] = ev.payload
-                } else {
-                    clone.unshift(ev.payload)
-                }
-
-                return clone
-            })
-        })
-            ; (async () => {
-                try {
-                    const downloadList = await invoke<DownloadType[]>("get_download_list")
-                    setDownloads(downloadList)
-                } catch (error) {
-                    console.error("Failed to load downloads:", error)
-                } finally {
-                    setIsLoading(false)
-                }
-            })()
+        (async () => {
+            try {
+                const list = await invoke<DownloadType[]>("get_download_list");
+                setDownloads(list);
+            } catch (err) {
+                console.error("Failed to load downloads:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        })();
 
         return () => {
-            unlisten.then((fn) => fn())
+            stopError.then((fn) => fn());
+            stopItem.then((fn) => fn());
+        };
+    }, []);
+
+    const removeDownload = async (id: number, removeFile = false) => {
+        try {
+            await invoke("remove_download", { id, removeFile });
+            // Optimistic UI update
+            setDownloads((prev) => prev.filter((d) => d.id !== id));
+        } catch (err) {
+            console.error("Failed to remove download:", err);
         }
-    }, [])
+    };
 
-    // Filter downloads based on selected MIME type
-    const filteredDownloads = selectedMimeType
-        ? downloads.filter((download) => {
-            // For grouped categories, check if the download's MIME type starts with the category
-            if (selectedMimeType.startsWith("image/")) {
-                return download.content_type.startsWith("image/")
-            }
-            if (selectedMimeType.startsWith("video/")) {
-                return download.content_type.startsWith("video/")
-            }
-            if (selectedMimeType.startsWith("audio/")) {
-                return download.content_type.startsWith("audio/")
-            }
-
-            return download.content_type === selectedMimeType
-        })
-        : downloads
+    const filteredDownloads = useMemo(() => {
+        if (!selectedMimeType) return downloads;
+        const selectedCategory = labelForMime(selectedMimeType);
+        return downloads.filter(
+            (d) => labelForMime(norm(d.content_type)) === selectedCategory
+        );
+    }, [downloads, selectedMimeType]);
 
     return (
         <DownloadContext.Provider
@@ -92,9 +96,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
                 selectedMimeType,
                 isLoading,
                 setSelectedMimeType,
+                removeDownload,
             }}
         >
             {children}
         </DownloadContext.Provider>
-    )
+    );
 }

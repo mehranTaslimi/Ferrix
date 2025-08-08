@@ -159,7 +159,11 @@ impl super::DownloadsManager {
         .unwrap();
 
         let download = DownloadRepository::find(download_id).await.unwrap();
-        Emitter::emit_event("download_item", download);
+        Emitter::emit_event("download_item", &download);
+
+        if matches!(status, DownloadStatus::Completed) {
+            Emitter::emit_notification("Download Completed", download.file_name);
+        }
     }
 
     pub(super) async fn pause_download_action(self: &Arc<Self>, download_id: i64) {

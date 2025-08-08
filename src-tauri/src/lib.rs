@@ -27,6 +27,7 @@ pub async fn run() {
         .init();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
@@ -43,11 +44,15 @@ pub async fn run() {
             #[cfg(target_os = "macos")]
             window_vibrancy::apply_vibrancy(
                 &window,
-                window_vibrancy::NSVisualEffectMaterial::Sidebar,
+                window_vibrancy::NSVisualEffectMaterial::HudWindow,
                 None,
                 None,
             )
             .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+
+            #[cfg(target_os = "windows")]
+            window_vibrancy::apply_blur(&window, Some((18, 18, 18, 125)))
+                .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
 
             spawn(async move {
                 Registry::new(app_handle).await;

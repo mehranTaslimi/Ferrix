@@ -10,6 +10,7 @@ export interface DownloadType {
   file_name: string;
   content_type: string;
   extension: Extension;
+  file_exist: boolean;
 }
 
 export enum ContentType {
