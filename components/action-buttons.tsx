@@ -32,7 +32,7 @@ export default function ActionButtons({
   const isResumeDisabled = status === Status.Writing;
   const canToggle = status !== Status.Completed && status !== Status.Failed;
   const canRemove = status !== Status.Downloading && status !== Status.Writing;
-  const canReveal = status === Status.Completed;
+  const canReveal = status === Status.Completed && fileExist;
 
   const handleToggleDownload = useCallback(async () => {
     if (status === Status.Paused) {

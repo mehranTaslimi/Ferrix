@@ -43,6 +43,6 @@ impl super::DownloadsManager {
         }
 
         download_speed.store(last_speed, Ordering::Relaxed);
-        bandwidth_limit.store(512000.0 / download_len as f64, Ordering::Relaxed);
+        bandwidth_limit.store(current_speed / download_len as f64, Ordering::Relaxed);
     }
 }

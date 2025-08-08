@@ -10,6 +10,7 @@
     "lint": "next lint",
     "tauri": "tauri",
     "release:windows-x86_64": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc",
+    "release:windows-aarch64": "tauri build --runner cargo-xwin --target aarch64-pc-windows-msvc -vv",
     "dev:all": "concurrently -k -n \"FRONTEND,TAURI\" -c \"cyan,magenta\" \"pnpm run dev\" \"cd src-tauri && cargo watch -c -q -x run\""
   },
   "dependencies": {
@@ -40,6 +41,7 @@
     "@tauri-apps/plugin-http": "~2.4.4",
     "@tauri-apps/plugin-notification": "~2.3.0",
     "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-os": "~2.3.0",
     "add": "^2.0.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

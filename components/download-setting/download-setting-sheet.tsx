@@ -1,16 +1,19 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { Form } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
+import BasicTab from "./basic-tab";
+import AdvancedTab from "./advanced-tab";
 import { downloadFormSchema } from "@/lib/validation";
+import { toast } from "sonner";
 import { Loading } from "../ui/loading";
 import {
   Sheet,
@@ -19,9 +22,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "../ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import BasicTab from "./basic-tab";
-import AdvancedTab from "./advanced-tab";
 
 export type DownloadFormData = z.infer<typeof downloadFormSchema>;
 
@@ -55,19 +55,29 @@ export default function DownloadSettingSheet({
         auth: undefined,
       },
     },
+    mode: "onBlur",
   });
 
-  const handleSubmit = async (values: DownloadFormData) => {
-    if (!values.url.trim()) return;
+  useEffect(() => {
+    if (open) {
+      // sync incoming URL into form on open
+      form.reset({ url, chunk: form.getValues("chunk") || 5 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
-    const arrayToRecord = (values?: Array<{ value: string; key: string }>) =>
-      values?.reduce((acc, { key, value }) => {
+  const handleSubmit = async (values: DownloadFormData) => {
+    if (!values.url?.trim()) {
+      form.setError("url", { type: "manual", message: "URL is required" });
+      return;
+    }
+
+    const kvToRecord = (arr?: Array<{ key: string; value: string }>) =>
+      (arr || []).reduce<Record<string, string>>((acc, { key, value }) => {
         if (key && value) acc[key] = value;
         return acc;
-      }, {} as Record<string, string>);
+      }, {});
 
-    const headers = arrayToRecord(values.headers);
-    const cookies = arrayToRecord(values.cookies);
     const proxy = values.proxy?.enabled
       ? {
           type: values.proxy.type,
@@ -77,26 +87,30 @@ export default function DownloadSettingSheet({
           password: values.proxy?.auth?.password,
         }
       : undefined;
+    const headers = kvToRecord(values.headers);
+    const cookies = kvToRecord(values.cookies);
 
     setIsLoading(true);
     try {
       await invoke("add_new_download", {
         url: values.url.trim(),
         options: {
-          headers: Object.keys(headers || {}).length > 0 ? headers : undefined,
-          cookies: Object.keys(cookies || {}).length > 0 ? cookies : undefined,
           proxy,
           ...(values.auth && {
             auth: { ...values.auth, type: values.auth.type.toLowerCase() },
           }),
+          headers: Object.keys(headers).length ? headers : undefined,
+          cookies: Object.keys(cookies).length ? cookies : undefined,
           chunk_count: values.chunk,
-          file_path: values.filePath,
-          speed_limit: values.speedLimit,
-          max_retries: values.maxRetries,
-          backoff_factor: values.backoffFactor,
-          timeout_secs: values.timeoutSecs,
+          file_path: values.filePath || undefined,
+          speed_limit: values.speedLimit || undefined,
+          max_retries: values.maxRetries || undefined,
+          backoff_factor: values.backoffFactor || undefined,
+          timeout_secs: values.timeoutSecs || undefined,
         },
       });
+
+      toast.success("Download added");
       setUrl(values.url.trim());
       onOpenChange(false);
       form.reset({
@@ -105,61 +119,51 @@ export default function DownloadSettingSheet({
         headers: [],
         cookies: [],
       });
-    } catch (error) {
-      console.error("Failed to add download:", error);
+    } catch (err: any) {
+      console.error("Failed to add download:", err);
+      toast.error("Failed to add download", {
+        description:
+          typeof err?.message === "string"
+            ? err.message
+            : "Please check the URL or settings and try again.",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const onKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       form.handleSubmit(handleSubmit)();
     }
   };
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onOpenChange(false);
-    };
-    if (open) {
-      document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
-    }
-  }, [open, onOpenChange]);
-
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(v) => !isLoading && onOpenChange(v)}>
       <SheetContent className="sm:max-w-md p-2 h-full">
-        <SheetHeader>
-          <SheetTitle>Download Settings</SheetTitle>
-          <SheetDescription>
-            Configure download parameters including proxy settings
-          </SheetDescription>
+        <SheetHeader className="px-1">
+          <SheetTitle>New download</SheetTitle>
+          <SheetDescription>Paste a URL, tweak options, done.</SheetDescription>
         </SheetHeader>
 
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="h-full flex flex-col justify-between overflow-y-auto"
+            className="h-full flex flex-col gap-2"
           >
-            <Tabs defaultValue="basic" className="overflow-y-auto">
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs defaultValue="basic" className="flex-1 overflow-hidden">
+              <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10">
                 <TabsTrigger value="basic">Basic</TabsTrigger>
                 <TabsTrigger value="advanced">Advanced</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="basic" className="space-y-4">
-                <BasicTab handleKeyPress={handleKeyPress} />
-              </TabsContent>
+              <BasicTab handleKeyPress={onKeyPress} />
 
-              <TabsContent value="advanced" className="space-y-4">
-                <AdvancedTab handleKeyPress={handleKeyPress} />
-              </TabsContent>
+              <AdvancedTab handleKeyPress={onKeyPress} />
             </Tabs>
 
-            <div className="flex gap-2 pt-4 sticky bottom-0 bg-background">
+            <div className="flex gap-2 pt-4 pb-2 sticky bottom-0 bg-background">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}

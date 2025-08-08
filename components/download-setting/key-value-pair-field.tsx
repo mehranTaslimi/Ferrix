@@ -1,9 +1,8 @@
-import { useFieldArray, useFormContext, UseFormReturn } from "react-hook-form";
+import { useFieldArray, useFormContext } from "react-hook-form";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { FormControl, FormField, FormItem } from "../ui/form";
 import { Plus, Trash2 } from "lucide-react";
-import { DownloadFormData } from "./download-setting-sheet";
 import FormMessage from "./form-message";
 
 interface KeyValuePairFieldProps {
@@ -24,11 +23,18 @@ export default function KeyValuePairField({
   });
 
   return (
-    <div className="space-y-1">
-      {label && <label className="text-sm font-medium">{label}</label>}
+    <div className="space-y-2">
+      <label className="text-sm font-medium">{label}</label>
+
       <div className="space-y-2">
-        {fields.map((field, index) => (
-          <div key={field.id} className="flex gap-2 items-start">
+        {fields.length === 0 && (
+          <div className="text-xs text-muted-foreground">
+            No {label.toLowerCase()} added.
+          </div>
+        )}
+
+        {fields.map((f, index) => (
+          <div key={f.id} className="flex gap-2 items-start">
             <FormField
               control={control}
               name={`${name}.${index}.key`}
@@ -66,11 +72,13 @@ export default function KeyValuePairField({
               variant="outline"
               size="icon"
               onClick={() => remove(index)}
+              aria-label={`Remove ${label}`}
             >
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         ))}
+
         <Button
           type="button"
           variant="outline"

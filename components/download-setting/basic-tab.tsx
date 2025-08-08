@@ -1,3 +1,5 @@
+"use client";
+
 import { TabsContent } from "@radix-ui/react-tabs";
 import {
   FormControl,
@@ -10,6 +12,7 @@ import { Input } from "../ui/input";
 import { useFormContext, UseFormReturn } from "react-hook-form";
 import { DownloadFormData } from "./download-setting-sheet";
 import FormMessage from "./form-message";
+import { Slider } from "../ui/slider";
 
 interface BasicTabProps {
   handleKeyPress: (e: React.KeyboardEvent) => void;
@@ -17,7 +20,7 @@ interface BasicTabProps {
 export default function BasicTab({ handleKeyPress }: BasicTabProps) {
   const { control } = useFormContext();
   return (
-    <TabsContent value="basic" className="p-2 space-y-3 overflow-scroll">
+    <TabsContent value="basic" className="p-2 space-y-3 overflow-y-scroll">
       <FormField
         control={control}
         name="url"
@@ -27,8 +30,9 @@ export default function BasicTab({ handleKeyPress }: BasicTabProps) {
             <FormControl>
               <Input
                 {...field}
+                inputMode="url"
                 placeholder="https://example.com/file.mp4"
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyPress}
                 autoFocus
               />
             </FormControl>
@@ -36,27 +40,34 @@ export default function BasicTab({ handleKeyPress }: BasicTabProps) {
           </FormItem>
         )}
       />
+
       <FormField
         control={control}
         name="chunk"
-        render={({ field }) => (
-          <FormItem className="gap-1 flex-col">
-            <FormLabel htmlFor="chunk">Number of Chunks</FormLabel>
-            <FormControl>
-              <Input
-                {...field}
-                type="number"
-                min={1}
-                onKeyPress={handleKeyPress}
-              />
-            </FormControl>
-            <FormDescription>
-              Higher chunk count may increase download speed but uses more
-              resources (1-16)
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
+        render={({ field }) => {
+          const val = typeof field.value === "number" ? field.value : 5;
+          return (
+            <FormItem className="gap-1 flex-col">
+              <div className="flex items-center justify-between">
+                <FormLabel htmlFor="chunk">Number of chunks</FormLabel>
+                <span className="text-xs text-muted-foreground">{val}</span>
+              </div>
+              <FormControl>
+                <Slider
+                  min={1}
+                  max={16}
+                  step={1}
+                  value={[val]}
+                  onValueChange={(v) => field.onChange(v[0])}
+                />
+              </FormControl>
+              <FormDescription>
+                More chunks can improve speed but use more resources (1–16).
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          );
+        }}
       />
     </TabsContent>
   );
