@@ -1,34 +1,12 @@
 "use client";
 
 import { memo } from "react";
-import {
-  Pause,
-  Play,
-  DownloadIcon,
-  FileText,
-  ImageIcon,
-  Archive,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { invoke } from "@tauri-apps/api/core";
 import StatusAndSpeed from "./status-and-speed";
-import { type DownloadType, Status, Extension } from "./types";
+import { type DownloadType, Status } from "./types";
 import ActionButtons from "./action-buttons";
-
-function getFileIcon(extension: Extension) {
-  const iconClass = "w-5 h-5";
-  switch (extension) {
-    case Extension.Mp4:
-      return <DownloadIcon className={iconClass} />;
-    case Extension.Jpg:
-      return <ImageIcon className={iconClass} />;
-    case Extension.Rar:
-      return <Archive className={iconClass} />;
-    default:
-      return <FileText className={iconClass} />;
-  }
-}
+import { FileIcon } from "./file-icon";
 
 function DownloadItem({ download }: { download: DownloadType }) {
   const isDownloadCompleted = download.status === Status.Completed;
@@ -40,7 +18,7 @@ function DownloadItem({ download }: { download: DownloadType }) {
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="flex-shrink-0 p-2 rounded-lg bg-muted/50">
-                {getFileIcon(download.extension)}
+                <FileIcon extension={download.extension} />
               </div>
               <div className="min-w-0 flex-1">
                 <h3
@@ -54,7 +32,7 @@ function DownloadItem({ download }: { download: DownloadType }) {
                 </p>
               </div>
             </div>
-            <ActionButtons downloadId={download.id} status={download.status} />
+            <ActionButtons fileExist={download.file_exist} filePath={download.file_path} downloadId={download.id} status={download.status} filename={download.file_name} />
           </div>
 
           {!isDownloadCompleted && (
