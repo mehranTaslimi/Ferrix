@@ -10,6 +10,7 @@
     "lint": "next lint",
     "tauri": "tauri",
     "release:windows-x86_64": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc",
+    "release:windows-aarch64": "tauri build --runner cargo-xwin --target aarch64-pc-windows-msvc -vv",
     "dev:all": "concurrently -k -n \"FRONTEND,TAURI\" -c \"cyan,magenta\" \"pnpm run dev\" \"cd src-tauri && cargo watch -c -q -x run\""
   },
   "dependencies": {

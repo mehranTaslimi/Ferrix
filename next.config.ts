@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   assetPrefix: isProd ? undefined : `http://${internalHost}:3000`,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;
