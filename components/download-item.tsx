@@ -1,7 +1,6 @@
 "use client";
 
 import { memo } from "react";
-import { } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import StatusAndSpeed from "./status-and-speed";
 import { type DownloadType, Status } from "./types";
