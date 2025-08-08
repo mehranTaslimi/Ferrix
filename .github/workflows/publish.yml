@@ -67,7 +67,8 @@ jobs:
       - name: Get version from tauri.conf.json
         id: version
         run: |
-          echo "version=$(node -p \"require('./src-tauri/tauri.conf.json').version\")" >> $GITHUB_OUTPUT
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build & Draft Release
         uses: tauri-apps/tauri-action@v0
