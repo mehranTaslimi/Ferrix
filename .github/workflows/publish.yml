@@ -77,8 +77,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: .
-          tagName: app-v${{ steps.version.outputs.version }}
-          releaseName: "App v${{ steps.version.outputs.version }}"
+          tagName: v${{ steps.version.outputs.version }}
+          releaseName: "Ferrix v${{ steps.version.outputs.version }}"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: false
           prerelease: false
