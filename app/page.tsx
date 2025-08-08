@@ -4,14 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import DownloadItem from "../components/download-item";
 import DownloadSettingSheet from "../components/download-setting/download-setting-sheet";
 import { useDownloads } from "../components/download-context";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { DownloadIcon, Plus } from "lucide-react";
+import { DownloadIcon } from "lucide-react";
 import DownloadBar from "@/components/download-bar";
 import { listen } from "@tauri-apps/api/event";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import { Status } from "../components/types";
+import { EmptyDownloadsIntro } from "@/components/empty-download-intro";
 
 
 const statusRank = (s: Status) => {
@@ -89,7 +88,6 @@ export default function Page() {
 
   return (
     <div className="container mx-auto max-w-5xl">
-      {/* small nit: z-20 instead of z-2 so it really stays on top */}
       <div className="mb-3 sticky top-0 z-20 bg-background">
         <DownloadBar
           setUrl={setUrl}
@@ -102,23 +100,7 @@ export default function Page() {
 
       <div className="space-y-4 px-3">
         {ordered.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <DownloadIcon className="w-12 h-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">
-                {selectedMimeType ? "No downloads match this filter" : "No downloads yet"}
-              </h3>
-              <p className="text-muted-foreground text-center mb-4">
-                {selectedMimeType
-                  ? "Try selecting a different file type or clear the filter"
-                  : 'Click the "New Download" button to get started'}
-              </p>
-              <Button onClick={() => setIsModalOpen(true)} variant="outline">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Your First Download
-              </Button>
-            </CardContent>
-          </Card>
+          <EmptyDownloadsIntro />
         ) : (
 
           <div className="grid gap-2 grid-cols-[repeat(auto-fill,_minmax(500px,_1fr))]">

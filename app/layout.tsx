@@ -4,7 +4,7 @@ import { DownloadProvider } from "@/components/download-context";
 import AppSidebar from "@/components/sidebar";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default function RootLayout({
   children,
@@ -13,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="antialiased">
+      <body className="antialiased bg-background/40">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
