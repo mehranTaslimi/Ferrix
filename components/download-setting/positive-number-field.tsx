@@ -1,13 +1,8 @@
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "../ui/form";
+import { FormControl, FormField, FormItem, FormLabel } from "../ui/form";
 import { Slider } from "../ui/slider";
 import { UseFormReturn } from "react-hook-form";
 import { DownloadFormData } from "./download-setting-sheet";
+import FormMessage from "./form-message";
 
 interface PositiveNumberFieldProps {
   form: UseFormReturn<DownloadFormData>;
@@ -51,9 +46,6 @@ export default function PositiveNumberField({
                 value={[value]}
               />
             </FormControl>
-            <div className="min-h-[20px]">
-              <FormMessage />
-            </div>
           </FormItem>
         );
       }}

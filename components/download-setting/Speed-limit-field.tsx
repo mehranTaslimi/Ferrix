@@ -1,11 +1,4 @@
-import {
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormDescription,
-  FormMessage,
-} from "../ui/form";
+import { FormField, FormItem, FormLabel, FormControl } from "../ui/form";
 import { Input } from "../ui/input";
 import { UseFormReturn } from "react-hook-form";
 import { DownloadFormData } from "./download-setting-sheet";
@@ -17,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import FormMessage from "./form-message";
 
 const UNIT_MULTIPLIERS = {
   KB: 1024,
@@ -92,9 +86,7 @@ export default function SpeedLimitField({
               </SelectContent>
             </Select>
           </div>
-          <div className="min-h-[20px]">
-            <FormMessage />
-          </div>
+          <FormMessage />
         </FormItem>
       )}
     />

@@ -40,7 +40,7 @@ export default function AdvancedTab({
   };
 
   return (
-    <TabsContent value="advanced" className="space-y-4 overflow-scroll p-2">
+    <TabsContent value="advanced" className="space-y-3 overflow-scroll p-2">
       <FormField
         control={form.control}
         name="filePath"
@@ -89,6 +89,7 @@ export default function AdvancedTab({
       />
 
       {/* <SpeedLimitField form={form} /> */}
+
       <PositiveNumberField
         max={30}
         defaultValue={3}

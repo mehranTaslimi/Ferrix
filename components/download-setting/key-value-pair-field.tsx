@@ -1,9 +1,10 @@
 import { useFieldArray, UseFormReturn } from "react-hook-form";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { FormControl, FormField, FormItem, FormMessage } from "../ui/form";
+import { FormControl, FormField, FormItem } from "../ui/form";
 import { Plus, Trash2 } from "lucide-react";
 import { DownloadFormData } from "./download-setting-sheet";
+import FormMessage from "./form-message";
 
 interface KeyValuePairFieldProps {
   form: UseFormReturn<DownloadFormData>;
@@ -24,16 +25,16 @@ export default function KeyValuePairField({
   });
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {label && <label className="text-sm font-medium">{label}</label>}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {fields.map((field, index) => (
           <div key={field.id} className="flex gap-2 items-start">
             <FormField
               control={form.control}
               name={`${name}.${index}.key`}
               render={({ field }) => (
-                <FormItem className="flex-1">
+                <FormItem className="flex-1 gap-1">
                   <FormControl>
                     <Input
                       {...field}
@@ -49,7 +50,7 @@ export default function KeyValuePairField({
               control={form.control}
               name={`${name}.${index}.value`}
               render={({ field }) => (
-                <FormItem className="flex-1">
+                <FormItem className="flex-1 gap-1">
                   <FormControl>
                     <Input
                       {...field}
