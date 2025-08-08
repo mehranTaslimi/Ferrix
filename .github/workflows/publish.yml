@@ -1,104 +1,57 @@
-name: publish
+name: "publish"
 
 on:
   push:
-    branches: [main]
-    tags: ["v*"]
-  workflow_dispatch:
-
-permissions:
-  contents: write
+    branches:
+      - main
 
 jobs:
   publish-tauri:
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest
+          - platform: "macos-latest"
             args: "--target aarch64-apple-darwin"
-          - platform: macos-latest
+          - platform: "macos-latest"
             args: "--target x86_64-apple-darwin"
-          - platform: ubuntu-22.04
+          - platform: "ubuntu-22.04"
             args: ""
-          - platform: windows-latest
+          - platform: "windows-latest"
             args: ""
 
     runs-on: ${{ matrix.platform }}
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: setup node
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: pnpm
 
-      - name: Install pnpm
-        run: npm install -g pnpm@latest
-
-      - name: Setup Rust (stable)
+      - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Install Linux dependencies
+      - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: Install NSIS (Windows)
-        if: matrix.platform == 'windows-latest'
-        run: choco install nsis -y
+      - name: install frontend dependencies
+        run: pnpm install
 
-      - name: Install frontend deps
-        run: pnpm install --frozen-lockfile
-
-      - name: Build (branch)
-        if: startsWith(github.ref, 'refs/heads/')
-        uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: ${{ matrix.args }}
-
-      - name: Build & Draft Release (tag)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Ferrix ${{ github.ref_name }}"
+          tagName: app-v__VERSION__
+          releaseName: "App v__VERSION__"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ferrix-${{ matrix.platform }}-${{ github.ref_name || 'branch' }}
-          path: |
-            **/target/release/bundle/**
