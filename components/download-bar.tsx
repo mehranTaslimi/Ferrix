@@ -14,7 +14,7 @@ import { Form } from "./ui/form";
 
 import { urlFormSchema } from "@/lib/validation";
 import { z } from "zod";
-import { FormControl, FormField, FormItem, FormMessage } from "./ui/form";
+import { FormControl, FormField, FormItem } from "./ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 interface DownloadBarProps {
   setIsModalOpen: (open: boolean) => void;

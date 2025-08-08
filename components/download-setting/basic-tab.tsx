@@ -5,11 +5,11 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
 import { UseFormReturn } from "react-hook-form";
 import { DownloadFormData } from "./download-setting-sheet";
+import FormMessage from "./form-message";
 
 interface BasicTabProps {
   form: UseFormReturn<DownloadFormData>;
@@ -17,7 +17,7 @@ interface BasicTabProps {
 }
 export default function BasicTab({ form, handleKeyPress }: BasicTabProps) {
   return (
-    <TabsContent value="basic" className="p-2">
+    <TabsContent value="basic" className="p-2 space-y-3 overflow-scroll">
       <FormField
         control={form.control}
         name="url"
@@ -32,9 +32,7 @@ export default function BasicTab({ form, handleKeyPress }: BasicTabProps) {
                 autoFocus
               />
             </FormControl>
-            <div className="min-h-[20px]">
-              <FormMessage />
-            </div>
+            <FormMessage />
           </FormItem>
         )}
       />
@@ -56,9 +54,7 @@ export default function BasicTab({ form, handleKeyPress }: BasicTabProps) {
               Higher chunk count may increase download speed but uses more
               resources (1-16)
             </FormDescription>
-            <div className="min-h-[20px]">
-              <FormMessage />
-            </div>
+            <FormMessage />
           </FormItem>
         )}
       />

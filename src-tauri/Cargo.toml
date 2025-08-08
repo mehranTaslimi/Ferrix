@@ -35,6 +35,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.3.0", features = [] }
 
 [dependencies]
+tauri-plugin-dialog = "2"
 tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2.4.0"
 serde = { version = "1", features = ["derive"] }

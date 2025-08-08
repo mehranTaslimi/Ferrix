@@ -5,19 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { useForm } from "react-hook-form";
+import { useForm, FieldValues } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form } from "@/components/ui/form";
 import { downloadFormSchema } from "@/lib/validation";
 import { Loading } from "../ui/loading";
 import {
@@ -64,11 +56,22 @@ export default function DownloadSettingSheet({
   const handleSubmit = async (values: DownloadFormData) => {
     if (!values.url.trim()) return;
 
+    const ArrayToRecord = (values?: Array<{ value: string; key: string }>) =>
+      values?.reduce((acc: { [x: string]: any }, { key, value }: any) => {
+        if (key && value) acc[key] = value;
+        return acc;
+      }, {} as Record<string, string>);
+
+    const headers = ArrayToRecord(values.headers);
+    const cookies = ArrayToRecord(values.cookies);
+
     setIsLoading(true);
     try {
       await invoke("add_new_download", {
         url: values.url.trim(),
         options: {
+          headers: Object.keys(headers || {}).length > 0 ? headers : undefined,
+          cookies: Object.keys(cookies || {}).length > 0 ? cookies : undefined,
           chunk_count: values.chunk,
           file_path: values.filePath,
           speed_limit: values.speedLimit,
@@ -77,9 +80,9 @@ export default function DownloadSettingSheet({
           timeout_secs: values.timeoutSecs,
         },
       });
-      setUrl(url);
+      setUrl(values.url.trim());
       onOpenChange(false);
-      form.reset({ url, chunk: 5 });
+      form.reset({ url: values.url.trim(), chunk: 5, headers: [] });
     } catch (error) {
       console.error("Failed to add download:", error);
     } finally {
