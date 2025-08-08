@@ -5,7 +5,7 @@ import {
   FormLabel,
   FormMessage,
 } from "../ui/form";
-import { Input } from "../ui/input";
+import { Slider } from "../ui/slider";
 import { UseFormReturn } from "react-hook-form";
 import { DownloadFormData } from "./download-setting-sheet";
 
@@ -13,37 +13,50 @@ interface PositiveNumberFieldProps {
   form: UseFormReturn<DownloadFormData>;
   name: keyof DownloadFormData;
   label: string;
-  placeholder?: string;
-  handleKeyPress?: (e: React.KeyboardEvent) => void;
+  min?: number;
+  max?: number;
+  defaultValue?: number;
+  step?: number;
 }
 
 export default function PositiveNumberField({
   form,
   name,
   label,
-  placeholder,
-  handleKeyPress,
+  min = 1,
+  max = 100,
+  defaultValue = min,
+  step = 1,
 }: PositiveNumberFieldProps) {
   return (
     <FormField
       control={form.control}
       name={name}
-      render={({ field }) => (
-        <FormItem className="gap-1 flex-col">
-          <FormLabel htmlFor={name}>{label}</FormLabel>
-          <FormControl>
-            <Input
-              {...field}
-              type="number"
-              placeholder={placeholder || `Enter ${label.toLowerCase()}`}
-              min={1}
-            />
-          </FormControl>
-          <div className="min-h-[20px]">
-            <FormMessage />
-          </div>
-        </FormItem>
-      )}
+      render={({ field }) => {
+        const value =
+          typeof field.value === "number" ? field.value : defaultValue;
+
+        return (
+          <FormItem className="gap-2 flex-col">
+            <FormLabel htmlFor={name}>
+              {label}: {value}
+            </FormLabel>
+            <FormControl>
+              <Slider
+                min={min}
+                max={max}
+                step={step}
+                defaultValue={[defaultValue]}
+                onValueChange={(value) => field.onChange(value[0])}
+                value={[value]}
+              />
+            </FormControl>
+            <div className="min-h-[20px]">
+              <FormMessage />
+            </div>
+          </FormItem>
+        );
+      }}
     />
   );
 }
