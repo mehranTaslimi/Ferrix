@@ -11,6 +11,7 @@ export interface DownloadType {
   content_type: string;
   extension: Extension;
   file_exist: boolean;
+  modified_at: string;
 }
 
 export enum ContentType {
