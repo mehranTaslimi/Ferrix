@@ -1,35 +1,36 @@
-name: Build Ferrix (Linux & Windows)
+name: "publish"
 
 on:
   push:
-    branches: [main]
-    tags:
-      - "v*"
-  pull_request:
+    branches: [release]
+    tags: ["v*"]
   workflow_dispatch:
 
-concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
+permissions:
+  contents: write
 
 jobs:
-  build:
+  publish-tauri:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-            platform: linux
-            tauri_args: ""
-          - os: windows-latest
-            platform: windows
-            tauri_args: ""
+          - platform: "macos-latest"
+            args: "--target aarch64-apple-darwin"
+          - platform: "macos-latest"
+            args: "--target x86_64-apple-darwin"
+          - platform: "ubuntu-22.04"
+            args: ""
+          - platform: "windows-latest"
+            args: ""
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.platform }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -43,8 +44,10 @@ jobs:
           version: latest
           run_install: false
 
-      - name: Setup Rust
+      - name: Setup Rust (stable)
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -58,7 +61,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Install Linux dependencies
-        if: matrix.platform == 'linux'
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -68,53 +71,37 @@ jobs:
             librsvg2-dev \
             patchelf
 
-      - name: Install NSIS
-        if: matrix.platform == 'windows'
-        uses: vimtor/action-install-nsis@v1
+      - name: Install NSIS (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: choco install nsis -y
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Tauri
+      - name: Build (branch = release)
+        if: startsWith(github.ref, 'refs/heads/')
         uses: tauri-apps/tauri-action@v0
-        with:
-          args: ${{ matrix.tauri_args }}
-
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ matrix.args }}
+
+      - name: Build & create Draft Release (tag push)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Ferrix ${{ github.ref_name }}"
+          releaseBody: "See the assets to download this version and install."
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ferrix-${{ matrix.platform }}
+          name: ferrix-${{ matrix.platform }}-${{ github.ref_name || 'branch' }}
           path: |
             **/target/release/bundle/**
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: [build]
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Download Linux artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: ferrix-linux
-          path: artifacts/linux
-
-      - name: Download Windows artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: ferrix-windows
-          path: artifacts/windows
-
-      - name: Create GitHub Release (draft)
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: true
-          name: Ferrix ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
-          files: |
-            artifacts/linux/**/*
-            artifacts/windows/**/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
