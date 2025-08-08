@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "tauri": "tauri",
-    "release:windows-x86_64" : "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc",
+    "release:windows-x86_64": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc",
     "dev:all": "concurrently -k -n \"FRONTEND,TAURI\" -c \"cyan,magenta\" \"pnpm run dev\" \"cd src-tauri && cargo watch -c -q -x run\""
   },
   "dependencies": {
@@ -33,6 +33,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-http": "~2.4.4",
+    "@tauri-apps/plugin-notification": "~2.3.0",
     "@tauri-apps/plugin-opener": "^2",
     "add": "^2.0.6",
     "class-variance-authority": "^0.7.1",
