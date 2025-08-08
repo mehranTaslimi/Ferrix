@@ -7,19 +7,19 @@ import {
   FormLabel,
 } from "../ui/form";
 import { Input } from "../ui/input";
-import { UseFormReturn } from "react-hook-form";
+import { useFormContext, UseFormReturn } from "react-hook-form";
 import { DownloadFormData } from "./download-setting-sheet";
 import FormMessage from "./form-message";
 
 interface BasicTabProps {
-  form: UseFormReturn<DownloadFormData>;
   handleKeyPress: (e: React.KeyboardEvent) => void;
 }
-export default function BasicTab({ form, handleKeyPress }: BasicTabProps) {
+export default function BasicTab({ handleKeyPress }: BasicTabProps) {
+  const { control } = useFormContext();
   return (
     <TabsContent value="basic" className="p-2 space-y-3 overflow-scroll">
       <FormField
-        control={form.control}
+        control={control}
         name="url"
         render={({ field }) => (
           <FormItem className="gap-1 flex-col">
@@ -37,7 +37,7 @@ export default function BasicTab({ form, handleKeyPress }: BasicTabProps) {
         )}
       />
       <FormField
-        control={form.control}
+        control={control}
         name="chunk"
         render={({ field }) => (
           <FormItem className="gap-1 flex-col">

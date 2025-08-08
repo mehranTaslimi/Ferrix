@@ -5,9 +5,13 @@ import { filePathSchema } from "./file-path";
 import { positiveNumberSchema } from "./positive-number";
 import { headersArraySchema } from "./headers";
 import { cookiesArraySchema } from "./cookies";
+import { proxySchema } from "./proxy";
+import { authSchema } from "./auth";
 
 export const downloadFormSchema = z
   .object({
+    proxy: proxySchema,
+    auth: authSchema,
     url: urlSchema,
     chunk: chunkSchema,
     filePath: filePathSchema,

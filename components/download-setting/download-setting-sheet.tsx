@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { useForm, FieldValues } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -22,11 +22,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import BasicTab from "./basic-tab";
 import AdvancedTab from "./advanced-tab";
-
-export interface TabsValue {
-  Basic: "basic";
-  Advanced: "advanced";
-}
 
 export type DownloadFormData = z.infer<typeof downloadFormSchema>;
 
@@ -50,20 +45,38 @@ export default function DownloadSettingSheet({
     defaultValues: {
       url,
       chunk: 5,
+      headers: [],
+      cookies: [],
+      proxy: {
+        enabled: false,
+        type: "http",
+        host: "",
+        port: 8080,
+        auth: undefined,
+      },
     },
   });
 
   const handleSubmit = async (values: DownloadFormData) => {
     if (!values.url.trim()) return;
 
-    const ArrayToRecord = (values?: Array<{ value: string; key: string }>) =>
-      values?.reduce((acc: { [x: string]: any }, { key, value }: any) => {
+    const arrayToRecord = (values?: Array<{ value: string; key: string }>) =>
+      values?.reduce((acc, { key, value }) => {
         if (key && value) acc[key] = value;
         return acc;
       }, {} as Record<string, string>);
 
-    const headers = ArrayToRecord(values.headers);
-    const cookies = ArrayToRecord(values.cookies);
+    const headers = arrayToRecord(values.headers);
+    const cookies = arrayToRecord(values.cookies);
+    const proxy = values.proxy?.enabled
+      ? {
+          type: values.proxy.type,
+          host: values.proxy.host,
+          port: values.proxy.port,
+          username: values.proxy?.auth?.username,
+          password: values.proxy?.auth?.password,
+        }
+      : undefined;
 
     setIsLoading(true);
     try {
@@ -72,6 +85,10 @@ export default function DownloadSettingSheet({
         options: {
           headers: Object.keys(headers || {}).length > 0 ? headers : undefined,
           cookies: Object.keys(cookies || {}).length > 0 ? cookies : undefined,
+          proxy,
+          ...(values.auth && {
+            auth: { ...values.auth, type: values.auth.type.toLowerCase() },
+          }),
           chunk_count: values.chunk,
           file_path: values.filePath,
           speed_limit: values.speedLimit,
@@ -82,7 +99,12 @@ export default function DownloadSettingSheet({
       });
       setUrl(values.url.trim());
       onOpenChange(false);
-      form.reset({ url: values.url.trim(), chunk: 5, headers: [] });
+      form.reset({
+        url: values.url.trim(),
+        chunk: 5,
+        headers: [],
+        cookies: [],
+      });
     } catch (error) {
       console.error("Failed to add download:", error);
     } finally {
@@ -111,10 +133,9 @@ export default function DownloadSettingSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md p-2 h-full">
         <SheetHeader>
-          <SheetTitle>Download Setting</SheetTitle>
+          <SheetTitle>Download Settings</SheetTitle>
           <SheetDescription>
-            Enter a URL and configure download settings to start downloading a
-            file.
+            Configure download parameters including proxy settings
           </SheetDescription>
         </SheetHeader>
 
@@ -123,16 +144,22 @@ export default function DownloadSettingSheet({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="h-full flex flex-col justify-between overflow-y-auto"
           >
-            <Tabs className="overflow-y-auto">
+            <Tabs defaultValue="basic" className="overflow-y-auto">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="basic">Basic Settings</TabsTrigger>
-                <TabsTrigger value="advanced">Advanced Settings</TabsTrigger>
+                <TabsTrigger value="basic">Basic</TabsTrigger>
+                <TabsTrigger value="advanced">Advanced</TabsTrigger>
               </TabsList>
-              <BasicTab form={form} handleKeyPress={handleKeyPress} />
-              <AdvancedTab form={form} handleKeyPress={handleKeyPress} />
+
+              <TabsContent value="basic" className="space-y-4">
+                <BasicTab handleKeyPress={handleKeyPress} />
+              </TabsContent>
+
+              <TabsContent value="advanced" className="space-y-4">
+                <AdvancedTab handleKeyPress={handleKeyPress} />
+              </TabsContent>
             </Tabs>
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-4 sticky bottom-0 bg-background">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
@@ -143,7 +170,7 @@ export default function DownloadSettingSheet({
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading} className="flex-1">
-                {isLoading ? <Loading /> : "Add Download"}
+                {isLoading ? <Loading /> : "Start Download"}
               </Button>
             </div>
           </form>

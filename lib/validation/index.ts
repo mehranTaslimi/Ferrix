@@ -6,3 +6,4 @@ export * from "./file-path";
 export * from "./key-value";
 export * from "./cookies";
 export * from "./headers";
+export * from "./proxy";

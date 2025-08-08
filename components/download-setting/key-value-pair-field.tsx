@@ -1,4 +1,4 @@
-import { useFieldArray, UseFormReturn } from "react-hook-form";
+import { useFieldArray, useFormContext, UseFormReturn } from "react-hook-form";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { FormControl, FormField, FormItem } from "../ui/form";
@@ -7,20 +7,19 @@ import { DownloadFormData } from "./download-setting-sheet";
 import FormMessage from "./form-message";
 
 interface KeyValuePairFieldProps {
-  form: UseFormReturn<DownloadFormData>;
   label: string;
   name: "headers" | "cookies";
   handleKeyPress?: (e: React.KeyboardEvent) => void;
 }
 
 export default function KeyValuePairField({
-  form,
   label,
   name,
   handleKeyPress,
 }: KeyValuePairFieldProps) {
+  const { control } = useFormContext();
   const { fields, append, remove } = useFieldArray({
-    control: form.control,
+    control,
     name,
   });
 
@@ -31,7 +30,7 @@ export default function KeyValuePairField({
         {fields.map((field, index) => (
           <div key={field.id} className="flex gap-2 items-start">
             <FormField
-              control={form.control}
+              control={control}
               name={`${name}.${index}.key`}
               render={({ field }) => (
                 <FormItem className="flex-1 gap-1">
@@ -47,7 +46,7 @@ export default function KeyValuePairField({
               )}
             />
             <FormField
-              control={form.control}
+              control={control}
               name={`${name}.${index}.value`}
               render={({ field }) => (
                 <FormItem className="flex-1 gap-1">
