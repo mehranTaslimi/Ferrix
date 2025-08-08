@@ -8,7 +8,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import BasicTab from "./basic-tab";
 import AdvancedTab from "./advanced-tab";
@@ -119,12 +118,13 @@ export default function DownloadSettingSheet({
         headers: [],
         cookies: [],
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as Error;
       console.error("Failed to add download:", err);
       toast.error("Failed to add download", {
         description:
-          typeof err?.message === "string"
-            ? err.message
+          typeof error?.message === "string"
+            ? error.message
             : "Please check the URL or settings and try again.",
       });
     } finally {

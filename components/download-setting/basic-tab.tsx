@@ -9,8 +9,7 @@ import {
   FormLabel,
 } from "../ui/form";
 import { Input } from "../ui/input";
-import { useFormContext, UseFormReturn } from "react-hook-form";
-import { DownloadFormData } from "./download-setting-sheet";
+import { useFormContext } from "react-hook-form";
 import FormMessage from "./form-message";
 import { Slider } from "../ui/slider";
 

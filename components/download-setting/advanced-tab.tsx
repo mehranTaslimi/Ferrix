@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { FormControl, FormField, FormItem, FormLabel } from "../ui/form";
 import { Input } from "../ui/input";
-import { useFormContext, UseFormReturn } from "react-hook-form";
-import { DownloadFormData } from "./download-setting-sheet";
+import { useFormContext } from "react-hook-form";
 import PositiveNumberField from "./positive-number-field";
 import KeyValuePairField from "./key-value-pair-field";
 import FormMessage from "./form-message";
@@ -73,7 +72,6 @@ export default function AdvancedTab({ handleKeyPress }: AdvancedTabProps) {
 
   return (
     <TabsContent value="advanced" className="space-y-3 p-2 overflow-y-scroll">
-      {/* Download location */}
       <FormField
         control={form.control}
         name="filePath"

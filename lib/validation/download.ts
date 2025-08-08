@@ -30,6 +30,6 @@ export const downloadFormSchema = z
       message: "Timeout duration must be a positive number",
     }),
   })
-  .refine((data) => {
+  .refine(() => {
     return true;
   });
