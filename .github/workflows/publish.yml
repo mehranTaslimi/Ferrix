@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   publish-tauri:
@@ -23,11 +24,14 @@ jobs:
             args: ""
 
     runs-on: ${{ matrix.platform }}
+
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
           version: latest
 
@@ -35,7 +39,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: "pnpm"
+          cache: pnpm
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -46,18 +50,46 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install NSIS (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: choco install nsis -y
 
       - name: install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: Get version from tauri.conf.json
+        id: version
+        run: |
+          echo "version=$(node -p \"require('./src-tauri/tauri.conf.json').version\")" >> $GITHUB_OUTPUT
+
+      - name: Build & Draft Release
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: app-v__VERSION__
-          releaseName: "App v__VERSION__"
+          projectPath: .
+          tagName: app-v${{ steps.version.outputs.version }}
+          releaseName: "App v${{ steps.version.outputs.version }}"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}
+          args: ${{ matrix.args }} --release
+
+      - name: List built files (debug)
+        run: |
+          echo "==== Bundle tree ===="
+          ls -R src-tauri/target/release/bundle || true
+
+      - name: Upload artifacts (fallback)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ferrix-${{ matrix.platform }}-${{ github.run_number }}
+          path: |
+            src-tauri/target/release/bundle/**
