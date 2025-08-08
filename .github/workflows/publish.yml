@@ -66,6 +66,7 @@ jobs:
 
       - name: Get version from tauri.conf.json
         id: version
+        shell: bash
         run: |
           VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
