@@ -80,7 +80,7 @@ jobs:
           tagName: app-v${{ steps.version.outputs.version }}
           releaseName: "App v${{ steps.version.outputs.version }}"
           releaseBody: "See the assets to download this version and install."
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
 
