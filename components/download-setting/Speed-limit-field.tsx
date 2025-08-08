@@ -22,13 +22,9 @@ type Unit = keyof typeof UNIT_MULTIPLIERS;
 
 interface SpeedLimitFieldProps {
   form: UseFormReturn<DownloadFormData>;
-  handleKeyPress?: (e: React.KeyboardEvent) => void;
 }
 
-export default function SpeedLimitField({
-  form,
-  handleKeyPress,
-}: SpeedLimitFieldProps) {
+export default function SpeedLimitField({ form }: SpeedLimitFieldProps) {
   const fieldName: keyof DownloadFormData = "speedLimit";
   const [unit, setUnit] = useState<Unit>("KB");
   const byteValue = form.watch(fieldName);

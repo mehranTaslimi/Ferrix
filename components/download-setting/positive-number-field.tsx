@@ -2,12 +2,11 @@
 
 import { FormControl, FormField, FormItem, FormLabel } from "../ui/form";
 import { Slider } from "../ui/slider";
-import type { UseFormReturn } from "react-hook-form";
-import type { DownloadFormData } from "./download-setting-sheet";
+import { useFormContext, UseFormReturn } from "react-hook-form";
+import { DownloadFormData } from "./download-setting-sheet";
 import FormMessage from "./form-message";
 
 interface PositiveNumberFieldProps {
-  form: UseFormReturn<DownloadFormData>;
   name: keyof DownloadFormData;
   label: string;
   min?: number;
@@ -17,7 +16,6 @@ interface PositiveNumberFieldProps {
 }
 
 export default function PositiveNumberField({
-  form,
   name,
   label,
   min = 1,
@@ -25,9 +23,11 @@ export default function PositiveNumberField({
   defaultValue = min,
   step = 1,
 }: PositiveNumberFieldProps) {
+  const { control } = useFormContext();
+
   return (
     <FormField
-      control={form.control}
+      control={control}
       name={name}
       render={({ field }) => {
         const v = typeof field.value === "number" ? field.value : defaultValue;
@@ -38,7 +38,13 @@ export default function PositiveNumberField({
               <span className="text-xs text-muted-foreground">{v}</span>
             </div>
             <FormControl>
-              <Slider min={min} max={max} step={step} value={[v]} onValueChange={(value) => field.onChange(value[0])} />
+              <Slider
+                min={min}
+                max={max}
+                step={step}
+                value={[v]}
+                onValueChange={(value) => field.onChange(value[0])}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>

@@ -1,23 +1,27 @@
 "use client";
 
 import { TabsContent } from "@radix-ui/react-tabs";
-import { FormControl, FormDescription, FormField, FormItem, FormLabel } from "../ui/form";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+} from "../ui/form";
 import { Input } from "../ui/input";
-import { UseFormReturn } from "react-hook-form";
-import type { DownloadFormData } from "./download-setting-sheet";
+import { useFormContext } from "react-hook-form";
 import FormMessage from "./form-message";
 import { Slider } from "../ui/slider";
 
 interface BasicTabProps {
-  form: UseFormReturn<DownloadFormData>;
   handleKeyPress: (e: React.KeyboardEvent) => void;
 }
-
-export default function BasicTab({ form, handleKeyPress }: BasicTabProps) {
+export default function BasicTab({ handleKeyPress }: BasicTabProps) {
+  const { control } = useFormContext();
   return (
-    <TabsContent value="basic" className="p-2 space-y-3">
+    <TabsContent value="basic" className="p-2 space-y-3 overflow-y-scroll">
       <FormField
-        control={form.control}
+        control={control}
         name="url"
         render={({ field }) => (
           <FormItem className="gap-1 flex-col">
@@ -37,7 +41,7 @@ export default function BasicTab({ form, handleKeyPress }: BasicTabProps) {
       />
 
       <FormField
-        control={form.control}
+        control={control}
         name="chunk"
         render={({ field }) => {
           const val = typeof field.value === "number" ? field.value : 5;
@@ -48,9 +52,17 @@ export default function BasicTab({ form, handleKeyPress }: BasicTabProps) {
                 <span className="text-xs text-muted-foreground">{val}</span>
               </div>
               <FormControl>
-                <Slider min={1} max={16} step={1} value={[val]} onValueChange={(v) => field.onChange(v[0])} />
+                <Slider
+                  min={1}
+                  max={16}
+                  step={1}
+                  value={[val]}
+                  onValueChange={(v) => field.onChange(v[0])}
+                />
               </FormControl>
-              <FormDescription>More chunks can improve speed but use more resources (1–16).</FormDescription>
+              <FormDescription>
+                More chunks can improve speed but use more resources (1–16).
+              </FormDescription>
               <FormMessage />
             </FormItem>
           );

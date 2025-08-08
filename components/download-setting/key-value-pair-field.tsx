@@ -1,22 +1,26 @@
-"use client";
-
-import { useFieldArray, UseFormReturn } from "react-hook-form";
+import { useFieldArray, useFormContext } from "react-hook-form";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { FormControl, FormField, FormItem } from "../ui/form";
 import { Plus, Trash2 } from "lucide-react";
-import type { DownloadFormData } from "./download-setting-sheet";
 import FormMessage from "./form-message";
 
 interface KeyValuePairFieldProps {
-  form: UseFormReturn<DownloadFormData>;
   label: string;
   name: "headers" | "cookies";
   handleKeyPress?: (e: React.KeyboardEvent) => void;
 }
 
-export default function KeyValuePairField({ form, label, name, handleKeyPress }: KeyValuePairFieldProps) {
-  const { fields, append, remove } = useFieldArray({ control: form.control, name });
+export default function KeyValuePairField({
+  label,
+  name,
+  handleKeyPress,
+}: KeyValuePairFieldProps) {
+  const { control } = useFormContext();
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name,
+  });
 
   return (
     <div className="space-y-2">
@@ -24,42 +28,63 @@ export default function KeyValuePairField({ form, label, name, handleKeyPress }:
 
       <div className="space-y-2">
         {fields.length === 0 && (
-          <div className="text-xs text-muted-foreground">No {label.toLowerCase()} added.</div>
+          <div className="text-xs text-muted-foreground">
+            No {label.toLowerCase()} added.
+          </div>
         )}
 
         {fields.map((f, index) => (
           <div key={f.id} className="flex gap-2 items-start">
             <FormField
-              control={form.control}
+              control={control}
               name={`${name}.${index}.key`}
               render={({ field }) => (
                 <FormItem className="flex-1 gap-1">
                   <FormControl>
-                    <Input {...field} placeholder={`${label} name`} onKeyDown={handleKeyPress} />
+                    <Input
+                      {...field}
+                      placeholder={`${label} name`}
+                      onKeyDown={handleKeyPress}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <FormField
-              control={form.control}
+              control={control}
               name={`${name}.${index}.value`}
               render={({ field }) => (
                 <FormItem className="flex-1 gap-1">
                   <FormControl>
-                    <Input {...field} placeholder={`${label} value`} onKeyDown={handleKeyPress} />
+                    <Input
+                      {...field}
+                      placeholder={`${label} value`}
+                      onKeyDown={handleKeyPress}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="button" variant="outline" size="icon" onClick={() => remove(index)} aria-label={`Remove ${label}`}>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => remove(index)}
+              aria-label={`Remove ${label}`}
+            >
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         ))}
 
-        <Button type="button" variant="outline" className="w-full" onClick={() => append({ key: "", value: "" })}>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={() => append({ key: "", value: "" })}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Add {label}
         </Button>

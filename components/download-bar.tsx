@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { DownloadIcon, MoreHorizontal, MoreVerticalIcon } from "lucide-react";
+import { DownloadIcon, MoreHorizontal } from "lucide-react";
 import { DownloadType } from "./types";
 import { useForm } from "react-hook-form";
 
@@ -18,8 +18,6 @@ import { FormControl, FormField, FormItem } from "./ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 interface DownloadBarProps {
   setIsModalOpen: (open: boolean) => void;
-  selectedMimeType: string | null;
-  filteredDownloads: DownloadType[];
   url: string;
   setUrl: (url: string) => void;
 }
@@ -30,9 +28,7 @@ import { cn } from "@/lib/utils";
 type UrlFormData = z.infer<typeof urlFormSchema>;
 
 export default function DownloadBar({
-  selectedMimeType,
   setIsModalOpen,
-  filteredDownloads,
   setUrl,
   url,
 }: DownloadBarProps) {

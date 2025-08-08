@@ -12,12 +12,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Status } from "../components/types";
 import { EmptyDownloadsIntro } from "@/components/empty-download-intro";
 
-
 const statusRank = (s: Status) => {
   switch (s) {
-    case Status.Downloading: return 0;
-    case Status.Queued: return 1;
-    default: return 2;
+    case Status.Downloading:
+      return 0;
+    case Status.Queued:
+      return 1;
+    default:
+      return 2;
   }
 };
 
@@ -26,7 +28,6 @@ export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [url, setUrl] = useState("");
 
-
   const prevStatus = useRef<Map<number, Status>>(new Map());
   const [justPromotedId, setJustPromotedId] = useState<number | null>(null);
 
@@ -34,20 +35,23 @@ export default function Page() {
     const unlisten = listen<string>("error", (ev) => {
       toast.error("Error", { description: ev.payload });
     });
-    return () => { unlisten.then((fn) => fn()); };
+    return () => {
+      unlisten.then((fn) => fn());
+    };
   }, []);
-
 
   useEffect(() => {
     for (const d of filteredDownloads) {
       const prev = prevStatus.current.get(d.id);
-      if (prev && prev !== Status.Downloading && d.status === Status.Downloading) {
+      if (
+        prev &&
+        prev !== Status.Downloading &&
+        d.status === Status.Downloading
+      ) {
         setJustPromotedId(d.id);
         const t = setTimeout(() => {
           setJustPromotedId((x) => (x === d.id ? null : x));
         }, 1200);
-
-
       }
     }
     for (const d of filteredDownloads) {
@@ -55,21 +59,21 @@ export default function Page() {
     }
   }, [filteredDownloads]);
 
-
   const ordered = useMemo(() => {
     return [...filteredDownloads].sort((a, b) => {
       const rA = statusRank(a.status);
       const rB = statusRank(b.status);
       if (rA !== rB) return rA - rB;
 
-
       if (a.status === Status.Downloading && b.status === Status.Downloading) {
-
-        return new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime();
+        return (
+          new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime()
+        );
       }
 
-
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return (
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
     });
   }, [filteredDownloads]);
 
@@ -92,8 +96,6 @@ export default function Page() {
         <DownloadBar
           setUrl={setUrl}
           url={url}
-          filteredDownloads={ordered}
-          selectedMimeType={selectedMimeType}
           setIsModalOpen={setIsModalOpen}
         />
       </div>
@@ -102,7 +104,6 @@ export default function Page() {
         {ordered.length === 0 ? (
           <EmptyDownloadsIntro />
         ) : (
-
           <div className="grid gap-2 grid-cols-[repeat(auto-fill,_minmax(500px,_1fr))]">
             <AnimatePresence initial={false}>
               {ordered.map((item) => {
@@ -111,11 +112,20 @@ export default function Page() {
                   <motion.div
                     key={item.id}
                     layout
-                    initial={highlighted ? { opacity: 0, y: 16, scale: 0.98 } : false}
+                    initial={
+                      highlighted ? { opacity: 0, y: 16, scale: 0.98 } : false
+                    }
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8 }}
-                    transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.6 }}
-                    className={highlighted ? "ring-2 ring-blue-500/40 rounded-xl" : ""}
+                    transition={{
+                      type: "spring",
+                      stiffness: 420,
+                      damping: 34,
+                      mass: 0.6,
+                    }}
+                    className={
+                      highlighted ? "ring-2 ring-blue-500/40 rounded-xl" : ""
+                    }
                   >
                     <DownloadItem download={item} />
                   </motion.div>

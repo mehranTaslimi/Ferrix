@@ -19,13 +19,11 @@ import { cn } from "@/lib/utils";
 export default function AppSidebar() {
   const { downloads, selectedMimeType, setSelectedMimeType } = useDownloads();
 
-
   const mimeCounts = downloads.reduce((acc, d) => {
     const mime = (d.content_type || "application/octet-stream").toLowerCase();
     acc[mime] = (acc[mime] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
-
 
   const grouped = Object.entries(mimeCounts).reduce((acc, [mime, count]) => {
     const label = labelForMime(mime);
@@ -35,11 +33,9 @@ export default function AppSidebar() {
     return acc;
   }, {} as Record<string, { count: number; mimeTypes: string[] }>);
 
-
   const categories = Object.entries(grouped).sort((a, b) => {
     if (b[1].count !== a[1].count) return b[1].count - a[1].count;
     return a[0].localeCompare(b[0]);
-
   });
 
   const total = downloads.length;
@@ -74,7 +70,10 @@ export default function AppSidebar() {
                       </span>
                     )}
                   </div>
-                  <Badge variant="outline" className="ml-2 rounded-full h-6 w-6">
+                  <Badge
+                    variant="outline"
+                    className="ml-2 rounded-full h-6 w-6"
+                  >
                     {total}
                   </Badge>
                 </SidebarMenuButton>
@@ -84,7 +83,8 @@ export default function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>File Types</SidebarGroupLabel>
+          {!!total && <SidebarGroupLabel>File Types</SidebarGroupLabel>}
+
           <SidebarGroupContent>
             <SidebarMenu>
               {categories.map(([label, { count, mimeTypes }]) => {
@@ -101,15 +101,17 @@ export default function AppSidebar() {
                         setSelectedMimeType(isSelected ? null : primaryMime)
                       }
                       className={cn(
-                        "w-full justify-between h-auto p-2 rounded-md",
-
+                        "w-full justify-between h-auto p-2 rounded-md"
                       )}
                     >
                       <div className="flex items-center gap-2">
                         {iconForMime(primaryMime)}
                         <span>{label}</span>
                       </div>
-                      <Badge variant="outline" className="h-6 w-6 ml-2 rounded-full">
+                      <Badge
+                        variant="outline"
+                        className="h-6 w-6 ml-2 rounded-full"
+                      >
                         {count}
                       </Badge>
                     </SidebarMenuButton>
