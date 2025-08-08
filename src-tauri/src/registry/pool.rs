@@ -14,9 +14,20 @@ impl super::Registry {
                     std::env::var("DATABASE_URL").expect("DATABASE_URL in .env file not set")
                 )
             } else {
-                path.as_ref()
-                    .map(|p| p.join("database.db?mode=rwc").to_string_lossy().to_string())
-                    .expect("failed to get app data directory")
+                let data_path = path.as_ref().expect("failed to get app data directory");
+                let is_exist = std::fs::metadata(data_path).is_ok();
+
+                if !is_exist {
+                    std::fs::create_dir_all(data_path)
+                        .expect("faild to create ferrix data directory");
+                };
+
+                let db_path = data_path
+                    .join("database.db?mode=rwc")
+                    .to_string_lossy()
+                    .to_string();
+
+                format!("sqlite://{}", db_path)
             }
         };
 
