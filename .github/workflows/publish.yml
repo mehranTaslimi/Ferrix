@@ -2,7 +2,7 @@ name: publish
 
 on:
   push:
-    branches: [release]
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -38,11 +38,8 @@ jobs:
           node-version: lts/*
           cache: pnpm
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
-          run_install: false
+      - name: Install pnpm
+        run: npm install -g pnpm@latest
 
       - name: Setup Rust (stable)
         uses: dtolnay/rust-toolchain@stable
