@@ -80,7 +80,7 @@ jobs:
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }} --release
+          args: ${{ matrix.args }}
 
       - name: List built files (debug)
         run: |
