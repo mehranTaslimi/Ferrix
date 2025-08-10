@@ -4,9 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 .light {
-  --background: oklch(0.795 0 0);
+  --background: oklch(0.9 0 0);
   --foreground: rgb(0, 0, 0);
-  --card: oklch(0.015 0 0 / 0.05);
+  --card: oklch(1 0 0);
   --card-foreground: rgb(0, 0, 0);
   --popover: oklch(0.795 0 0);
   --popover-foreground: rgb(0, 0, 0);

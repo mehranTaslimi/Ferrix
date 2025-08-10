@@ -18,7 +18,7 @@ export function EmptyDownloadsIntro() {
     const shouldInvert = theme === "light" || (theme === "system" && systemTheme === "light");
 
     return (
-        <Card className="overflow-hidden border-0 bg-transparent">
+        <Card className="overflow-hidden border-0 bg-transparent shadow-none">
             <CardContent className="py-14">
                 <div className="flex flex-col items-center text-center px-6">
 
