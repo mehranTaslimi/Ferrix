@@ -72,7 +72,7 @@ export default function AppSidebar() {
                   </div>
                   <Badge
                     variant="outline"
-                    className="ml-2 rounded-full h-6 w-6"
+                    className="ml-2 rounded-full h-6 w-6 dark:text-white text-black"
                   >
                     {total}
                   </Badge>
@@ -110,7 +110,7 @@ export default function AppSidebar() {
                       </div>
                       <Badge
                         variant="outline"
-                        className="h-6 w-6 ml-2 rounded-full"
+                        className="h-6 w-6 ml-2 rounded-full dark:text-white text-black"
                       >
                         {count}
                       </Badge>
