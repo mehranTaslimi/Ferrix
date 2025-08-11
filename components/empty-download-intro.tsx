@@ -1,18 +1,33 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { shouldApplyBackdropBlur } from "@/utils/os-utils";
+import { useTheme } from "next-themes";
 
 export function EmptyDownloadsIntro() {
+    const [shouldBlur, setShouldBlur] = useState<boolean>(false);
+    const { theme, systemTheme } = useTheme();
+
+    useEffect(() => {
+        (async () => {
+            const blur = await shouldApplyBackdropBlur();
+            setShouldBlur(blur);
+        })();
+    }, []);
+
+    const shouldInvert = theme === "light" || (theme === "system" && systemTheme === "light");
+
     return (
-        <Card className="overflow-hidden border-0 bg-transparent">
+        <Card className="overflow-hidden border-0 bg-transparent shadow-none">
             <CardContent className="py-14">
                 <div className="flex flex-col items-center text-center px-6">
 
                     <div className="relative mb-6">
-                        <div className="h-16 w-16 rounded-2xl bg-white/5 ring-1 ring-white/10 backdrop-blur-sm grid place-items-center">
+                        <div className={`h-16 w-16 rounded-2xl bg-white/5 ring-1 ring-white/10 ${shouldBlur ? "backdrop-blur-sm" : ""} grid place-items-center`}>
                             <img
                                 src="/logo.png"
                                 alt="Ferrix"
-                                className="h-12 w-12 opacity-90"
+                                className={`h-12 w-12 opacity-90 ${shouldInvert ? "filter invert" : ""}`}
                             />
                         </div>
                     </div>
@@ -24,7 +39,7 @@ export function EmptyDownloadsIntro() {
                         transition={{ duration: 0.6, ease: "easeOut" }}
                     >
                         <motion.span
-                            className="bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60 inline-block"
+                            className="bg-clip-text text-transparent bg-gradient-to-r dark:from-white dark:to-white/60 from-black to-black/60 inline-block"
                             initial={{ backgroundPositionX: "0%" }}
                             animate={{ backgroundPositionX: "100%" }}
                             transition={{
@@ -48,16 +63,16 @@ export function EmptyDownloadsIntro() {
                     </p>
 
                     <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px]">
-                        <span className="rounded-full border bg-white/5 px-2.5 py-1 text-white/80">
+                        <span className="rounded-full border bg-white/5 px-2.5 py-1 dark:text-white/80 text-black/80">
                             Multi-chunk engine
                         </span>
-                        <span className="rounded-full border bg-white/5 px-2.5 py-1 text-white/80">
+                        <span className="rounded-full border bg-white/5 px-2.5 py-1 dark:text-white/80 text-black/80">
                             Resume & verify
                         </span>
-                        <span className="rounded-full border bg-white/5 px-2.5 py-1 text-white/80">
+                        <span className="rounded-full border bg-white/5 px-2.5 py-1 dark:text-white/80 text-black/80">
                             Smart backoff
                         </span>
-                        <span className="rounded-full border bg-white/5 px-2.5 py-1 text-white/80">
+                        <span className="rounded-full border bg-white/5 px-2.5 py-1 dark:text-white/80 text-black/80">
                             Native notifications
                         </span>
                     </div>
