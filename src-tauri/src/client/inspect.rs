@@ -23,13 +23,9 @@ impl super::Client {
         let status = response.status();
         let final_url = response.url().clone();
         let headers = response.headers().clone();
-        let body = response.text().await?;
 
         if !status.is_success() {
-            return Err(super::ClientError::Http {
-                status,
-                message: body,
-            });
+            return Err(super::ClientError::Http { status });
         }
 
         let supports_range = headers
