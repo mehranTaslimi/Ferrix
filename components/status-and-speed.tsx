@@ -44,8 +44,11 @@ function StatusPill({ status }: { status: Status }) {
     [Status.Completed]: { label: "Completed", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
     [Status.Failed]: { label: "Failed", cls: "bg-red-500/10 text-red-500 border-red-500/20" },
     [Status.Error]: { label: "Error", cls: "bg-red-500/10 text-red-500 border-red-500/20" },
+    [Status.Trying]: { label: "Trying", cls: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
   };
+
   const { label, cls } = map[status];
+
   return (
     <span className={clsx("inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium", cls)}>
       {label}
@@ -68,7 +71,7 @@ function StatusAndSpeed({
   const [wroteBytes, setWroteBytes] = useState(initialDownloadedBytes);
   const [sr, setSr] = useState<SpeedAndRemaining>({ speed: 0, diskSpeed: 0, remaining_time: 0 });
 
-  
+
   const [series, setSeries] = useState<SpeedPoint[]>([]);
   const tRef = useRef(0);
   const lastNet = useRef(0);
@@ -79,10 +82,10 @@ function StatusAndSpeed({
       setDownloadedBytes(ev.payload);
     });
 
-    
+
     const un2 = listen<SpeedAndRemaining>(`speed_and_remaining_${id}`, (ev) => {
       const net = Math.max(0, ev.payload.speed ?? 0);
-      const disk = lastDisk.current; 
+      const disk = lastDisk.current;
       lastNet.current = net;
 
       setSr((prev) => ({ ...prev, ...ev.payload }));
@@ -95,7 +98,7 @@ function StatusAndSpeed({
       });
     });
 
-    
+
     const un3 = listen<number>(`disk_speed_${id}`, (ev) => {
       const disk = Math.max(0, ev.payload ?? 0);
       const net = lastNet.current;
