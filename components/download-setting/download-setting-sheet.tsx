@@ -30,7 +30,17 @@ interface DownloadSettingSheetProps {
   url: string;
   setUrl: (url: string) => void;
 }
-
+const getDefaultFormValues = (url: string): DownloadFormData => ({
+  maxRetries: 3,
+  backoffFactor: 2,
+  timeoutSecs: 30,
+  url,
+  chunk: 5,
+  headers: [],
+  cookies: [],
+  auth: { type: "None" },
+  proxy: {},
+});
 export default function DownloadSettingSheet({
   open,
   onOpenChange,
@@ -38,34 +48,20 @@ export default function DownloadSettingSheet({
   url,
 }: DownloadSettingSheetProps) {
   const [isLoading, setIsLoading] = useState(false);
-
   const form = useForm<DownloadFormData>({
     resolver: zodResolver(downloadFormSchema),
-    defaultValues: {
-      url,
-      chunk: 5,
-      headers: [],
-      cookies: [],
-      proxy: {
-        enabled: false,
-        type: "http",
-        host: "",
-        port: 8080,
-        auth: undefined,
-      },
-    },
+    defaultValues: getDefaultFormValues(url),
     mode: "onBlur",
   });
 
   useEffect(() => {
     if (open) {
-      // sync incoming URL into form on open
-      form.reset({ url, chunk: form.getValues("chunk") || 5 });
+      form.setValue("url", url.trim());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleSubmit = async (values: DownloadFormData) => {
+    console.log("Submitting form with values:", values);
     if (!values.url?.trim()) {
       form.setError("url", { type: "manual", message: "URL is required" });
       return;
@@ -95,9 +91,10 @@ export default function DownloadSettingSheet({
         url: values.url.trim(),
         options: {
           proxy,
-          ...(values.auth && {
-            auth: { ...values.auth, type: values.auth.type.toLowerCase() },
-          }),
+          ...(values.auth &&
+            values.auth?.type !== "None" && {
+              auth: { ...values.auth, type: values.auth.type.toLowerCase() },
+            }),
           headers: Object.keys(headers).length ? headers : undefined,
           cookies: Object.keys(cookies).length ? cookies : undefined,
           chunk_count: values.chunk,
@@ -112,12 +109,7 @@ export default function DownloadSettingSheet({
       toast.success("Download added");
       setUrl(values.url.trim());
       onOpenChange(false);
-      form.reset({
-        url: values.url.trim(),
-        chunk: 5,
-        headers: [],
-        cookies: [],
-      });
+      form.reset(getDefaultFormValues(""));
     } catch (err: unknown) {
       const error = err as Error;
       console.error("Failed to add download:", err);
@@ -138,7 +130,6 @@ export default function DownloadSettingSheet({
       form.handleSubmit(handleSubmit)();
     }
   };
-
   return (
     <Sheet open={open} onOpenChange={(v) => !isLoading && onOpenChange(v)}>
       <SheetContent className="sm:max-w-md p-2 h-full">
