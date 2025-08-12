@@ -151,10 +151,6 @@ impl DownloadWorker {
             (client, range, timeout_secs, file)
         };
 
-        if chunk.chunk_index == 2 {
-            return Err(ClientError::StreamTimeout);
-        }
-
         let mut stream = client.stream(range).await?;
 
         loop {
