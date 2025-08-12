@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/logo.png" alt="Ferrix Logo" width="128"/>
+  <img src="./docs/assets/logo.png" alt="Ferrix Logo" width="128"/>
 </p>
 
 <h1 align="center">Ferrix 🦀 ⬇️</h1>
@@ -70,7 +70,7 @@ pnpm dev:all
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="./assets/screenshot.png" width="700" alt="Ferrix UI Screenshot"/>
+  <img src="./docs/assets/screenshot.png" width="700" alt="Ferrix UI Screenshot"/>
 </p>
 
 ---
