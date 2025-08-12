@@ -14,6 +14,7 @@ dependencies = [
  "dashmap",
  "dotenvy",
  "env_logger",
+ "fastrand",
  "fs2",
  "futures-util",
  "log",
