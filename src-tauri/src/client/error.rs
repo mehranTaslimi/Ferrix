@@ -7,8 +7,8 @@ pub enum ClientError {
     #[error("{0}")]
     Reqwest(#[from] reqwest::Error),
 
-    #[error("{status}: {message}")]
-    Http { status: StatusCode, message: String },
+    #[error("{status}")]
+    Http { status: StatusCode },
 
     #[error("{0}")]
     Deserialize(#[from] serde_json::Error),

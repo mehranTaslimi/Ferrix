@@ -55,8 +55,7 @@ export default function DownloadBar({
       });
       form.setValue("url", "");
     } catch (error) {
-      console.error("Failed to add download:", error);
-      toast.error("Failed to add download. Please check the URL.");
+      toast.error(`${error}`);
     } finally {
       setIsLoading(false);
     }
