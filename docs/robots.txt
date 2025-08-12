@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mehrantaslimi.github.io/Ferrix/sitemap.xml
