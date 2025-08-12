@@ -37,7 +37,7 @@ export default function ActionButtons({
   const handleToggleDownload = useCallback(async () => {
     if (status === Status.Paused) {
       await invoke("resume_download", { id: downloadId });
-    } else if (status === Status.Downloading) {
+    } else {
       await invoke("pause_download", { id: downloadId });
     }
   }, [status, downloadId]);

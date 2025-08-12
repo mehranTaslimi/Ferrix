@@ -10,6 +10,7 @@ use crate::{
     registry::{Registry, Report},
 };
 
+mod backoff;
 mod bandwidth;
 mod download;
 mod status;

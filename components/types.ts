@@ -34,4 +34,5 @@ export enum Status {
   Failed = "failed",
   Writing = "writing",
   Error = "error",
+  Trying = "trying",
 }
