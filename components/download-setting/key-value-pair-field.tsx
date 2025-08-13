@@ -21,7 +21,6 @@ export default function KeyValuePairField({
     control,
     name,
   });
-
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">{label}</label>

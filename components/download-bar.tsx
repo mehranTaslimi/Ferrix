@@ -54,6 +54,7 @@ export default function DownloadBar({
         },
       });
       form.setValue("url", "");
+      setUrl("");
     } catch (error) {
       toast.error(`${error}`);
     } finally {
