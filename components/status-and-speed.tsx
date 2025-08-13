@@ -35,17 +35,18 @@ function fmtRemaining(s: number) {
   return sec > 1 ? `${sec} seconds` : "1 second";
 }
 
-function StatusPill({ status }: { status: Status }) {
-  const map: Record<Status, { label: string; cls: string }> = {
-    [Status.Downloading]: { label: "Downloading", cls: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-    [Status.Writing]: { label: "Writing", cls: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
-    [Status.Paused]: { label: "Paused", cls: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" },
-    [Status.Queued]: { label: "Queued", cls: "bg-muted text-foreground/70 border-transparent" },
-    [Status.Completed]: { label: "Completed", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
-    [Status.Failed]: { label: "Failed", cls: "bg-red-500/10 text-red-500 border-red-500/20" },
-    [Status.Error]: { label: "Error", cls: "bg-red-500/10 text-red-500 border-red-500/20" },
-    [Status.Trying]: { label: "Trying", cls: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
-  };
+function StatusPill({ status, errorMessage }: { status: Status, errorMessage: string }) {
+  const map: Record<Status, { label: string; cls: string }> = useMemo(() => {
+    return {
+      [Status.Downloading]: { label: "Downloading", cls: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+      [Status.Writing]: { label: "Writing", cls: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
+      [Status.Paused]: { label: "Paused", cls: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" },
+      [Status.Queued]: { label: "Queued", cls: "bg-muted text-foreground/70 border-transparent" },
+      [Status.Completed]: { label: "Completed", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
+      [Status.Failed]: { label: `Download Failed ${errorMessage}`, cls: "bg-red-500/10 text-red-500 border-red-500/20" },
+      [Status.Trying]: { label: `Trying ${errorMessage}`, cls: "bg-red-400/10 text-red-400 border-red-400/20" },
+    }
+  }, [errorMessage]);
 
   const { label, cls } = map[status];
 
@@ -60,12 +61,14 @@ function StatusAndSpeed({
   id,
   totalBytes,
   status,
+  errorMessage,
   downloadedBytes: initialDownloadedBytes,
 }: {
   id: number;
   totalBytes: number;
   status: Status;
   downloadedBytes: number;
+  errorMessage: string
 }) {
   const [downloadedBytes, setDownloadedBytes] = useState(initialDownloadedBytes);
   const [wroteBytes, setWroteBytes] = useState(initialDownloadedBytes);
@@ -132,7 +135,7 @@ function StatusAndSpeed({
   }, [initialDownloadedBytes]);
 
   const isWriting = status === Status.Writing;
-  const isDownloading = status === Status.Downloading;
+  const isDownloading = status === Status.Downloading || status === Status.Trying;
 
   const progress = useMemo(() => {
     const bytes = isWriting ? wroteBytes : downloadedBytes;
@@ -143,7 +146,7 @@ function StatusAndSpeed({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <StatusPill status={status} />
+          <StatusPill status={status} errorMessage={errorMessage} />
           {isDownloading && (
             <>
               <span className="text-xs text-muted-foreground">•</span>

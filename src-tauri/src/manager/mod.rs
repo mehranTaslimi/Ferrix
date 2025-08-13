@@ -1,3 +1,4 @@
+use log::debug;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
@@ -11,7 +12,7 @@ mod reports;
 pub use actions::DownloadOptions;
 pub use event::ManagerAction;
 
-use crate::spawn;
+use crate::{emitter::Emitter, spawn};
 
 #[derive(Debug)]
 pub struct DownloadsManager {
@@ -34,7 +35,10 @@ impl DownloadsManager {
 
         spawn!("manager_mpsc", {
             while let Some(action) = rx.recv().await {
-                self_clone.reducer(action).await;
+                if let Err(err) = self_clone.reducer(action).await {
+                    debug!("{}", err.to_string());
+                    Emitter::emit_error(err.to_string());
+                }
             }
         });
     }

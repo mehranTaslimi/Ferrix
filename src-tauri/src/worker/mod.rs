@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Context};
 use dashmap::DashMap;
 use std::{sync::Arc, time::Instant};
 use tokio::sync::{mpsc::UnboundedSender, Mutex, Notify, RwLock};
@@ -38,32 +39,33 @@ pub struct DownloadWorker {
 }
 
 impl DownloadWorker {
-    pub async fn new(download_id: i64) -> Result<Arc<Self>, ()> {
+    pub async fn new(download_id: i64) -> anyhow::Result<Arc<Self>> {
         let chunks_status = Arc::new(DashMap::new());
         let notify = Arc::new(Notify::new());
         let state = Registry::get_state();
-        let worker_ref = state.workers.get(&download_id);
-        let report_ref = state.reports.get(&download_id);
+        let worker = state
+            .workers
+            .get(&download_id)
+            .context(anyhow!("cannot find worker with id {}", download_id))?;
+        let report = state
+            .reports
+            .get(&download_id)
+            .context(anyhow!("cannot find report with id {}", download_id))?;
         let stream_duration = Arc::new(Mutex::new(None));
         let received_bytes = Arc::new(Mutex::new(0));
 
-        if let (Some(worker), Some(report)) = (worker_ref, report_ref) {
-            let w = Arc::new(Self {
-                download_id,
-                data: Arc::clone(&worker),
-                report: Arc::clone(&report),
-                chunks_status,
-                notify,
-                stream_duration,
-                received_bytes,
-            });
+        let w = Arc::new(Self {
+            download_id,
+            data: Arc::clone(&worker),
+            report: Arc::clone(&report),
+            chunks_status,
+            notify,
+            stream_duration,
+            received_bytes,
+        });
 
-            w.start_status_listener().await;
+        w.start_status_listener().await;
 
-            Ok(w)
-        } else {
-            Emitter::emit_error("download not found");
-            Err(())
-        }
+        Ok(w)
     }
 }

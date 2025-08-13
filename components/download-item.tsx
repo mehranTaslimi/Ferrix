@@ -38,6 +38,7 @@ function DownloadItem({ download }: { download: DownloadType }) {
         {!isDone && (
           <div className="mt-3">
             <StatusAndSpeed
+              errorMessage={download.error_message}
               id={download.id}
               totalBytes={download.total_bytes}
               downloadedBytes={download.downloaded_bytes}

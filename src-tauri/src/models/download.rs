@@ -100,9 +100,9 @@ pub struct UpdateDownload {
 }
 
 impl TryFrom<DownloadRaw> for Download {
-    type Error = sqlx::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(raw: DownloadRaw) -> Result<Self, Self::Error> {
+    fn try_from(raw: DownloadRaw) -> anyhow::Result<Self> {
         let proxy = match raw.proxy {
             Some(str) => {
                 Some(serde_json::from_str(&str).map_err(|e| sqlx::Error::Decode(Box::new(e)))?)

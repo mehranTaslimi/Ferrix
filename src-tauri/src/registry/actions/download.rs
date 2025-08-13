@@ -110,7 +110,7 @@ impl DownloadActions for Registry {
             .map(|f| (f.chunk_index, AtomicU64::new(f.downloaded_bytes as u64)))
             .collect();
 
-        let buffer = File::get_chunks_bytes_from_file(download.id).await?;
+        // let buffer = File::get_chunks_bytes_from_file(download.id).await?;
 
         reports.insert(
             download.id,
@@ -127,7 +127,7 @@ impl DownloadActions for Registry {
                 last_update_downloaded_bytes: AtomicU64::new(download.downloaded_bytes as u64),
                 stable_speed: AtomicBool::new(false),
                 last_update_time: Arc::new(Mutex::new(Instant::now())),
-                buffer: Arc::new(buffer),
+                buffer: Arc::new(DashMap::new()),
             }),
         );
 

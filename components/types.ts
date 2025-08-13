@@ -12,6 +12,7 @@ export interface DownloadType {
   extension: Extension;
   file_exist: boolean;
   modified_at: string;
+  error_message: string;
 }
 
 export enum ContentType {
@@ -33,6 +34,5 @@ export enum Status {
   Paused = "paused",
   Failed = "failed",
   Writing = "writing",
-  Error = "error",
   Trying = "trying",
 }
