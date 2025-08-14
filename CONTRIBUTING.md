@@ -49,7 +49,7 @@ We are committed to providing a welcoming and harassment-free experience for eve
 - **pnpm** package manager → `npm install -g pnpm`
 - **SQLite** (for local database)
 
-### Clone & Install
+### 1. Clone & Install
 
 ```bash
 git clone https://github.com/mehranTaslimi/Ferrix.git
@@ -57,7 +57,24 @@ cd Ferrix
 pnpm install
 ```
 
-### Run in Development
+### 2. Create .env file in the project root
+
+```
+DATABASE_URL=sqlite://./database.db?mode=rwc
+RUST_LOG=ferrix_lib=debug
+```
+
+### 3. Run database migrations
+
+```bash
+# Install sqlx-cli (for database migrations)
+cargo install sqlx-cli --no-default-features --features sqlite
+
+cd src-tauri
+cargo sqlx migrate run
+```
+
+### 4. Run in Development
 
 ```bash
 pnpm dev:all
