@@ -54,7 +54,7 @@ export default function BasicTab({ handleKeyPress }: BasicTabProps) {
               <FormControl>
                 <Slider
                   min={1}
-                  max={16}
+                  max={5}
                   step={1}
                   value={[val]}
                   onValueChange={(v) => field.onChange(v[0])}
