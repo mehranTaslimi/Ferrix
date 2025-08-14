@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    path::PathBuf,
     sync::{atomic::Ordering, Arc},
 };
 
@@ -47,7 +48,11 @@ impl super::DownloadsManager {
         let response = client.inspect().await.map_err(|e| e.to_string())?;
 
         let file_path = match options.file_path {
-            Some(path) => path,
+            Some(path) => {
+                let mut path_buf = PathBuf::from(path);
+                path_buf.push(&response.file_name);
+                path_buf.to_string_lossy().into_owned()
+            }
             None => {
                 let default_path = File::get_default_path(&response.file_name).await?;
                 File::get_available_filename(&default_path).await?

@@ -40,7 +40,9 @@ const getDefaultFormValues = (url: string): DownloadFormData => ({
   cookies: [],
   auth: { type: "None" },
   proxy: {},
+  filePath: "",
 });
+
 export default function DownloadSettingSheet({
   open,
   onOpenChange,
@@ -98,7 +100,9 @@ export default function DownloadSettingSheet({
           headers: Object.keys(headers).length ? headers : undefined,
           cookies: Object.keys(cookies).length ? cookies : undefined,
           chunk_count: values.chunk,
-          file_path: values.filePath || undefined,
+          ...(!!values.filePath && {
+            file_path: values.filePath,
+          }),
           speed_limit: values.speedLimit || undefined,
           max_retries: values.maxRetries || undefined,
           backoff_factor: values.backoffFactor || undefined,
@@ -107,8 +111,8 @@ export default function DownloadSettingSheet({
       });
 
       toast.success("Download added");
-      setUrl(values.url.trim());
       onOpenChange(false);
+      setUrl("");
       form.reset(getDefaultFormValues(""));
     } catch (err: unknown) {
       const error = err as Error;
