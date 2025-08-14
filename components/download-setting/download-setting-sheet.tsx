@@ -111,8 +111,8 @@ export default function DownloadSettingSheet({
       });
 
       toast.success("Download added");
-      setUrl(values.url.trim());
       onOpenChange(false);
+      setUrl("");
       form.reset(getDefaultFormValues(""));
     } catch (err: unknown) {
       const error = err as Error;
