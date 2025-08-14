@@ -55,7 +55,7 @@ window-vibrancy = "0.6.0"
 num_cpus = "1.17.0"
 mime2ext = "0.1.54"
 thiserror = "2.0.12"
-dashmap = "6.1.0"
+dashmap = { version = "6.1.0", features = ["serde"] }
 fs2 = "0.4.3"
 cookie = "0.18.1"
 log = "0.4"

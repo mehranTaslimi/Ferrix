@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
@@ -13,10 +15,12 @@ import {
 } from "@/components/ui/sidebar";
 import { useDownloads } from "./download-context";
 import { iconForMime, labelForMime } from "@/utils/mime-utils";
-import { FileIcon, X } from "lucide-react";
+import { FileIcon, X, Settings as SettingsIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AppSidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
   const { downloads, selectedMimeType, setSelectedMimeType } = useDownloads();
 
   const mimeCounts = downloads.reduce((acc, d) => {
@@ -41,6 +45,11 @@ export default function AppSidebar() {
   const total = downloads.length;
   const isFiltered = selectedMimeType !== null;
 
+  const goHomeThen = (fn?: () => void) => {
+    if (pathname !== "/") router.push("/");
+    fn?.();
+  };
+
   return (
     <Sidebar className="border-none">
       <SidebarContent>
@@ -49,8 +58,8 @@ export default function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={!isFiltered}
-                  onClick={() => setSelectedMimeType(null)}
+                  isActive={pathname === "/" && !isFiltered}
+                  onClick={() => goHomeThen(() => setSelectedMimeType(null))}
                   className="w-full justify-between h-auto p-3 rounded-md"
                 >
                   <div className="flex items-center gap-2">
@@ -60,7 +69,7 @@ export default function AppSidebar() {
                       <span
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedMimeType(null);
+                          goHomeThen(() => setSelectedMimeType(null));
                         }}
                         className="ml-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                         title="Clear filter"
@@ -84,7 +93,6 @@ export default function AppSidebar() {
 
         <SidebarGroup>
           {!!total && <SidebarGroupLabel>File Types</SidebarGroupLabel>}
-
           <SidebarGroupContent>
             <SidebarMenu>
               {categories.map(([label, { count, mimeTypes }]) => {
@@ -96,13 +104,13 @@ export default function AppSidebar() {
                 return (
                   <SidebarMenuItem key={label}>
                     <SidebarMenuButton
-                      isActive={isSelected}
+                      isActive={pathname === "/" && isSelected}
                       onClick={() =>
-                        setSelectedMimeType(isSelected ? null : primaryMime)
+                        goHomeThen(() =>
+                          setSelectedMimeType(isSelected ? null : primaryMime)
+                        )
                       }
-                      className={cn(
-                        "w-full justify-between h-auto p-2 rounded-md"
-                      )}
+                      className={cn("w-full justify-between h-auto p-2 rounded-md")}
                     >
                       <div className="flex items-center gap-2">
                         {iconForMime(primaryMime)}
@@ -118,6 +126,28 @@ export default function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>App</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname.startsWith("/settings")}
+                  className="w-full justify-between h-auto p-3 rounded-md"
+                >
+                  <Link href="/settings">
+                    <div className="flex items-center gap-2">
+                      <SettingsIcon className="w-4 h-4" />
+                      <span className="font-medium">Settings</span>
+                    </div>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

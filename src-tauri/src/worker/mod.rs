@@ -5,7 +5,6 @@ use tokio::sync::{mpsc::UnboundedSender, Mutex, Notify, RwLock};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    emitter::Emitter,
     file::WriteMessage,
     models::{Download, DownloadChunk},
     registry::{Registry, Report},

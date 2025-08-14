@@ -23,6 +23,7 @@ mod actions;
 mod event;
 mod pool;
 
+pub use actions::TaskStatus;
 pub use event::RegistryAction;
 
 #[derive(Debug)]
@@ -46,6 +47,8 @@ pub struct Report {
 pub struct State {
     pub pool: SqlitePool,
     pub current_tasks: Arc<Semaphore>,
+    pub tasks: Arc<DashMap<u64, actions::Task>>,
+    pub task_id: Arc<AtomicU64>,
     pub app_handle: Arc<AppHandle>,
     pub available_permits: Arc<AtomicUsize>,
     pub pending_queue: Arc<Mutex<VecDeque<i64>>>,
@@ -82,11 +85,15 @@ impl Registry {
         let bandwidth_limit = Arc::new(AtomicF64::new(0.0));
         let spawn_cancellation_token = Arc::new(CancellationToken::new());
         let download_speed = Arc::new(AtomicF64::new(0.0));
+        let tasks = Arc::new(DashMap::new());
+        let task_id = Arc::new(AtomicU64::new(0));
 
         let state = Arc::new(State {
             pool,
+            tasks,
             reports,
             workers,
+            task_id,
             manager,
             app_handle,
             mpsc_sender,
