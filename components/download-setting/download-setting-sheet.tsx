@@ -77,12 +77,12 @@ export default function DownloadSettingSheet({
 
     const proxy = values.proxy?.enabled
       ? {
-          type: values.proxy.type,
-          host: values.proxy.host,
-          port: values.proxy.port,
-          username: values.proxy?.auth?.username,
-          password: values.proxy?.auth?.password,
-        }
+        type: values.proxy.type,
+        host: values.proxy.host,
+        port: values.proxy.port,
+        username: values.proxy?.auth?.username,
+        password: values.proxy?.auth?.password,
+      }
       : undefined;
     const headers = kvToRecord(values.headers);
     const cookies = kvToRecord(values.cookies);
@@ -95,8 +95,8 @@ export default function DownloadSettingSheet({
           proxy,
           ...(values.auth &&
             values.auth?.type !== "None" && {
-              auth: { ...values.auth, type: values.auth.type.toLowerCase() },
-            }),
+            auth: { ...values.auth, type: values.auth.type.toLowerCase() },
+          }),
           headers: Object.keys(headers).length ? headers : undefined,
           cookies: Object.keys(cookies).length ? cookies : undefined,
           chunk_count: values.chunk,
@@ -148,7 +148,7 @@ export default function DownloadSettingSheet({
             className="h-full flex flex-col gap-2 overflow-y-auto"
           >
             <Tabs defaultValue="basic" className="flex-1">
-              <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10">
+              <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10 dark:bg-muted/5 bg-muted/30">
                 <TabsTrigger value="basic">Basic</TabsTrigger>
                 <TabsTrigger value="advanced">Advanced</TabsTrigger>
               </TabsList>
