@@ -4,17 +4,21 @@ macro_rules! spawn {
         let state = $crate::registry::Registry::get_state();
 
         let permit = ::std::sync::Arc::clone(&state.current_tasks);
+        let task_id = ::std::sync::Arc::clone(&state.task_id);
         let available_permits = ::std::sync::Arc::clone(&state.available_permits);
         let spawn_cancellation_token = ::std::sync::Arc::clone(&state.spawn_cancellation_token);
 
         tokio::spawn(async move {
             let acquired = permit.acquire().await.unwrap();
 
-            let count = available_permits.swap(
+            let task_id = task_id.fetch_add(1, ::std::sync::atomic::Ordering::SeqCst);
+
+            $crate::dispatch!(registry, AddTask, (task_id, $name.into()));
+
+            available_permits.swap(
                 permit.available_permits(),
                 ::std::sync::atomic::Ordering::SeqCst,
             );
-            log::debug!("🔵 {} {}", count, $name);
 
             tokio::select! {
                 _ = async move $body => {}
@@ -23,11 +27,15 @@ macro_rules! spawn {
 
             drop(acquired);
 
-            let count = available_permits.swap(
+            available_permits.swap(
                 permit.available_permits(),
                 ::std::sync::atomic::Ordering::SeqCst,
             );
-            log::debug!("⚪️ {} {}", count, $name);
+            $crate::dispatch!(
+                registry,
+                ChangeTaskStatus,
+                (task_id, $crate::registry::TaskStatus::Completed)
+            );
         });
     }};
 }

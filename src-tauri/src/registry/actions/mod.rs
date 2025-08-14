@@ -4,4 +4,4 @@ mod system;
 
 pub use download::DownloadActions;
 pub use report::ReportActions;
-pub use system::SystemActions;
+pub use system::{SystemActions, Task, TaskStatus};

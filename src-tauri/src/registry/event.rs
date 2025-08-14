@@ -1,3 +1,5 @@
+use crate::registry::actions::TaskStatus;
+
 use super::actions::{DownloadActions, ReportActions, SystemActions};
 
 use anyhow::Context;
@@ -25,6 +27,8 @@ pub enum RegistryAction {
         /* Chunk Index */ i64,
         /* Bytes */ Vec<u8>,
     ),
+    AddTask(u64, String),
+    ChangeTaskStatus(u64, TaskStatus),
 }
 
 impl super::Registry {
@@ -64,6 +68,8 @@ impl super::Registry {
             // System
             CheckAvailablePermit => Self::check_available_permit().await,
             CloseRequested => Self::close_request().await,
+            AddTask(task_id, task_name) => Self::add_task(task_id, task_name).await,
+            ChangeTaskStatus(task_id, status) => Self::change_task_status(task_id, status).await,
         }
     }
 }

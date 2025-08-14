@@ -6,7 +6,7 @@ use crate::{
 pub struct DownloadRepository;
 
 impl DownloadRepository {
-    pub async fn find_all(status: Option<&str>) -> Result<Vec<Download>, sqlx::Error> {
+    pub async fn find_all(status: Option<&str>) -> anyhow::Result<Vec<Download>> {
         let pool = Registry::get_pool();
 
         let query = r#"
@@ -67,7 +67,7 @@ impl DownloadRepository {
             .collect::<Result<Vec<_>, _>>()
     }
 
-    pub async fn find(id: i64) -> Result<Download, sqlx::Error> {
+    pub async fn find(id: i64) -> anyhow::Result<Download> {
         let pool = Registry::get_pool();
         let raw = sqlx::query_as!(
             DownloadRaw,
@@ -119,7 +119,7 @@ GROUP BY d.id;
         Download::try_from(raw)
     }
 
-    pub async fn add(new: NewDownload) -> Result<i64, sqlx::Error> {
+    pub async fn add(new: NewDownload) -> anyhow::Result<i64> {
         let pool = Registry::get_pool();
 
         let mut fields = vec![
@@ -210,13 +210,10 @@ GROUP BY d.id;
             query_builder = query_builder.bind(param);
         }
 
-        query_builder
-            .execute(pool)
-            .await
-            .map(|op| op.last_insert_rowid())
+        Ok(query_builder.execute(pool).await?.last_insert_rowid())
     }
 
-    pub async fn update(id: i64, update: UpdateDownload) -> Result<(), sqlx::Error> {
+    pub async fn update(id: i64, update: UpdateDownload) -> anyhow::Result<()> {
         let pool = Registry::get_pool();
 
         let mut fields = Vec::new();
@@ -300,11 +297,12 @@ GROUP BY d.id;
         Ok(())
     }
 
-    pub async fn delete(id: i64) -> Result<String, sqlx::Error> {
+    pub async fn delete(id: i64) -> anyhow::Result<String> {
         let pool = Registry::get_pool();
-        sqlx::query!("DELETE FROM downloads WHERE id = ? RETURNING file_path", id)
+        let record = sqlx::query!("DELETE FROM downloads WHERE id = ? RETURNING file_path", id)
             .fetch_one(pool)
-            .await
-            .map(|record| record.file_path)
+            .await?;
+
+        Ok(record.file_path)
     }
 }

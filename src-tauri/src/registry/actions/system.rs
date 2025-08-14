@@ -1,4 +1,10 @@
-use std::sync::{atomic::Ordering, Arc};
+use std::{
+    sync::{atomic::Ordering, Arc},
+    time::Instant,
+};
+
+use log::debug;
+use serde::Serialize;
 
 use crate::{
     dispatch, emitter::Emitter, file::File, queue_spawn, repository::download::DownloadRepository,
@@ -6,9 +12,26 @@ use crate::{
 
 use super::super::Registry;
 
+#[derive(Debug, Serialize)]
+pub struct Task {
+    pub name: String,
+    pub status: TaskStatus,
+    #[serde(skip)]
+    pub start_time: Instant,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskStatus {
+    Completed,
+    Running,
+}
+
 pub trait SystemActions {
     async fn check_available_permit() -> anyhow::Result<()>;
     async fn close_request() -> anyhow::Result<()>;
+    async fn add_task(task_id: u64, task_name: impl Into<String>) -> anyhow::Result<()>;
+    async fn change_task_status(task_id: u64, status: TaskStatus) -> anyhow::Result<()>;
 }
 
 impl SystemActions for Registry {
@@ -78,8 +101,46 @@ impl SystemActions for Registry {
 
     async fn close_request() -> anyhow::Result<()> {
         Self::get_state().spawn_cancellation_token.cancel();
-        let app_handle = Arc::clone(&Registry::get_state().app_handle);
+        let app_handle = Arc::clone(&Self::get_state().app_handle);
         app_handle.exit(0);
+        Ok(())
+    }
+
+    async fn add_task(task_id: u64, task_name: impl Into<String>) -> anyhow::Result<()> {
+        let tasks = Arc::clone(&Self::get_state().tasks);
+        let now = Instant::now();
+        tasks.insert(
+            task_id,
+            Task {
+                name: task_name.into(),
+                status: TaskStatus::Running,
+                start_time: now,
+            },
+        );
+
+        for task in tasks.iter() {
+            debug!("{}. {}", task.key(), task.name)
+        }
+        debug!("--- --- --- ---");
+
+        Ok(())
+    }
+
+    async fn change_task_status(task_id: u64, status: TaskStatus) -> anyhow::Result<()> {
+        let tasks = Arc::clone(&Self::get_state().tasks);
+
+        match status {
+            TaskStatus::Completed => {
+                tasks.remove(&task_id);
+            }
+            _ => {}
+        };
+
+        for task in tasks.iter() {
+            debug!("{}. {}", task.key(), task.name)
+        }
+        debug!("--- --- --- ---");
+
         Ok(())
     }
 }
