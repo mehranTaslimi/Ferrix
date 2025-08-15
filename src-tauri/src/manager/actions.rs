@@ -1,7 +1,10 @@
 use std::{
     collections::HashMap,
     path::PathBuf,
-    sync::{atomic::Ordering, Arc},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
 };
 
 use anyhow::{anyhow, Context};
@@ -166,7 +169,7 @@ impl super::DownloadsManager {
         )
         .await?;
 
-        let download = DownloadRepository::find(download_id).await.unwrap();
+        let download = DownloadRepository::find(download_id).await?;
         Emitter::emit_event("download_item", &download);
 
         if matches!(status, DownloadStatus::Completed) {
@@ -182,7 +185,7 @@ impl super::DownloadsManager {
     ) -> anyhow::Result<()> {
         let workers = Arc::clone(&Registry::get_state().workers);
         let worker = workers.get(&download_id).ok_or(anyhow!(
-            "cannot find worker with download id {}",
+            "pause download error: cannot find worker with download id {}",
             download_id
         ))?;
 
@@ -199,7 +202,7 @@ impl super::DownloadsManager {
     ) -> anyhow::Result<()> {
         let workers = Arc::clone(&Registry::get_state().workers);
         let worker = workers.get(&download_id).context(anyhow!(
-            "cannot find worker with download id {}",
+            "update chunk error: cannot find worker with download id {}",
             download_id
         ))?;
 
@@ -218,12 +221,10 @@ impl super::DownloadsManager {
                 .unwrap_or(0);
 
             async move {
-                // let expected_hash = Self::hash_chunk(download_id, chunk_index)
-                //     .await
-                //     .ok()
-                //     .map(|h| h.to_string());
-
-                let expected_hash = Some(String::new());
+                let expected_hash = Self::hash_chunk(download_id, chunk_index)
+                    .await
+                    .ok()
+                    .map(|h| h.to_string());
 
                 UpdateChunk {
                     downloaded_bytes: Some(wrote_bytes as i64),
@@ -244,6 +245,50 @@ impl super::DownloadsManager {
         if clean_after_update {
             dispatch!(registry, CleanDownloadedItemData, (download_id));
         }
+
+        Ok(())
+    }
+
+    pub(super) async fn reset_chunk_action(
+        self: &Arc<Self>,
+        download_id: i64,
+        chunk_index: i64,
+    ) -> anyhow::Result<()> {
+        ChunkRepository::update(
+            download_id,
+            UpdateChunk {
+                chunk_index,
+                downloaded_bytes: Some(0),
+                expected_hash: None,
+            },
+        )
+        .await?;
+
+        let reports = Arc::clone(&Registry::get_state().reports);
+
+        let report = reports.get(&download_id).context(anyhow!(
+            "reset chunk error: cannot find report with download id {}",
+            download_id
+        ))?;
+
+        let chunk_counter = report.chunks_wrote_bytes.get(&chunk_index)
+        .context(
+            anyhow!(
+                "reset chunk error: cannot find chunk wrote bytes in report with download id {} and chunk index {}",
+                download_id, chunk_index
+            )
+        )?;
+
+        let prev_chunk_bytes = chunk_counter.swap(0, Ordering::AcqRel);
+
+        let saturating_fetch_sub = |atom: &AtomicU64, amount: u64| {
+            let _ = atom.fetch_update(Ordering::AcqRel, Ordering::Acquire, |cur| {
+                Some(cur.saturating_sub(amount))
+            });
+        };
+
+        saturating_fetch_sub(&report.total_downloaded_bytes, prev_chunk_bytes);
+        saturating_fetch_sub(&report.total_wrote_bytes, prev_chunk_bytes);
 
         Ok(())
     }

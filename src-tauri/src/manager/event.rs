@@ -17,6 +17,7 @@ pub enum ManagerAction {
         /*Download ID */ i64,
         /* Clean After Update */ bool,
     ),
+    ResetChunk(/*Download ID */ i64, /* Chunk Index */ i64),
 }
 
 impl super::DownloadsManager {
@@ -30,21 +31,24 @@ impl super::DownloadsManager {
     pub(super) async fn reducer(self: &Arc<Self>, action: ManagerAction) -> anyhow::Result<()> {
         let self_clone = Arc::clone(&self);
 
+        use ManagerAction::*;
+
         match action {
-            ManagerAction::StartDownload(download_id) => {
-                self_clone.start_download_action(download_id).await
-            }
-            ManagerAction::UpdateDownloadStatus(status, error_message, download_id) => {
+            StartDownload(download_id) => self_clone.start_download_action(download_id).await,
+            UpdateDownloadStatus(status, error_message, download_id) => {
                 self_clone
                     .update_download_status_action(status, error_message, download_id)
                     .await
             }
-            ManagerAction::PauseDownload(download_id) => {
-                self_clone.pause_download_action(download_id).await
-            }
-            ManagerAction::UpdateChunks(download_id, clean_after_update) => {
+            PauseDownload(download_id) => self_clone.pause_download_action(download_id).await,
+            UpdateChunks(download_id, clean_after_update) => {
                 self_clone
                     .update_chunks_action(download_id, clean_after_update)
+                    .await
+            }
+            ResetChunk(download_id, chunk_index) => {
+                self_clone
+                    .reset_chunk_action(download_id, chunk_index)
                     .await
             }
         }

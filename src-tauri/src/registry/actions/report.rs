@@ -1,6 +1,5 @@
-use anyhow::anyhow;
-
 use super::super::Registry;
+use anyhow::anyhow;
 
 use std::sync::{
     atomic::{AtomicU64, Ordering},
@@ -67,22 +66,42 @@ impl ReportActions for Registry {
     async fn update_chunk_buffer_report(
         download_id: i64,
         chunk_index: i64,
-        _bytes: Vec<u8>,
+        bytes: Vec<u8>,
     ) -> anyhow::Result<()> {
         let reports = Arc::clone(&Self::get_state().reports);
-        let report = reports
-            .get(&download_id)
-            .ok_or_else(|| anyhow!("cannot find report with download id {}", download_id))?;
+        let report = reports.get(&download_id).ok_or_else(|| {
+            anyhow!(
+                "update chunk buffer error: cannot find report with download id {}",
+                download_id
+            )
+        })?;
 
         let buffer = report.buffer.get(&chunk_index).ok_or_else(|| {
             anyhow!(
-                "cannot find buffer report with download id {} and indec {}",
+                "update chunk buffer error: cannot find buffer report with download id {} and index {}",
                 download_id,
                 chunk_index
             )
         })?;
 
-        // let mut buffer = buffer.lock().await;
+        let mut buffer = buffer.lock().await;
+
+        if buffer.first.len() < 1024 {
+            let remaining = 1024 - buffer.first.len();
+            let take = remaining.min(bytes.len());
+            buffer.first.extend_from_slice(&bytes[..take]);
+        }
+
+        if bytes.len() >= 1024 {
+            buffer.last.clear();
+            buffer.last.extend_from_slice(&&bytes[bytes.len() - 1024..]);
+        } else {
+            buffer.last.extend_from_slice(&bytes);
+            if buffer.last.len() > 1024 {
+                let drop = buffer.last.len() - 1024;
+                let _ = buffer.last.split_to(drop);
+            }
+        }
 
         Ok(())
     }

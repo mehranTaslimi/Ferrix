@@ -79,7 +79,7 @@ impl super::DownloadsManager {
 
         let buffer_lock = buffer.lock().await;
 
-        if buffer_lock.len() < 2048 {
+        if buffer_lock.first.len() + buffer_lock.last.len() < 2048 {
             return Err(anyhow::anyhow!(
                 "buffer for download id {} with chunk index {} must be at least 2048 bytes",
                 download_id,
@@ -87,12 +87,9 @@ impl super::DownloadsManager {
             ));
         }
 
-        let start = &buffer_lock[..1024];
-        let end = &buffer_lock[buffer_lock.len() - 1024..];
-
         let mut hasher = Hasher::new();
-        hasher.update(start);
-        hasher.update(end);
+        hasher.update(&buffer_lock.first);
+        hasher.update(&buffer_lock.last);
 
         Ok(hasher.finalize())
     }

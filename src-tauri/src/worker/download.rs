@@ -35,7 +35,7 @@ impl DownloadWorker {
             }
         };
 
-        for chunk in chunks {
+        for mut chunk in chunks {
             let worker_clone = Arc::clone(self);
             let cancel_token = Arc::clone(&cancel_token);
 
@@ -56,8 +56,8 @@ impl DownloadWorker {
                         status = worker_clone.download_chunk(&chunk) => {
                             match status {
                                 Ok(()) => Finished,
-                                Err(err) if err.is_retryable() => Trying(err.to_string()),
-                                Err(err) => Errored(err.to_string())
+                                Err(err) if err.is_retryable() => Trying(err),
+                                Err(err) => Errored(err)
                             }
                         },
                         _ = cancel_token.cancelled() => Paused,
@@ -80,7 +80,20 @@ impl DownloadWorker {
                             }
 
                             if retries < max_retries {
-                                set(Trying(err)).await;
+                                set(Trying(err.clone())).await;
+
+                                match err {
+                                    ClientError::UnexpectedChunkHash => {
+                                        chunk.expected_hash = None;
+
+                                        dispatch!(
+                                            manager,
+                                            ResetChunk,
+                                            (chunk.download_id, chunk.chunk_index)
+                                        );
+                                    }
+                                    _ => {}
+                                };
 
                                 retries += 1;
 
@@ -106,19 +119,19 @@ impl DownloadWorker {
     }
 
     async fn download_chunk(self: &Arc<Self>, chunk: &DownloadChunk) -> Result<(), ClientError> {
+        if let Err(_) = self
+            .validate_chunk(chunk.expected_hash.clone(), chunk.chunk_index)
+            .await
+        {
+            return Err(ClientError::UnexpectedChunkHash);
+        }
+
         let report = Arc::clone(&self.report);
 
         let mut downloaded_bytes = match report.chunks_wrote_bytes.get(&chunk.chunk_index) {
             Some(bytes) => bytes.load(Ordering::SeqCst) as i64,
             None => 0,
         };
-
-        // if let Err(_) = self
-        //     .validate_chunk(chunk.expected_hash.clone(), chunk.chunk_index)
-        //     .await
-        // {
-        //     return Err(ClientError::UnexpectedChunkHash);
-        // }
 
         let start_byte = chunk.start_byte;
         let end_byte = chunk.end_byte;

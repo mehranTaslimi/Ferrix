@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Context};
 use dashmap::DashMap;
 use std::{sync::Arc, time::Instant};
-use tokio::sync::{mpsc::UnboundedSender, Mutex, Notify, RwLock};
+use tokio::sync::{mpsc::UnboundedSender, Mutex, RwLock};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -32,15 +32,14 @@ pub struct DownloadWorker {
     data: Arc<RwLock<Worker>>,
     report: Arc<Report>,
     chunks_status: Arc<DashMap<i64, status::ChunkDownloadStatus>>,
-    notify: Arc<Notify>,
     stream_duration: Arc<Mutex<Option<Instant>>>,
     received_bytes: Arc<Mutex<u64>>,
+    last_worker_status: Arc<Mutex<DownloadStatus>>,
 }
 
 impl DownloadWorker {
     pub async fn new(download_id: i64) -> anyhow::Result<Arc<Self>> {
         let chunks_status = Arc::new(DashMap::new());
-        let notify = Arc::new(Notify::new());
         let state = Registry::get_state();
         let worker = state
             .workers
@@ -52,18 +51,17 @@ impl DownloadWorker {
             .context(anyhow!("cannot find report with id {}", download_id))?;
         let stream_duration = Arc::new(Mutex::new(None));
         let received_bytes = Arc::new(Mutex::new(0));
+        let last_worker_status = Arc::new(Mutex::new(DownloadStatus::Unknown));
 
         let w = Arc::new(Self {
             download_id,
             data: Arc::clone(&worker),
             report: Arc::clone(&report),
             chunks_status,
-            notify,
             stream_duration,
             received_bytes,
+            last_worker_status,
         });
-
-        w.start_status_listener().await;
 
         Ok(w)
     }
