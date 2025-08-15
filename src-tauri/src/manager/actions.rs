@@ -169,7 +169,7 @@ impl super::DownloadsManager {
         )
         .await?;
 
-        let download = DownloadRepository::find(download_id).await.unwrap();
+        let download = DownloadRepository::find(download_id).await?;
         Emitter::emit_event("download_item", &download);
 
         if matches!(status, DownloadStatus::Completed) {
@@ -185,7 +185,7 @@ impl super::DownloadsManager {
     ) -> anyhow::Result<()> {
         let workers = Arc::clone(&Registry::get_state().workers);
         let worker = workers.get(&download_id).ok_or(anyhow!(
-            "cannot find worker with download id {}",
+            "pause download error: cannot find worker with download id {}",
             download_id
         ))?;
 
@@ -202,7 +202,7 @@ impl super::DownloadsManager {
     ) -> anyhow::Result<()> {
         let workers = Arc::clone(&Registry::get_state().workers);
         let worker = workers.get(&download_id).context(anyhow!(
-            "cannot find worker with download id {}",
+            "update chunk error: cannot find worker with download id {}",
             download_id
         ))?;
 
