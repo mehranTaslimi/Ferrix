@@ -27,6 +27,12 @@ pub use actions::TaskStatus;
 pub use event::RegistryAction;
 
 #[derive(Debug)]
+pub struct Buffer {
+    pub first: BytesMut,
+    pub last: BytesMut,
+}
+
+#[derive(Debug)]
 pub struct Report {
     pub total_downloaded_bytes: AtomicU64,
     pub downloaded_bytes: AtomicU64,
@@ -40,7 +46,7 @@ pub struct Report {
     pub last_update_downloaded_bytes: AtomicU64,
     pub last_update_time: Arc<Mutex<Instant>>,
     pub stable_speed: AtomicBool,
-    pub buffer: Arc<DashMap<i64, Arc<Mutex<BytesMut>>>>,
+    pub buffer: Arc<DashMap<i64, Arc<Mutex<Buffer>>>>,
 }
 
 #[derive(Debug)]

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, time::Duration};
 use tokio::{select, time::sleep};
 
-use crate::{dispatch, spawn};
+use crate::{client::ClientError, dispatch, spawn};
 
 use super::*;
 
@@ -26,13 +26,13 @@ impl ToString for DownloadStatus {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum ChunkDownloadStatus {
     Paused,
     Finished,
     Downloading,
-    Trying(String),
-    Errored(String),
+    Trying(ClientError),
+    Errored(ClientError),
 }
 
 impl DownloadWorker {
@@ -123,36 +123,43 @@ impl DownloadWorker {
         ) {
             (true, _, _, _, _) => {
                 let msg = self.get_error_message(statuses);
-                self.update_download_status(DownloadStatus::Failed, msg)
-                    .await;
+                dispatch!(
+                    manager,
+                    UpdateDownloadStatus,
+                    (DownloadStatus::Failed, msg, self.download_id)
+                );
             }
             (_, true, _, _, _) => {
                 let msg = self.get_error_message(statuses);
-                self.update_download_status(DownloadStatus::Trying, msg)
-                    .await;
+                dispatch!(
+                    manager,
+                    UpdateDownloadStatus,
+                    (DownloadStatus::Trying, msg, self.download_id)
+                );
             }
             (_, _, true, _, _) => {
-                self.update_download_status(DownloadStatus::Downloading, None)
-                    .await;
+                dispatch!(
+                    manager,
+                    UpdateDownloadStatus,
+                    (DownloadStatus::Downloading, None, self.download_id)
+                );
             }
             (_, _, _, true, _) => {
-                self.update_download_status(DownloadStatus::Paused, None)
-                    .await;
+                dispatch!(
+                    manager,
+                    UpdateDownloadStatus,
+                    (DownloadStatus::Paused, None, self.download_id)
+                );
             }
             (_, _, _, _, true) => {
-                self.update_download_status(DownloadStatus::Completed, None)
-                    .await;
+                dispatch!(
+                    manager,
+                    UpdateDownloadStatus,
+                    (DownloadStatus::Completed, None, self.download_id)
+                );
             }
             _ => {}
-        }
-    }
-
-    async fn update_download_status(&self, status: DownloadStatus, err_msg: Option<String>) {
-        dispatch!(
-            manager,
-            UpdateDownloadStatus,
-            (status, err_msg, self.download_id)
-        );
+        };
     }
 
     fn get_error_message(&self, statuses: &[ChunkDownloadStatus]) -> Option<String> {
@@ -165,7 +172,7 @@ impl DownloadWorker {
         statuses.iter().for_each(|s| match s {
             Errored(err) | Trying(err) => {
                 errors
-                    .entry(err.clone())
+                    .entry(err.to_string())
                     .and_modify(|count| *count += 1)
                     .or_insert(1);
             }
