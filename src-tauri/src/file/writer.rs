@@ -40,11 +40,12 @@ impl super::File {
                     UpdateDiskReport,
                     (download_id, chunk_index, downloaded_bytes)
                 );
-                // dispatch!(
-                //     registry,
-                //     UpdateChunkBufferReport,
-                //     (download_id, chunk_index, bytes)
-                // );
+
+                dispatch!(
+                    registry,
+                    UpdateChunkBufferReport,
+                    (download_id, chunk_index, bytes)
+                );
             }
         });
 
