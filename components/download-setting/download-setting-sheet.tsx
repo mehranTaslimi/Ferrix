@@ -148,7 +148,7 @@ export default function DownloadSettingSheet({
             className="h-full flex flex-col gap-2 overflow-y-auto"
           >
             <Tabs defaultValue="basic" className="flex-1">
-              <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10 dark:bg-muted/5 bg-muted/30">
+              <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10 dark:bg-neutral-900 bg-neutral-200">
                 <TabsTrigger value="basic">Basic</TabsTrigger>
                 <TabsTrigger value="advanced">Advanced</TabsTrigger>
               </TabsList>
