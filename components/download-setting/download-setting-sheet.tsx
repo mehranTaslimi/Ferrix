@@ -39,7 +39,7 @@ const getDefaultFormValues = (url: string): DownloadFormData => ({
   headers: [],
   cookies: [],
   auth: { type: "None" },
-  proxy: {},
+  proxy: { type: "system" },
   filePath: "",
 });
 
@@ -75,15 +75,16 @@ export default function DownloadSettingSheet({
         return acc;
       }, {});
 
-    const proxy = values.proxy?.enabled
-      ? {
-        type: values.proxy.type,
-        host: values.proxy.host,
-        port: values.proxy.port,
-        username: values.proxy?.auth?.username,
-        password: values.proxy?.auth?.password,
-      }
-      : undefined;
+    const proxy =
+      values.proxy?.type !== "none" && values.proxy?.type !== "system"
+        ? {
+            type: values.proxy.type.toLowerCase(),
+            host: values.proxy.host,
+            port: values.proxy.port,
+            username: values.proxy?.auth?.username,
+            password: values.proxy?.auth?.password,
+          }
+        : undefined;
     const headers = kvToRecord(values.headers);
     const cookies = kvToRecord(values.cookies);
 
@@ -95,8 +96,8 @@ export default function DownloadSettingSheet({
           proxy,
           ...(values.auth &&
             values.auth?.type !== "None" && {
-            auth: { ...values.auth, type: values.auth.type.toLowerCase() },
-          }),
+              auth: { ...values.auth, type: values.auth.type.toLowerCase() },
+            }),
           headers: Object.keys(headers).length ? headers : undefined,
           cookies: Object.keys(cookies).length ? cookies : undefined,
           chunk_count: values.chunk,
