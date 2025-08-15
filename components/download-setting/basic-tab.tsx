@@ -19,7 +19,7 @@ interface BasicTabProps {
 export default function BasicTab({ handleKeyPress }: BasicTabProps) {
   const { control } = useFormContext();
   return (
-    <TabsContent value="basic" className="p-2 space-y-3 overflow-y-scroll">
+    <TabsContent value="basic" className="p-2 space-y-3">
       <FormField
         control={control}
         name="url"
