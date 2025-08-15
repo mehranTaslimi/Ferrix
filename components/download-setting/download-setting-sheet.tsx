@@ -39,7 +39,7 @@ const getDefaultFormValues = (url: string): DownloadFormData => ({
   headers: [],
   cookies: [],
   auth: { type: "None" },
-  proxy: {},
+  proxy: { type: "system" },
   filePath: "",
 });
 
@@ -75,15 +75,16 @@ export default function DownloadSettingSheet({
         return acc;
       }, {});
 
-    const proxy = values.proxy?.enabled
-      ? {
-          type: values.proxy.type,
-          host: values.proxy.host,
-          port: values.proxy.port,
-          username: values.proxy?.auth?.username,
-          password: values.proxy?.auth?.password,
-        }
-      : undefined;
+    const proxy =
+      values.proxy?.type !== "none" && values.proxy?.type !== "system"
+        ? {
+            type: values.proxy.type.toLowerCase(),
+            host: values.proxy.host,
+            port: values.proxy.port,
+            username: values.proxy?.auth?.username,
+            password: values.proxy?.auth?.password,
+          }
+        : undefined;
     const headers = kvToRecord(values.headers);
     const cookies = kvToRecord(values.cookies);
 
@@ -148,7 +149,7 @@ export default function DownloadSettingSheet({
             className="h-full flex flex-col gap-2 overflow-y-auto"
           >
             <Tabs defaultValue="basic" className="flex-1">
-              <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10">
+              <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10 dark:bg-neutral-900 bg-neutral-200">
                 <TabsTrigger value="basic">Basic</TabsTrigger>
                 <TabsTrigger value="advanced">Advanced</TabsTrigger>
               </TabsList>

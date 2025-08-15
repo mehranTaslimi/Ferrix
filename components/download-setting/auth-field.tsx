@@ -20,7 +20,7 @@ export default function AuthField() {
   const authType = watch("auth.type") || "None";
 
   return (
-    <div className="space-y-4 rounded-lg border p-4">
+    <div className="rounded-lg space-y-4 border p-2">
       <FormField
         control={control}
         name="auth.type"
@@ -29,7 +29,7 @@ export default function AuthField() {
             <FormLabel>Authentication Type</FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
-                <SelectTrigger>
+                <SelectTrigger className="min-w-44">
                   <SelectValue placeholder="Select authentication type" />
                 </SelectTrigger>
               </FormControl>
@@ -48,7 +48,7 @@ export default function AuthField() {
       />
 
       {authType === "Basic" && (
-        <div className="space-y-4 p-4 border rounded-lg">
+        <div className="space-y-2">
           <FormField
             control={control}
             name="auth.username"
@@ -79,7 +79,7 @@ export default function AuthField() {
       )}
 
       {authType === "Bearer" && (
-        <div className="p-4 border rounded-lg">
+        <div>
           <FormField
             control={control}
             name="auth.token"
@@ -97,7 +97,7 @@ export default function AuthField() {
       )}
 
       {authType === "CustomToken" && (
-        <div className="space-y-4 p-4 border rounded-lg">
+        <div className="space-y-2">
           <FormField
             control={control}
             name="auth.scheme"
@@ -128,7 +128,7 @@ export default function AuthField() {
       )}
 
       {authType === "ApiKeyHeader" && (
-        <div className="space-y-4 p-4 border rounded-lg">
+        <div className="space-y-2">
           <FormField
             control={control}
             name="auth.header_name"
@@ -159,7 +159,7 @@ export default function AuthField() {
       )}
 
       {authType === "ApiKeyQuery" && (
-        <div className="space-y-4 p-4 border rounded-lg">
+        <div className="space-y-2">
           <FormField
             control={control}
             name="auth.key_name"
@@ -190,7 +190,7 @@ export default function AuthField() {
       )}
 
       {authType === "Cookie" && (
-        <div className="p-4 border rounded-lg">
+        <div>
           <FormField
             control={control}
             name="auth.cookie"

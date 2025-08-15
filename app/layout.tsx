@@ -13,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="antialiased bg-background/40">
+      <body className="antialiased bg-background/30">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

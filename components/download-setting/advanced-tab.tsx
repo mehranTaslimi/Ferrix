@@ -71,7 +71,7 @@ export default function AdvancedTab({ handleKeyPress }: AdvancedTabProps) {
   };
 
   return (
-    <TabsContent value="advanced" className="space-y-3 p-2 overflow-y-scroll">
+    <TabsContent value="advanced" className="space-y-3 p-2">
       <FormField
         control={form.control}
         name="filePath"
