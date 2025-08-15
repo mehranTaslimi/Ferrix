@@ -1,7 +1,6 @@
-use std::{collections::HashMap, time::Duration};
-use tokio::{select, time::sleep};
+use std::collections::HashMap;
 
-use crate::{client::ClientError, dispatch, spawn};
+use crate::{client::ClientError, dispatch};
 
 use super::*;
 
@@ -12,6 +11,7 @@ pub enum DownloadStatus {
     Failed,
     Downloading,
     Trying,
+    Unknown,
 }
 
 impl ToString for DownloadStatus {
@@ -22,6 +22,7 @@ impl ToString for DownloadStatus {
             DownloadStatus::Failed => "failed".to_string(),
             DownloadStatus::Downloading => "downloading".to_string(),
             DownloadStatus::Trying => "trying".to_string(),
+            DownloadStatus::Unknown => "unknown".to_string(),
         }
     }
 }
@@ -36,47 +37,36 @@ pub enum ChunkDownloadStatus {
 }
 
 impl DownloadWorker {
-    pub(super) async fn start_status_listener(self: &Arc<Self>) {
-        let self_clone = Arc::clone(self);
-
-        let worker = self.data.read().await;
-        let notify = Arc::clone(&self.notify);
-        let cancel_token = Arc::clone(&worker.cancel_token);
+    async fn update_worker_status(&self) {
         let chunks_status = Arc::clone(&self.chunks_status);
 
-        spawn!("download_status_update", {
-            let mut cancelled = false;
+        let status_snapshot = chunks_status
+            .iter()
+            .map(|s| s.value().clone())
+            .collect::<Vec<_>>();
 
-            loop {
-                select! {
-                    _ = notify.notified() => {
-                        sleep(Duration::from_millis(100)).await;
+        let last_status = Arc::clone(&self.last_worker_status);
+        let mut last_status_lock = last_status.lock().await;
 
-                        let status_snapshot = chunks_status
-                            .iter()
-                            .map(|s| s.value().clone())
-                            .collect::<Vec<_>>();
+        let (st, msg) = self.calculate_worker_status(&status_snapshot).await;
 
-                        self_clone.calculate_worker_status(&status_snapshot).await;
-
-                        if cancelled {
-                            break;
-                        }
-                    }
-                    _ = cancel_token.cancelled() => {
-                        cancelled = true;
-                    }
-                };
-            }
-        });
+        if (*last_status_lock != st || st == DownloadStatus::Trying)
+            && st != DownloadStatus::Unknown
+        {
+            *last_status_lock = st.clone();
+            dispatch!(manager, UpdateDownloadStatus, (st, msg, self.download_id));
+        }
     }
 
     pub(super) async fn update_chunk_status(&self, index: i64, status: ChunkDownloadStatus) {
         self.chunks_status.entry(index).insert(status);
-        self.notify.notify_one();
+        self.update_worker_status().await;
     }
 
-    async fn calculate_worker_status(&self, statuses: &[ChunkDownloadStatus]) {
+    async fn calculate_worker_status(
+        &self,
+        statuses: &[ChunkDownloadStatus],
+    ) -> (DownloadStatus, Option<String>) {
         use ChunkDownloadStatus::*;
 
         let mut has_errored = false;
@@ -122,47 +112,21 @@ impl DownloadWorker {
             all_finished,
         ) {
             (true, _, _, _, _) => {
-                let msg = self.get_error_message(statuses);
-                dispatch!(
-                    manager,
-                    UpdateDownloadStatus,
-                    (DownloadStatus::Failed, msg, self.download_id)
-                );
+                let msg = self.generate_error_message(statuses);
+                (DownloadStatus::Failed, msg)
             }
             (_, true, _, _, _) => {
-                let msg = self.get_error_message(statuses);
-                dispatch!(
-                    manager,
-                    UpdateDownloadStatus,
-                    (DownloadStatus::Trying, msg, self.download_id)
-                );
+                let msg = self.generate_error_message(statuses);
+                (DownloadStatus::Trying, msg)
             }
-            (_, _, true, _, _) => {
-                dispatch!(
-                    manager,
-                    UpdateDownloadStatus,
-                    (DownloadStatus::Downloading, None, self.download_id)
-                );
-            }
-            (_, _, _, true, _) => {
-                dispatch!(
-                    manager,
-                    UpdateDownloadStatus,
-                    (DownloadStatus::Paused, None, self.download_id)
-                );
-            }
-            (_, _, _, _, true) => {
-                dispatch!(
-                    manager,
-                    UpdateDownloadStatus,
-                    (DownloadStatus::Completed, None, self.download_id)
-                );
-            }
-            _ => {}
-        };
+            (_, _, true, _, _) => (DownloadStatus::Downloading, None),
+            (_, _, _, true, _) => (DownloadStatus::Paused, None),
+            (_, _, _, _, true) => (DownloadStatus::Completed, None),
+            _ => (DownloadStatus::Unknown, None),
+        }
     }
 
-    fn get_error_message(&self, statuses: &[ChunkDownloadStatus]) -> Option<String> {
+    fn generate_error_message(&self, statuses: &[ChunkDownloadStatus]) -> Option<String> {
         use ChunkDownloadStatus::*;
 
         let mut error_message = String::new();
