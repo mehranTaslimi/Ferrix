@@ -14,19 +14,14 @@
     "windows": [
       {
         "decorations": true,
-        "transparent": true,
+        "transparent": false,
         "title": "Ferrix",
         "width": 1000,
         "height": 650,
         "resizable": false,
         "fullscreen": false,
         "center": true,
-        "dragDropEnabled": true,
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true,
-        "windowEffects": {
-          "effects": ["sidebar"]
-        }
+        "dragDropEnabled": true
       }
     ],
     "security": {
