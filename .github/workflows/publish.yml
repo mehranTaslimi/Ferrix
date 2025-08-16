@@ -57,7 +57,11 @@ jobs:
             libgtk-3-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            xdg-utils \
+            desktop-file-utils \
+            shared-mime-info \
+            libglib2.0-bin
 
       - name: Install NSIS (Windows)
         if: matrix.platform == 'windows-latest'
