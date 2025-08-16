@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Ferrix (Beta)",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "identifier": "com.ferrix.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -42,6 +42,19 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0",
+          "libayatana-appindicator3-1",
+          "librsvg2-2"
+        ]
+      },
+      "rpm": {
+        "depends": ["webkit2gtk4.1", "gtk3", "libappindicator-gtk3", "librsvg2"]
+      }
+    },
     "macOS": {
       "minimumSystemVersion": "10.13"
     },
