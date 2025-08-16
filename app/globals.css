@@ -118,6 +118,12 @@
   * {
     @apply border-border outline-ring/50 select-none;
   }
+
+  html,
+  body {
+    overflow: hidden;
+  }
+
   *:not(input, textarea) {
     @apply cursor-default;
   }
