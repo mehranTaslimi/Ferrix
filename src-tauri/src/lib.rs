@@ -40,21 +40,7 @@ pub async fn run() {
             command::remove_download
         ])
         .setup(move |app| {
-            let window = app.get_webview_window("main").unwrap();
             let app_handle = app.app_handle().clone();
-
-            #[cfg(target_os = "macos")]
-            window_vibrancy::apply_vibrancy(
-                &window,
-                window_vibrancy::NSVisualEffectMaterial::HudWindow,
-                None,
-                None,
-            )
-            .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
-
-            #[cfg(target_os = "windows")]
-            window_vibrancy::apply_blur(&window, Some((18, 18, 18, 125)))
-                .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
 
             spawn(async move {
                 Registry::new(app_handle).await;

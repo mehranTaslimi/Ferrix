@@ -23,7 +23,10 @@
         "center": true,
         "dragDropEnabled": true,
         "titleBarStyle": "Overlay",
-        "hiddenTitle": true
+        "hiddenTitle": true,
+        "windowEffects": {
+          "effects": ["sidebar"]
+        }
       }
     ],
     "security": {
