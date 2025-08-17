@@ -1,13 +1,5 @@
 FROM --platform=$BUILDPLATFORM debian:12 AS builder
 
-ARG TARGETPLATFORM
-
-RUN case "$TARGETPLATFORM" in \
-      "linux/amd64")  echo x86_64-unknown-linux-gnu  > /rust-target ;; \
-      "linux/arm64")  echo aarch64-unknown-linux-gnu > /rust-target ;; \
-      *)              echo x86_64-unknown-linux-gnu  > /rust-target ;; \
-    esac && cat /rust-target
-
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     ca-certificates curl wget xz-utils git build-essential pkg-config file \
     patchelf desktop-file-utils xdg-utils shared-mime-info \
@@ -21,10 +13,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     corepack enable && corepack prepare pnpm@latest --activate && \
     rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y && \
-    /root/.cargo/bin/rustup target add $(cat /rust-target) || true && \
-    /root/.cargo/bin/cargo install tauri-cli --locked
+RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
+RUN cargo install tauri-cli --locked
 
 WORKDIR /app
 COPY . .
@@ -32,10 +23,9 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
-RUN NO_STRIP=true pnpm tauri build --verbose --target $(cat /rust-target)
+RUN NO_STRIP=true pnpm tauri build --verbose
 
 FROM debian:12 AS output
 WORKDIR /out
-
-COPY --from=builder /app/src-tauri/target/*/release/bundle/ /out/
+COPY --from=builder /app/src-tauri/target/release/bundle/ /out/
 CMD ["ls","-R","/out"]
