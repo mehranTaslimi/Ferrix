@@ -1,9 +1,10 @@
+# syntax=docker/dockerfile:1.6
 FROM --platform=$TARGETPLATFORM fedora:41 AS builder
 
 RUN dnf install -y \
     git curl wget xz make gcc gcc-c++ file \
     rust cargo \
-    webkit2gtk-4.1-devel gtk3-devel \
+    webkit2gtk4.1-devel gtk3-devel \
     libappindicator-gtk3-devel librsvg2-devel \
     libsoup3-devel javascriptcoregtk4.1-devel \
     patchelf desktop-file-utils xdg-utils \
@@ -27,4 +28,4 @@ RUN NO_STRIP=true pnpm tauri build --verbose
 FROM fedora:41 AS output
 WORKDIR /out
 COPY --from=builder /app/src-tauri/target/release/bundle /out
-CMD ["ls","-R","/out"]
+CMD ["ls", "-R", "/out"]
