@@ -40,18 +40,18 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build ${{ matrix.arch }} bundles in Docker
+      - name: Build ${{ matrix.arch }} bundles in Fedora container
         run: |
           docker buildx build \
             --platform linux/${{ matrix.arch }} \
-            -f docker/Dockerfile.debian12 \
-            -t ferrix-debian12-${{ matrix.arch }} \
+            -f docker/Dockerfile.fedora \
+            -t ferrix-fedora-${{ matrix.arch }} \
             . \
             --load
 
       - name: Extract artifacts (${{ matrix.arch }})
         run: |
-          id=$(docker create ferrix-debian12-${{ matrix.arch }})
+          id=$(docker create ferrix-fedora-${{ matrix.arch }})
           mkdir -p dist-${{ matrix.arch }}
           docker cp "$id:/out" "dist-${{ matrix.arch }}"
           docker rm "$id"
@@ -63,3 +63,15 @@ jobs:
         with:
           name: ferrix-linux-${{ matrix.arch }}-v${{ steps.version.outputs.version }}
           path: dist-${{ matrix.arch }}/**/*
+
+      - name: Upload to GitHub Release (append)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Ferrix v${{ steps.version.outputs.version }}
+          draft: true
+          prerelease: false
+          files: |
+            dist-${{ matrix.arch }}/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
