@@ -1,0 +1,32 @@
+# === Node / pnpm ===
+node_modules
+.pnpm
+.npm
+yarn.lock
+package-lock.json
+
+# === Rust ===
+target
+Cargo.lock
+
+# === Git ===
+.git
+.gitignore
+
+# === OS / Editor junk ===
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.log
+
+# === Build outputs ===
+dist
+out
+src-tauri/target
+src-tauri/gen
+
+# === Docker ===
+Dockerfile
+docker-compose.yml
+.dockerignore

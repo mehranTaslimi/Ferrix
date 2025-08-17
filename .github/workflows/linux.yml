@@ -1,0 +1,50 @@
+name: publish-linux
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  linux-multiarch:
+    name: Linux (AppImage/deb/rpm) amd64 + arm64
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU (for cross-arch)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.arch }} bundles in Docker
+        run: |
+          docker buildx build \
+            --platform linux/${{ matrix.arch }} \
+            -f docker/Dockerfile.debian12 \
+            -t ferrix-debian12-${{ matrix.arch }} \
+            . \
+            --load
+
+      - name: Extract artifacts (${{ matrix.arch }})
+        run: |
+          id=$(docker create ferrix-debian12-${{ matrix.arch }})
+          mkdir -p dist-${{ matrix.arch }}
+          docker cp "$id:/out" "dist-${{ matrix.arch }}"
+          docker rm "$id"
+          echo "==== files (${{ matrix.arch }}) ===="
+          ls -R "dist-${{ matrix.arch }}" || true
+
+      - name: Upload artifacts (${{ matrix.arch }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: ferrix-linux-${{ matrix.arch }}-${{ github.run_number }}
+          path: dist-${{ matrix.arch }}/**/*
