@@ -7,14 +7,14 @@ on:
 
 jobs:
   linux-multiarch:
-    name: Linux (AppImage/deb/rpm) amd64 + arm64
+    name: Linux (AppImage/deb/rpm) amd64
     runs-on: ubuntu-latest
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, arm64]
+        arch: [amd64]
 
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +62,20 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ferrix-linux-${{ matrix.arch }}-v${{ steps.version.outputs.version }}
-          path: dist-${{ matrix.arch }}/**/*
+          path: |
+            dist-${{ matrix.arch }}/out/appimage/*.AppImage
+            dist-${{ matrix.arch }}/out/deb/*.deb
+            dist-${{ matrix.arch }}/out/rpm/*.rpm
+
+      - name: Remove AppDir trees
+        run: |
+          rm -rf "dist-${{ matrix.arch }}"/out/appimage/*.AppDir || true
+
+      - name: List package files to upload
+        run: |
+          echo "== AppImages ==" && ls -l "dist-${{ matrix.arch }}"/out/appimage/*.AppImage || true
+          echo "== DEBs ==" && ls -l "dist-${{ matrix.arch }}"/out/deb/*.deb || true
+          echo "== RPMs ==" && ls -l "dist-${{ matrix.arch }}"/out/rpm/*.rpm || true
 
       - name: Upload to GitHub Release (append)
         uses: softprops/action-gh-release@v2
@@ -72,6 +85,8 @@ jobs:
           draft: true
           prerelease: false
           files: |
-            dist-${{ matrix.arch }}/**/*
+            dist-${{ matrix.arch }}/out/appimage/*.AppImage
+            dist-${{ matrix.arch }}/out/deb/*.deb
+            dist-${{ matrix.arch }}/out/rpm/*.rpm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
