@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.6
 FROM --platform=$BUILDPLATFORM debian:12 AS builder
 
 ARG TARGETPLATFORM
