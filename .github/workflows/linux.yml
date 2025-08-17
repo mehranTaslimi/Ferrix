@@ -18,6 +18,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
 
       - name: Get version from tauri.conf.json
         id: version
@@ -25,6 +32,7 @@ jobs:
         run: |
           VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
 
       - name: Set up QEMU (for cross-arch)
         uses: docker/setup-qemu-action@v3
@@ -53,5 +61,5 @@ jobs:
       - name: Upload artifacts (${{ matrix.arch }})
         uses: actions/upload-artifact@v4
         with:
-          name: ferrix-linux-${{ matrix.arch }}-${{ github.run_number }}
+          name: ferrix-linux-${{ matrix.arch }}-v${{ steps.version.outputs.version }}
           path: dist-${{ matrix.arch }}/**/*
