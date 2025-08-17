@@ -1,4 +1,5 @@
-FROM fedora:41 AS builder
+# syntax=docker/dockerfile:1.6
+FROM --platform=$TARGETPLATFORM fedora:41 AS builder
 
 RUN dnf install -y \
     git curl wget xz make gcc gcc-c++ file \
@@ -8,29 +9,23 @@ RUN dnf install -y \
     libsoup3-devel javascriptcoregtk4.1-devel \
     patchelf desktop-file-utils xdg-utils \
     openssl-devel pkgconf-pkg-config zlib-devel \
-    && dnf clean all
+  && dnf clean all
 
 RUN curl -fsSL https://rpm.nodesource.com/setup_22.x | bash - \
-    && dnf install -y nodejs \
-    && corepack enable \
-    && corepack prepare pnpm@latest --activate
+  && dnf install -y nodejs \
+  && corepack enable && corepack prepare pnpm@latest --activate
 
 RUN cargo install tauri-cli --locked
 
 WORKDIR /app
-
 COPY . .
 
 RUN pnpm install --frozen-lockfile
-
 RUN pnpm build
 
 RUN NO_STRIP=true pnpm tauri build --verbose
 
 FROM fedora:41 AS output
-
 WORKDIR /out
-
 COPY --from=builder /app/src-tauri/target/release/bundle /out
-
 CMD ["ls", "-R", "/out"]
