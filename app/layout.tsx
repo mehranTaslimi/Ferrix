@@ -1,3 +1,5 @@
+"use client";
+
 import type React from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DownloadProvider } from "@/components/download-context";
@@ -5,15 +7,28 @@ import AppSidebar from "@/components/sidebar";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { OsType, type } from "@tauri-apps/plugin-os";
+import clsx from "clsx";
+import { useLayoutEffect, useState } from "react";
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [OS, setOS] = useState<OsType>()
+
+
+  useLayoutEffect(() => {
+    setOS(type())
+  }, []);
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="antialiased bg-background/30">
+      <body className={clsx("antialiased", {
+        "bg-secondary": OS === 'linux' || OS === 'windows',
+        "bg-background/30": OS === 'macos',
+      })}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
