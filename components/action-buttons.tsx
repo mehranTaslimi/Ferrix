@@ -2,7 +2,7 @@
 
 import React, { useCallback, useState } from "react";
 import { Button } from "./ui/button";
-import { Pause, Play, X, Folder } from "lucide-react";
+import { Pause, Play, X, Folder, RotateCw } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { RemoveDownloadDialog } from "./confirm-modal";
@@ -33,9 +33,10 @@ export default function ActionButtons({
   const canToggle = status !== Status.Completed && status !== Status.Failed;
   const canRemove = status !== Status.Downloading && status !== Status.Writing;
   const canReveal = status === Status.Completed && fileExist;
+  const canRetry = status === Status.Failed
 
   const handleToggleDownload = useCallback(async () => {
-    if (status === Status.Paused) {
+    if (status === Status.Paused || status === Status.Failed) {
       await invoke("resume_download", { id: downloadId });
     } else {
       await invoke("pause_download", { id: downloadId });
@@ -87,6 +88,21 @@ export default function ActionButtons({
           </Button>
         )}
 
+        {
+          canRetry && (
+            <Button
+              onClick={handleToggleDownload}
+              variant="outline"
+              size="sm"
+              className={buttonClassName}
+              aria-label="Retry"
+              title="Retry"
+            >
+              <RotateCw className="w-4 h-4" />
+            </Button>
+          )
+        }
+
         {canRemove && (
           <Button
             onClick={() => setConfirmOpen(true)}
@@ -112,7 +128,7 @@ export default function ActionButtons({
             <Folder className="w-4 h-4" />
           </Button>
         )}
-      </div>
+      </div >
     </>
   );
 }
