@@ -10,6 +10,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { OsType, type } from "@tauri-apps/plugin-os";
 import clsx from "clsx";
 import { useLayoutEffect, useState } from "react";
+import {WindowsTitlebar, TITLE_BAR_HEIGHT} from "@/components/windows-titlebar";
 
 export default function RootLayout({
   children,
@@ -22,10 +23,12 @@ export default function RootLayout({
   useLayoutEffect(() => {
     setOS(type())
   }, []);
+  
+  const windowContainerHeight = OS === 'windows' ? `calc(100vh - ${TITLE_BAR_HEIGHT}px - 8px)` : '100vh';
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={clsx("antialiased", {
+      <body className={clsx("antialiased h-screen w-screen", {
         "bg-secondary": OS === 'linux' || OS === 'windows',
         "bg-background/30": OS === 'macos',
       })}>
@@ -37,24 +40,20 @@ export default function RootLayout({
           storageKey="theme"
           themes={["light", "dark"]}
         >
+          <WindowsTitlebar/>
           <DownloadProvider>
-            <div className="h-screen overflow-hidden">
-              <div className="h-full">
-                <div
-                  className="fixed w-full h-6 bg-transparent left-0 top-0 z-50"
-                  data-tauri-drag-region
-                />
-                <SidebarProvider className="w-screen h-screen">
+            <div className="overflow-hidden">
+                <SidebarProvider className="w-screen">
                   <AppSidebar />
-
-                  <div className="h-screen flex items-center justify-center flex-col mr-2 w-full">
-                    <div className="bg-background w-full h-[97.4%] rounded-lg overflow-x-hidden pb-3 overflow-y-auto">
+                  <div className="flex items-center justify-start flex-col mr-2 w-full" style={{
+                    height: windowContainerHeight
+                  }}>
+                    <div className="bg-background w-full h-full rounded-lg overflow-x-hidden pb-3 overflow-y-auto">
                       {children}
                       <Toaster />
                     </div>
                   </div>
                 </SidebarProvider>
-              </div>
             </div>
           </DownloadProvider>
         </ThemeProvider>
