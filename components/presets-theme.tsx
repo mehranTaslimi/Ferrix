@@ -48,7 +48,7 @@ export function PresetThemes() {
                      <div className="flex items-center gap-2 border rounded-lg px-2 focus-within:ring-2 focus-within:ring-ring transition">
                      <Search className="w-4 h-4 text-muted-foreground" />
                      <Input
-                        className="focus-visible:ring-0 border-0 px-0"
+                        className="focus-visible:ring-0 border-0 px-0 bg-transparent!"
                         id="search_presets"
                         name="search_presets"
                         value={search}
