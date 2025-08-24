@@ -150,7 +150,7 @@ html:not([data-tauri-platform="macos"]) *::-webkit-scrollbar {
 }
 
 html:not([data-tauri-platform="macos"]) *::-webkit-scrollbar-thumb {
-   background-color: var(--muted);
+   background-color: color-mix(in oklab, var(--muted) 85%, black 10%);
    border-radius: var(--radius);
    border: 2px solid var(--background);
 }
