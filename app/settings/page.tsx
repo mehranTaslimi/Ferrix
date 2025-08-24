@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Monitor, Moon, Store, Sun } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PresetThemes } from "@/components/presets-theme";
 
 export default function SettingsPage() {
     const { theme, setTheme } = useTheme();
@@ -68,6 +69,10 @@ export default function SettingsPage() {
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+                        <div className="space-y-2">                            
+                            <Label htmlFor="presets">Presets</Label>
+                            <PresetThemes />
                         </div>
                     </AccordionContent>
                 </AccordionItem>
