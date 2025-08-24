@@ -10,6 +10,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { OsType, type } from "@tauri-apps/plugin-os";
 import clsx from "clsx";
 import { useLayoutEffect, useState } from "react";
+import { PresetsThemeProvider } from "@/components/presets-theme-context";
 
 export default function RootLayout({
   children,
@@ -25,10 +26,28 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+            <script
+               dangerouslySetInnerHTML={{
+                  __html: `
+                  (function() {
+                     try {
+                     var preset = localStorage.getItem('theme-preset');
+                     // If a preset is stored and it's not the default, hide the page
+                     if (preset && preset !== 'modern-minimal') {
+                     document.documentElement.style.visibility = 'hidden';
+                     }
+                  } catch (e) {}
+                     })();
+                        `,
+               }}
+            />
+         </head>
       <body className={clsx("antialiased", {
         "bg-secondary": OS === 'linux' || OS === 'windows',
         "bg-background/30": OS === 'macos',
       })}>
+         <PresetsThemeProvider>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -58,6 +77,7 @@ export default function RootLayout({
             </div>
           </DownloadProvider>
         </ThemeProvider>
+        </PresetsThemeProvider>
       </body>
     </html>
   );
