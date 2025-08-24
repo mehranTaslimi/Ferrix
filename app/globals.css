@@ -140,3 +140,17 @@
     -moz-appearance: textfield !important;
   }
 }
+
+html:not([data-tauri-platform="macos"]) *::-webkit-scrollbar-track {
+   background: var(--background);
+}
+
+html:not([data-tauri-platform="macos"]) *::-webkit-scrollbar {
+   width: 12px;
+}
+
+html:not([data-tauri-platform="macos"]) *::-webkit-scrollbar-thumb {
+   background-color: var(--muted);
+   border-radius: var(--radius);
+   border: 2px solid var(--background);
+}
