@@ -11,7 +11,8 @@
     "tauri": "tauri",
     "release:windows-x86_64": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc",
     "release:windows-aarch64": "tauri build --runner cargo-xwin --target aarch64-pc-windows-msvc -vv",
-    "dev:all": "concurrently -k -n \"FRONTEND,TAURI\" -c \"cyan,magenta\" \"pnpm run dev\" \"cd src-tauri && cargo watch -c -q -x run\""
+    "dev:all": "concurrently -k -n \"FRONTEND,TAURI\" -c \"cyan,magenta\" \"pnpm run dev\" \"cd src-tauri && cargo watch -c -q -x run\"",
+    "prepare": "husky"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -72,8 +73,19 @@
     "concurrently": "^9.1.2",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.5",
+    "prettier": "3.6.2",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.4",
     "typescript": "^5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "next lint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css,scss}": "prettier --write"
   }
 }
