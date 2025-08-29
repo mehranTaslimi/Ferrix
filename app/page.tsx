@@ -79,7 +79,7 @@ export default function Page() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-4xl">
+      <div className="w-full">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <DownloadIcon className="w-8 h-8 mx-auto mb-2 animate-pulse" />
@@ -91,7 +91,7 @@ export default function Page() {
   }
 
   return (
-    <div className="container mx-auto max-w-5xl">
+    <div className="w-full">
       <div className="mb-3 sticky top-0 z-20 bg-background">
         <DownloadBar
           setUrl={setUrl}
