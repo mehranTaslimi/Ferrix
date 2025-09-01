@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build outputs & caches
+build/
+dist/
+.next/
+.out/
+.eslintcache
+*.tsbuildinfo
+
+# Tauri build artifacts
+src-tauri/target/
+
+# Logs
+*.log
+pnpm-debug.log*
+
+# Local development & OS/editor files
+.env*.local
+.vscode/
+.idea/
+.DS_Store
+
+# Other generated files
+coverage/
+next-env.d.ts
+
+# Deployment artifacts
+.vercel/
+
+# shadcn generated components
+components/ui/
