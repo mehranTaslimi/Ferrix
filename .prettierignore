@@ -1,7 +1,7 @@
 # Dependencies
 node_modules/
 
-# Build outputs & Caching
+# Build outputs & caches
 build/
 dist/
 .next/
@@ -10,13 +10,13 @@ dist/
 *.tsbuildinfo
 
 # Tauri build artifacts
-/src-tauri/target/
+src-tauri/target/
 
 # Logs
 *.log
 pnpm-debug.log*
 
-# Local development & OS-specific
+# Local development & OS/editor files
 .env*.local
 .vscode/
 .idea/
@@ -25,9 +25,6 @@ pnpm-debug.log*
 # Other generated files
 coverage/
 next-env.d.ts
-
-# Lockfiles
-pnpm-lock.yaml
 
 # Deployment artifacts
 .vercel/
