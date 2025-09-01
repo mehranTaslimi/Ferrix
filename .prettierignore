@@ -28,3 +28,6 @@ next-env.d.ts
 
 # Deployment artifacts
 .vercel/
+
+# shadcn generated components
+components/ui/
