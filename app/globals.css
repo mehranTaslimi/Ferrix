@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -128,15 +128,29 @@
     @apply cursor-default;
   }
   body {
-    @apply bg-transparent text-foreground;
+    @apply text-foreground bg-transparent;
   }
-  input[type="number"]::-webkit-inner-spin-button,
-  input[type="number"]::-webkit-outer-spin-button {
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
     -webkit-appearance: none !important;
     margin: 0 !important;
   }
 
-  input[type="number"] {
+  input[type='number'] {
     -moz-appearance: textfield !important;
   }
+}
+
+html:not([data-tauri-platform='macos']) *::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+html:not([data-tauri-platform='macos']) *::-webkit-scrollbar {
+  width: 12px;
+}
+
+html:not([data-tauri-platform='macos']) *::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklab, var(--muted) 85%, black 20%);
+  border-radius: var(--radius);
+  border: 2px solid var(--background);
 }
