@@ -1,8 +1,7 @@
 'use client';
 
-import './globals.css';
 import { type } from '@tauri-apps/plugin-os';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import { useLayoutEffect, useState } from 'react';
 
 import { DownloadProvider } from '@/components/download-context';
@@ -14,6 +13,8 @@ import { Toaster } from '@/components/ui/sonner';
 
 import type { OsType } from '@tauri-apps/plugin-os';
 import type React from 'react';
+
+import './globals.css';
 
 export default function RootLayout({
   children,

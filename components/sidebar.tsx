@@ -1,8 +1,10 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
+import { FileIcon, Settings as SettingsIcon, X } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+
+import { Badge } from '@/components/ui/badge';
 import {
   Sidebar,
   SidebarContent,
@@ -12,30 +14,36 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { useDownloads } from "./download-context";
-import { iconForMime, labelForMime } from "@/utils/mime-utils";
-import { FileIcon, X, Settings as SettingsIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
+import { iconForMime, labelForMime } from '@/utils/mime-utils';
+
+import { useDownloads } from './download-context';
 
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { downloads, selectedMimeType, setSelectedMimeType } = useDownloads();
 
-  const mimeCounts = downloads.reduce((acc, d) => {
-    const mime = (d.content_type || "application/octet-stream").toLowerCase();
-    acc[mime] = (acc[mime] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const mimeCounts = downloads.reduce(
+    (acc, d) => {
+      const mime = (d.content_type || 'application/octet-stream').toLowerCase();
+      acc[mime] = (acc[mime] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
-  const grouped = Object.entries(mimeCounts).reduce((acc, [mime, count]) => {
-    const label = labelForMime(mime);
-    if (!acc[label]) acc[label] = { count: 0, mimeTypes: [] as string[] };
-    acc[label].count += count;
-    acc[label].mimeTypes.push(mime);
-    return acc;
-  }, {} as Record<string, { count: number; mimeTypes: string[] }>);
+  const grouped = Object.entries(mimeCounts).reduce(
+    (acc, [mime, count]) => {
+      const label = labelForMime(mime);
+      if (!acc[label]) acc[label] = { count: 0, mimeTypes: [] as string[] };
+      acc[label].count += count;
+      acc[label].mimeTypes.push(mime);
+      return acc;
+    },
+    {} as Record<string, { count: number; mimeTypes: string[] }>,
+  );
 
   const categories = Object.entries(grouped).sort((a, b) => {
     if (b[1].count !== a[1].count) return b[1].count - a[1].count;
@@ -46,7 +54,7 @@ export default function AppSidebar() {
   const isFiltered = selectedMimeType !== null;
 
   const goHomeThen = (fn?: () => void) => {
-    if (pathname !== "/") router.push("/");
+    if (pathname !== '/') router.push('/');
     fn?.();
   };
 
@@ -56,32 +64,44 @@ export default function AppSidebar() {
         <SidebarGroup className="pt-14">
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
+              <SidebarMenuItem className="flex items-center gap-1">
                 <SidebarMenuButton
-                  isActive={pathname === "/" && !isFiltered}
+                  isActive={pathname === '/' && !isFiltered}
                   onClick={() => goHomeThen(() => setSelectedMimeType(null))}
-                  className="w-full justify-between h-auto p-3 rounded-md"
+                  className="h-auto w-full justify-between rounded-md p-3"
                 >
                   <div className="flex items-center gap-2">
-                    <FileIcon className="w-4 h-4" />
+                    <FileIcon className="h-4 w-4" />
                     <span className="font-medium">All Downloads</span>
+
                     {isFiltered && (
                       <span
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => {
                           e.stopPropagation();
                           goHomeThen(() => setSelectedMimeType(null));
                         }}
-                        className="ml-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            goHomeThen(() => setSelectedMimeType(null));
+                          }
+                        }}
+                        className="text-muted-foreground hover:text-foreground ml-1 inline-flex items-center gap-1 text-xs"
                         title="Clear filter"
+                        aria-label="Clear filter"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="h-3 w-3" aria-hidden="true" />
                         Clear
                       </span>
                     )}
                   </div>
+
                   <Badge
                     variant="outline"
-                    className="ml-2 rounded-full h-6 w-6 dark:text-white text-black"
+                    className="ml-2 h-6 w-6 rounded-full text-black dark:text-white"
                   >
                     {total}
                   </Badge>
@@ -96,21 +116,17 @@ export default function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {categories.map(([label, { count, mimeTypes }]) => {
-                const isSelected = mimeTypes.some(
-                  (mime) => selectedMimeType === mime
-                );
+                const isSelected = mimeTypes.some((mime) => selectedMimeType === mime);
                 const primaryMime = mimeTypes[0];
 
                 return (
                   <SidebarMenuItem key={label}>
                     <SidebarMenuButton
-                      isActive={pathname === "/" && isSelected}
+                      isActive={pathname === '/' && isSelected}
                       onClick={() =>
-                        goHomeThen(() =>
-                          setSelectedMimeType(isSelected ? null : primaryMime)
-                        )
+                        goHomeThen(() => setSelectedMimeType(isSelected ? null : primaryMime))
                       }
-                      className={cn("w-full justify-between h-auto p-2 rounded-md")}
+                      className={cn('h-auto w-full justify-between rounded-md p-2')}
                     >
                       <div className="flex items-center gap-2">
                         {iconForMime(primaryMime)}
@@ -118,7 +134,7 @@ export default function AppSidebar() {
                       </div>
                       <Badge
                         variant="outline"
-                        className="h-6 w-6 ml-2 rounded-full dark:text-white text-black"
+                        className="ml-2 h-6 w-6 rounded-full text-black dark:text-white"
                       >
                         {count}
                       </Badge>
@@ -137,12 +153,12 @@ export default function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname.startsWith("/settings")}
-                  className="w-full justify-between h-auto p-3 rounded-md"
+                  isActive={pathname.startsWith('/settings')}
+                  className="h-auto w-full justify-between rounded-md p-3"
                 >
                   <Link href="/settings">
                     <div className="flex items-center gap-2">
-                      <SettingsIcon className="w-4 h-4" />
+                      <SettingsIcon className="h-4 w-4" />
                       <span className="font-medium">Settings</span>
                     </div>
                   </Link>
