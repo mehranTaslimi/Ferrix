@@ -57,10 +57,9 @@ export default function DownloadSettingSheet({
     if (open) {
       form.setValue('url', url.trim());
     }
-  }, [open]);
+  }, [form, open, url]);
 
   const handleSubmit = async (values: DownloadFormData) => {
-    console.log('Submitting form with values:', values);
     if (!values.url?.trim()) {
       form.setError('url', { type: 'manual', message: 'URL is required' });
       return;

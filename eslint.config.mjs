@@ -18,9 +18,10 @@ const base = compat.extends(
   'plugin:import/typescript',
   'plugin:jsx-a11y/recommended',
   'plugin:react-hooks/recommended',
+  'plugin:react/recommended',
 );
 
-export default [
+const eslintConfig = [
   {
     ignores: [
       'components/ui/',
@@ -46,8 +47,15 @@ export default [
     files: ['**/*.{js,jsx,ts,tsx}'],
     settings: {
       'import/resolver': {
-        typescript: { project: true },
-        node: true,
+        typescript: {
+          project: './tsconfig.json',
+        },
+        node: {
+          extensions: ['.js', '.jsx', '.ts', '.tsx'],
+        },
+      },
+      react: {
+        version: 'detect',
       },
     },
     rules: {
@@ -61,6 +69,7 @@ export default [
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
+      '@typescript-eslint/no-explicit-any': 'warn',
       'import/no-unresolved': 'error',
       'import/no-duplicates': 'error',
       'import/order': [
@@ -72,9 +81,13 @@ export default [
         },
       ],
       'import/newline-after-import': ['error', { count: 1 }],
+      'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
     },
   },
   eslintConfigPrettier,
 ];
+
+export default eslintConfig;

@@ -9,8 +9,6 @@
     ],
     "editor.codeActionsOnSave": {
         "source.fixAll.eslint": "always",
-        "source.organizeImports": "always",
-        "source.sortImports": "always",
     },
     "editor.formatOnSave": true,
   

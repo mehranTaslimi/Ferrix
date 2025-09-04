@@ -1,7 +1,7 @@
 'use client';
 
 import { listen } from '@tauri-apps/api/event';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import { Clock, Download, HardDrive } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 

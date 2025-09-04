@@ -45,7 +45,7 @@ export default function SpeedLimitField({ form }: SpeedLimitFieldProps) {
       );
       form.setValue(fieldName, newByteValue);
     }
-  }, [unit, byteValue]);
+  }, [unit, byteValue, form]);
 
   return (
     <FormField

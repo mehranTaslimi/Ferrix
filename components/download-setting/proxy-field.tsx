@@ -37,7 +37,7 @@ export default function ProxyField() {
         shouldDirty: true,
       });
     }
-  }, [proxyType]);
+  }, [proxyType, setValue]);
 
   return (
     <div className="space-y-4 rounded-lg border p-2">

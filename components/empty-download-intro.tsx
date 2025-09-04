@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
@@ -26,7 +27,7 @@ export function EmptyDownloadsIntro() {
             <div
               className={`h-16 w-16 rounded-2xl bg-white/5 ring-1 ring-white/10 ${shouldBlur ? 'backdrop-blur-sm' : ''} grid place-items-center`}
             >
-              <img
+              <Image
                 src="/logo.png"
                 alt="Ferrix"
                 className={`h-12 w-12 opacity-90 ${shouldInvert ? 'invert filter' : ''}`}
