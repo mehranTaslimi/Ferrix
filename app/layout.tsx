@@ -48,7 +48,7 @@ export default function RootLayout({
       </head>
       <body
         className={clsx('antialiased', {
-          'bg-sidebar': OS === 'linux' || OS === 'windows',
+          'bg-[var(--background-secondary)]': OS === 'linux' || OS === 'windows',
           'bg-background/30': OS === 'macos',
         })}
       >
