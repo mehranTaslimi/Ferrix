@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="scroll-smooth">
   <head>
     <meta charset="utf-8" />
@@ -39,9 +39,20 @@
       }
       html,
       body {
-        font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
-          Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
-          "Segoe UI Emoji", "Segoe UI Symbol";
+        font-family:
+          'Inter',
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Ubuntu,
+          Cantarell,
+          'Helvetica Neue',
+          Arial,
+          'Noto Sans',
+          'Apple Color Emoji',
+          'Segoe UI Emoji',
+          'Segoe UI Symbol';
       }
       /* Subtle gradient background */
       .bg-grid {
@@ -54,41 +65,34 @@
 
     <script>
       // Theme handling (system by default)
-      const storedTheme = localStorage.getItem("theme");
+      const storedTheme = localStorage.getItem('theme');
       if (
-        storedTheme === "dark" ||
-        (!storedTheme &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
+        storedTheme === 'dark' ||
+        (!storedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
       ) {
-        document.documentElement.classList.add("dark");
+        document.documentElement.classList.add('dark');
       }
       function toggleTheme() {
-        const isDark = document.documentElement.classList.toggle("dark");
-        localStorage.setItem("theme", isDark ? "dark" : "light");
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
       }
     </script>
   </head>
   <body class="bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
     <!-- Top Nav -->
     <header
-      class="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 border-b border-black/5 dark:border-white/5"
+      class="sticky top-0 z-30 border-b border-black/5 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:border-white/5 dark:supports-[backdrop-filter]:bg-gray-900/60"
     >
-      <div
-        class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between"
-      >
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <a href="#" class="flex items-center gap-3">
           <img src="./logo.png" alt="Ferrix logo" class="h-8 w-8" />
           <span class="font-semibold tracking-tight">Ferrix</span>
         </a>
-        <nav class="hidden md:flex items-center gap-6 text-sm">
+        <nav class="hidden items-center gap-6 text-sm md:flex">
           <a href="#features" class="opacity-80 hover:opacity-100">Features</a>
-          <a href="#architecture" class="opacity-80 hover:opacity-100"
-            >Architecture</a
-          >
+          <a href="#architecture" class="opacity-80 hover:opacity-100">Architecture</a>
           <a href="#download" class="opacity-80 hover:opacity-100">Download</a>
-          <a
-            href="https://github.com/mehrantaslimi/Ferrix"
-            class="opacity-80 hover:opacity-100"
+          <a href="https://github.com/mehrantaslimi/Ferrix" class="opacity-80 hover:opacity-100"
             >GitHub</a
           >
         </nav>
@@ -104,7 +108,7 @@
           >
           <button
             onclick="toggleTheme()"
-            class="inline-flex items-center rounded-xl border border-black/10 dark:border-white/10 px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/5"
+            class="inline-flex items-center rounded-xl border border-black/10 px-3 py-1.5 text-sm hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/5"
           >
             Toggle theme
           </button>
@@ -114,41 +118,39 @@
 
     <!-- Hero -->
     <section class="relative">
-      <div class="absolute inset-0 bg-grid"></div>
+      <div class="bg-grid absolute inset-0"></div>
       <div class="mx-auto max-w-6xl px-4 pt-16 pb-10">
-        <div class="grid md:grid-cols-2 gap-10 items-center">
+        <div class="grid items-center gap-10 md:grid-cols-2">
           <div>
             <div
-              class="inline-flex items-center gap-2 rounded-full border border-black/10 dark:border-white/10 px-3 py-1 text-xs mb-4"
+              class="mb-4 inline-flex items-center gap-2 rounded-full border border-black/10 px-3 py-1 text-xs dark:border-white/10"
             >
               <span class="opacity-70">New</span>
               <span class="font-medium">Modern download manager</span>
             </div>
-            <h1
-              class="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight"
-            >
+            <h1 class="text-4xl leading-tight font-extrabold tracking-tight md:text-5xl">
               Ferrix 🦀 — fast, resumable downloads with a clean UI
             </h1>
             <p class="mt-4 text-lg opacity-80">
-              Built with <b>Rust</b> & <b>Tauri</b> for performance and safety,
-              and <b>Next.js + shadcn/ui</b> for a sleek frontend. Handles
-              real‑world network instability like a pro.
+              Built with <b>Rust</b> & <b>Tauri</b> for performance and safety, and
+              <b>Next.js + shadcn/ui</b> for a sleek frontend. Handles real‑world network
+              instability like a pro.
             </p>
             <div class="mt-6 flex flex-wrap items-center gap-3" id="download">
               <a
                 href="https://github.com/mehrantaslimi/Ferrix/releases/latest"
-                class="inline-flex items-center gap-2 rounded-xl bg-gray-900 text-white dark:bg-white dark:text-gray-900 px-4 py-2.5 font-medium hover:opacity-90"
+                class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 font-medium text-white hover:opacity-90 dark:bg-white dark:text-gray-900"
               >
                 <span>Download</span>
               </a>
               <a
                 href="https://github.com/mehrantaslimi/Ferrix"
-                class="inline-flex items-center gap-2 rounded-xl border border-black/10 dark:border-white/10 px-4 py-2.5 font-medium hover:bg-black/5 dark:hover:bg-white/5"
+                class="inline-flex items-center gap-2 rounded-xl border border-black/10 px-4 py-2.5 font-medium hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/5"
                 >View on GitHub</a
               >
               <a
                 href="#features"
-                class="inline-flex items-center gap-2 rounded-xl border border-black/10 dark:border-white/10 px-4 py-2.5 font-medium hover:bg-black/5 dark:hover:bg-white/5"
+                class="inline-flex items-center gap-2 rounded-xl border border-black/10 px-4 py-2.5 font-medium hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/5"
                 >See features</a
               >
             </div>
@@ -170,84 +172,50 @@
 
     <!-- Logos / Stack -->
     <section class="mx-auto max-w-6xl px-4 py-10">
-      <div
-        class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center text-xs opacity-70"
-      >
-        <div
-          class="rounded-xl border border-black/10 dark:border-white/10 px-4 py-3"
-        >
-          Rust
-        </div>
-        <div
-          class="rounded-xl border border-black/10 dark:border-white/10 px-4 py-3"
-        >
-          Tauri
-        </div>
-        <div
-          class="rounded-xl border border-black/10 dark:border-white/10 px-4 py-3"
-        >
+      <div class="grid grid-cols-2 gap-4 text-center text-xs opacity-70 sm:grid-cols-4">
+        <div class="rounded-xl border border-black/10 px-4 py-3 dark:border-white/10">Rust</div>
+        <div class="rounded-xl border border-black/10 px-4 py-3 dark:border-white/10">Tauri</div>
+        <div class="rounded-xl border border-black/10 px-4 py-3 dark:border-white/10">
           Next.js + shadcn/ui
         </div>
-        <div
-          class="rounded-xl border border-black/10 dark:border-white/10 px-4 py-3"
-        >
-          SQLite
-        </div>
+        <div class="rounded-xl border border-black/10 px-4 py-3 dark:border-white/10">SQLite</div>
       </div>
     </section>
 
     <!-- Features -->
     <section id="features" class="mx-auto max-w-6xl px-4 py-12">
-      <h2 class="text-2xl md:text-3xl font-bold tracking-tight">Features</h2>
-      <p class="mt-2 opacity-80">
-        Everything you need for reliable, blazing‑fast downloads.
-      </p>
-      <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div
-          class="rounded-2xl border border-black/10 dark:border-white/10 p-6"
-        >
+      <h2 class="text-2xl font-bold tracking-tight md:text-3xl">Features</h2>
+      <p class="mt-2 opacity-80">Everything you need for reliable, blazing‑fast downloads.</p>
+      <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="rounded-2xl border border-black/10 p-6 dark:border-white/10">
           <h3 class="font-semibold">Parallel & Chunked</h3>
           <p class="mt-2 text-sm opacity-80">
-            Splits files into chunks to maximize throughput and resume
-            effectively.
+            Splits files into chunks to maximize throughput and resume effectively.
           </p>
         </div>
-        <div
-          class="rounded-2xl border border-black/10 dark:border-white/10 p-6"
-        >
+        <div class="rounded-2xl border border-black/10 p-6 dark:border-white/10">
           <h3 class="font-semibold">Crash‑safe Progress</h3>
           <p class="mt-2 text-sm opacity-80">
             Persists progress with SQLite to survive restarts and power loss.
           </p>
         </div>
-        <div
-          class="rounded-2xl border border-black/10 dark:border-white/10 p-6"
-        >
+        <div class="rounded-2xl border border-black/10 p-6 dark:border-white/10">
           <h3 class="font-semibold">Clean, Minimal UI</h3>
           <p class="mt-2 text-sm opacity-80">
-            Built with Next.js + shadcn/ui for a crisp, distraction‑free
-            experience.
+            Built with Next.js + shadcn/ui for a crisp, distraction‑free experience.
           </p>
         </div>
-        <div
-          class="rounded-2xl border border-black/10 dark:border-white/10 p-6"
-        >
+        <div class="rounded-2xl border border-black/10 p-6 dark:border-white/10">
           <h3 class="font-semibold">Smart Retries</h3>
           <p class="mt-2 text-sm opacity-80">
             Automatic backoff and per‑chunk retries for flaky networks.
           </p>
         </div>
-        <div
-          class="rounded-2xl border border-black/10 dark:border-white/10 p-6"
-        >
+        <div class="rounded-2xl border border-black/10 p-6 dark:border-white/10">
           <h3 class="font-semibold">Proxy & Auth</h3>
-          <p class="mt-2 text-sm opacity-80">
-            Works with common auth schemes and proxy setups.
-          </p>
+          <p class="mt-2 text-sm opacity-80">Works with common auth schemes and proxy setups.</p>
         </div>
-        <div
-          class="rounded-2xl border border-black/10 dark:border-white/10 p-6"
-        >
+        <div class="rounded-2xl border border-black/10 p-6 dark:border-white/10">
           <h3 class="font-semibold">Cross‑platform</h3>
           <p class="mt-2 text-sm opacity-80">
             macOS, Windows, and Linux builds available in Releases.
@@ -258,26 +226,16 @@
 
     <!-- Architecture (short) -->
     <section id="architecture" class="mx-auto max-w-6xl px-4 py-12">
-      <div class="rounded-3xl border border-black/10 dark:border-white/10 p-8">
-        <h2 class="text-2xl md:text-3xl font-bold tracking-tight">
-          Architecture
-        </h2>
-        <p class="mt-3 opacity-80">
-          Ferrix pairs a high‑performance backend with a modern web UI:
-        </p>
-        <ul class="mt-4 list-disc pl-6 space-y-2 opacity-90">
+      <div class="rounded-3xl border border-black/10 p-8 dark:border-white/10">
+        <h2 class="text-2xl font-bold tracking-tight md:text-3xl">Architecture</h2>
+        <p class="mt-3 opacity-80">Ferrix pairs a high‑performance backend with a modern web UI:</p>
+        <ul class="mt-4 list-disc space-y-2 pl-6 opacity-90">
           <li>
-            <b>Rust + Tokio + Tauri</b> backend orchestrates workers, manages
-            concurrency, and ensures safety.
+            <b>Rust + Tokio + Tauri</b> backend orchestrates workers, manages concurrency, and
+            ensures safety.
           </li>
-          <li>
-            <b>Next.js + shadcn/ui</b> frontend provides a reactive, minimal
-            interface.
-          </li>
-          <li>
-            <b>SQLite</b> stores download states and chunk checkpoints for
-            robust resume.
-          </li>
+          <li><b>Next.js + shadcn/ui</b> frontend provides a reactive, minimal interface.</li>
+          <li><b>SQLite</b> stores download states and chunk checkpoints for robust resume.</li>
         </ul>
         <p class="mt-4 text-sm opacity-70">
           Curious? Read the source or open an issue — contributions welcome.
@@ -288,29 +246,24 @@
     <!-- Callout / CTA -->
     <section class="mx-auto max-w-6xl px-4 pb-16">
       <div
-        class="rounded-3xl border border-black/10 dark:border-white/10 p-8 md:p-10 bg-gray-50 dark:bg-white/5"
+        class="rounded-3xl border border-black/10 bg-gray-50 p-8 md:p-10 dark:border-white/10 dark:bg-white/5"
       >
-        <div
-          class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
-        >
+        <div class="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           <div>
-            <h3 class="text-xl md:text-2xl font-semibold">
-              Ready to try Ferrix?
-            </h3>
-            <p class="opacity-80 mt-1">
-              Grab the latest release and give it a spin. If you like it, drop a
-              ⭐ on GitHub!
+            <h3 class="text-xl font-semibold md:text-2xl">Ready to try Ferrix?</h3>
+            <p class="mt-1 opacity-80">
+              Grab the latest release and give it a spin. If you like it, drop a ⭐ on GitHub!
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <a
               href="https://github.com/mehrantaslimi/Ferrix/releases/latest"
-              class="inline-flex items-center gap-2 rounded-xl bg-gray-900 text-white dark:bg-white dark:text-gray-900 px-4 py-2.5 font-medium hover:opacity-90"
+              class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 font-medium text-white hover:opacity-90 dark:bg-white dark:text-gray-900"
               >Download latest</a
             >
             <a
               href="https://github.com/mehrantaslimi/Ferrix"
-              class="inline-flex items-center gap-2 rounded-xl border border-black/10 dark:border-white/10 px-4 py-2.5 font-medium hover:bg-black/5 dark:hover:bg-white/5"
+              class="inline-flex items-center gap-2 rounded-xl border border-black/10 px-4 py-2.5 font-medium hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/5"
               >GitHub repo</a
             >
           </div>
@@ -320,20 +273,14 @@
 
     <footer class="border-t border-black/5 dark:border-white/5">
       <div
-        class="mx-auto max-w-6xl px-4 py-8 text-sm flex flex-col md:flex-row items-center justify-between gap-4"
+        class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm md:flex-row"
       >
-        <p class="opacity-70">
-          © 2025 Mehran Taslimi. Built with ❤️ in Rust & Tauri.
-        </p>
+        <p class="opacity-70">© 2025 Mehran Taslimi. Built with ❤️ in Rust & Tauri.</p>
         <div class="flex items-center gap-4 opacity-80">
-          <a
-            href="https://github.com/mehrantaslimi/Ferrix/issues"
-            class="hover:opacity-100"
+          <a href="https://github.com/mehrantaslimi/Ferrix/issues" class="hover:opacity-100"
             >Report an issue</a
           >
-          <a
-            href="https://github.com/mehrantaslimi/Ferrix#readme"
-            class="hover:opacity-100"
+          <a href="https://github.com/mehrantaslimi/Ferrix#readme" class="hover:opacity-100"
             >README</a
           >
         </div>

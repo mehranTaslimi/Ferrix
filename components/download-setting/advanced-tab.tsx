@@ -1,19 +1,21 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import { TabsContent } from "@radix-ui/react-tabs";
-import { FormControl, FormField, FormItem, FormLabel } from "../ui/form";
-import { Input } from "../ui/input";
-import { useFormContext } from "react-hook-form";
-import PositiveNumberField from "./positive-number-field";
-import KeyValuePairField from "./key-value-pair-field";
-import FormMessage from "./form-message";
-import ProxyField from "./proxy-field";
-import AuthField from "./auth-field";
-import { Button } from "../ui/button";
-import { FolderOpen } from "lucide-react";
-import { open } from "@tauri-apps/plugin-dialog";
-import { platform as getPlatform } from "@tauri-apps/plugin-os";
+import { TabsContent } from '@radix-ui/react-tabs';
+import { open } from '@tauri-apps/plugin-dialog';
+import { platform as getPlatform } from '@tauri-apps/plugin-os';
+import { FolderOpen } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useFormContext } from 'react-hook-form';
+
+import { Button } from '../ui/button';
+import { FormControl, FormField, FormItem, FormLabel } from '../ui/form';
+import { Input } from '../ui/input';
+
+import AuthField from './auth-field';
+import FormMessage from './form-message';
+import KeyValuePairField from './key-value-pair-field';
+import PositiveNumberField from './positive-number-field';
+import ProxyField from './proxy-field';
 
 interface AdvancedTabProps {
   handleKeyPress: (e: React.KeyboardEvent) => void;
@@ -21,26 +23,24 @@ interface AdvancedTabProps {
 
 export default function AdvancedTab({ handleKeyPress }: AdvancedTabProps) {
   const form = useFormContext();
-  const [os, setOs] = useState<"windows" | "macos" | "linux" | "unknown">(
-    "unknown"
-  );
+  const [os, setOs] = useState<'windows' | 'macos' | 'linux' | 'unknown'>('unknown');
 
   useEffect(() => {
     (async () => {
       try {
         const p = await getPlatform();
-        if (p === "windows" || p === "macos" || p === "linux") setOs(p);
+        if (p === 'windows' || p === 'macos' || p === 'linux') setOs(p);
       } catch {
-        setOs("unknown");
+        setOs('unknown');
       }
     })();
   }, []);
 
   const placeholder = useMemo(() => {
-    if (os === "windows") return "e.g. C:\\Users\\YourName\\Downloads";
-    if (os === "macos") return "e.g. /Users/yourname/Downloads";
-    if (os === "linux") return "e.g. /home/yourname/Downloads";
-    return "Select a folder…";
+    if (os === 'windows') return 'e.g. C:\\Users\\YourName\\Downloads';
+    if (os === 'macos') return 'e.g. /Users/yourname/Downloads';
+    if (os === 'linux') return 'e.g. /home/yourname/Downloads';
+    return 'Select a folder…';
   }, [os]);
 
   const handleSelectDirectory = async () => {
@@ -48,24 +48,24 @@ export default function AdvancedTab({ handleKeyPress }: AdvancedTabProps) {
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "Select Download Directory",
+        title: 'Select Download Directory',
       });
-      if (typeof selected === "string") {
-        form.setValue("filePath", selected, {
+      if (typeof selected === 'string') {
+        form.setValue('filePath', selected, {
           shouldValidate: true,
           shouldDirty: true,
         });
       } else if (Array.isArray(selected) && selected[0]) {
-        form.setValue("filePath", selected[0], {
+        form.setValue('filePath', selected[0], {
           shouldValidate: true,
           shouldDirty: true,
         });
       }
     } catch (error) {
-      console.error("Error selecting directory:", error);
-      form.setError("filePath", {
-        type: "manual",
-        message: "Failed to select directory. Please try again.",
+      console.error('Error selecting directory:', error);
+      form.setError('filePath', {
+        type: 'manual',
+        message: 'Failed to select directory. Please try again.',
       });
     }
   };
@@ -76,7 +76,7 @@ export default function AdvancedTab({ handleKeyPress }: AdvancedTabProps) {
         control={form.control}
         name="filePath"
         render={({ field }) => (
-          <FormItem className="gap-1 flex-col">
+          <FormItem className="flex-col gap-1">
             <FormLabel htmlFor="filePath">Download location</FormLabel>
             <div className="flex gap-2">
               <FormControl>
@@ -94,7 +94,7 @@ export default function AdvancedTab({ handleKeyPress }: AdvancedTabProps) {
                 onClick={handleSelectDirectory}
                 className="shrink-0"
               >
-                <FolderOpen className="w-4 h-4 mr-2" />
+                <FolderOpen className="mr-2 h-4 w-4" />
                 Browse
               </Button>
             </div>
@@ -104,16 +104,8 @@ export default function AdvancedTab({ handleKeyPress }: AdvancedTabProps) {
       />
       <ProxyField />
       <AuthField />
-      <KeyValuePairField
-        name="headers"
-        label="Headers"
-        handleKeyPress={handleKeyPress}
-      />
-      <KeyValuePairField
-        name="cookies"
-        label="Cookies"
-        handleKeyPress={handleKeyPress}
-      />
+      <KeyValuePairField name="headers" label="Headers" handleKeyPress={handleKeyPress} />
+      <KeyValuePairField name="cookies" label="Cookies" handleKeyPress={handleKeyPress} />
       {/* <SpeedLimitField form={form} /> */}
       <PositiveNumberField
         max={30}

@@ -1,54 +1,59 @@
-"use client";
+'use client';
 
-import type React from "react";
-import { ThemeProvider } from "@/components/theme-provider";
-import { DownloadProvider } from "@/components/download-context";
-import AppSidebar from "@/components/sidebar";
-import "./globals.css";
-import { Toaster } from "@/components/ui/sonner";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { OsType, type } from "@tauri-apps/plugin-os";
-import clsx from "clsx";
-import { useLayoutEffect, useState } from "react";
+import { type } from '@tauri-apps/plugin-os';
+import { clsx } from 'clsx';
+import { useLayoutEffect, useState } from 'react';
+
+import { DownloadProvider } from '@/components/download-context';
+import AppSidebar from '@/components/sidebar';
+import { ThemeProvider } from '@/components/theme-provider';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { Toaster } from '@/components/ui/sonner';
+
+import type { OsType } from '@tauri-apps/plugin-os';
+import type React from 'react';
+
+import './globals.css';
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [OS, setOS] = useState<OsType>()
-
+  const [OS, setOS] = useState<OsType>();
 
   useLayoutEffect(() => {
-    setOS(type())
+    setOS(type());
   }, []);
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={clsx("antialiased", {
-        "bg-secondary": OS === 'linux' || OS === 'windows',
-        "bg-background/30": OS === 'macos',
-      })}>
+      <body
+        className={clsx('antialiased', {
+          'bg-secondary': OS === 'linux' || OS === 'windows',
+          'bg-background/30': OS === 'macos',
+        })}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
           storageKey="theme"
-          themes={["light", "dark"]}
+          themes={['light', 'dark']}
         >
           <DownloadProvider>
             <div className="h-screen overflow-hidden">
               <div className="h-full">
                 <div
-                  className="fixed w-full h-6 bg-transparent left-0 top-0 z-50"
+                  className="fixed top-0 left-0 z-50 h-6 w-full bg-transparent"
                   data-tauri-drag-region
                 />
-                <SidebarProvider className="w-screen h-screen">
+                <SidebarProvider className="h-screen w-screen">
                   <AppSidebar />
 
-                  <div className="h-screen flex items-center justify-center flex-col mr-2 w-full">
-                    <div className="bg-background w-full h-[97.4%] rounded-lg overflow-x-hidden pb-3 overflow-y-auto">
+                  <div className="mr-2 flex h-screen w-full flex-col items-center justify-center">
+                    <div className="bg-background h-[97.4%] w-full overflow-x-hidden overflow-y-auto rounded-lg pb-3">
                       {children}
                       <Toaster />
                     </div>

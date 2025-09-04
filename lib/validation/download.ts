@@ -1,12 +1,13 @@
-import { z } from "zod";
-import { urlSchema } from "./url";
-import { chunkSchema } from "./chunk";
-import { filePathSchema } from "./file-path";
-import { positiveNumberSchema } from "./positive-number";
-import { headersArraySchema } from "./headers";
-import { cookiesArraySchema } from "./cookies";
-import { proxySchema } from "./proxy";
-import { authSchema } from "./auth";
+import { z } from 'zod';
+
+import { authSchema } from './auth';
+import { chunkSchema } from './chunk';
+import { cookiesArraySchema } from './cookies';
+import { filePathSchema } from './file-path';
+import { headersArraySchema } from './headers';
+import { positiveNumberSchema } from './positive-number';
+import { proxySchema } from './proxy';
+import { urlSchema } from './url';
 
 export const downloadFormSchema = z
   .object({
@@ -18,16 +19,16 @@ export const downloadFormSchema = z
     headers: headersArraySchema,
     cookies: cookiesArraySchema,
     speedLimit: positiveNumberSchema({
-      message: "Speed limit must be a positive number",
+      message: 'Speed limit must be a positive number',
     }),
     maxRetries: positiveNumberSchema({
-      message: "Max retries must be a positive number",
+      message: 'Max retries must be a positive number',
     }),
     backoffFactor: positiveNumberSchema({
-      message: "Backoff factor must be a positive number",
+      message: 'Backoff factor must be a positive number',
     }),
     timeoutSecs: positiveNumberSchema({
-      message: "Timeout duration must be a positive number",
+      message: 'Timeout duration must be a positive number',
     }),
   })
   .refine(() => {

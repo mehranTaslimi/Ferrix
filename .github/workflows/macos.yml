@@ -14,10 +14,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest"
-            args: "--target aarch64-apple-darwin"
-          - platform: "macos-latest"
-            args: "--target x86_64-apple-darwin"
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
 
     runs-on: ${{ matrix.platform }}
 
@@ -59,8 +59,8 @@ jobs:
         with:
           projectPath: .
           tagName: v${{ steps.version.outputs.version }}
-          releaseName: "Ferrix v${{ steps.version.outputs.version }}"
-          releaseBody: "See the assets to download this version and install."
+          releaseName: 'Ferrix v${{ steps.version.outputs.version }}'
+          releaseBody: 'See the assets to download this version and install.'
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

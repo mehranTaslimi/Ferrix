@@ -1,0 +1,9 @@
+ignoredBuiltDependencies:
+  - '@tailwindcss/oxide'
+  - sharp
+  - unrs-resolver
+
+packages:
+  - 'src-tauri'
+  - 'frontend'
+  - 'packages/*'

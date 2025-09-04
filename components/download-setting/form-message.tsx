@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { FormMessage as RHFMessage } from "../ui/form";
+import { FormMessage as RHFMessage } from '../ui/form';
 
 export default function FormMessage() {
   return (
