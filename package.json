@@ -68,6 +68,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@next/eslint-plugin-next": "^15.5.2",
     "@tailwindcss/postcss": "^4",
     "@tauri-apps/cli": "^2",
     "@types/node": "^20",
@@ -83,6 +84,7 @@
     "eslint-plugin-jest-dom": "^5.5.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-promise": "^7.2.1",
+    "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-testing-library": "^7.6.6",
     "eslint-plugin-unicorn": "^60.0.0",
