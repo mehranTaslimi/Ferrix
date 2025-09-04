@@ -28,6 +28,8 @@ export function EmptyDownloadsIntro() {
               className={`h-16 w-16 rounded-2xl bg-white/5 ring-1 ring-white/10 ${shouldBlur ? 'backdrop-blur-sm' : ''} grid place-items-center`}
             >
               <Image
+                width={48}
+                height={48}
                 src="/logo.png"
                 alt="Ferrix"
                 className={`h-12 w-12 opacity-90 ${shouldInvert ? 'invert filter' : ''}`}
