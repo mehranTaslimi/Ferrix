@@ -33,10 +33,6 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   const norm = (mime?: string) => (mime || 'application/octet-stream').toLowerCase();
 
   useEffect(() => {
-    const stopError = listen('error', (ev) => {
-      console.log(ev);
-    });
-
     const stopItem = listen<DownloadType>('download_item', (ev) => {
       setDownloads((prev) => {
         const clone = structuredClone(prev);
@@ -59,7 +55,6 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     })();
 
     return () => {
-      stopError.then((fn) => fn());
       stopItem.then((fn) => fn());
     };
   }, []);

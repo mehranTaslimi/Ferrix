@@ -1,7 +1,7 @@
 'use client';
 
 import { type } from '@tauri-apps/plugin-os';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import { useLayoutEffect, useState } from 'react';
 
 import { DownloadProvider } from '@/components/download-context';
