@@ -1,21 +1,19 @@
-import { useFieldArray, useFormContext } from "react-hook-form";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { FormControl, FormField, FormItem } from "../ui/form";
-import { Plus, Trash2 } from "lucide-react";
-import FormMessage from "./form-message";
+import { Plus, Trash2 } from 'lucide-react';
+import { useFieldArray, useFormContext } from 'react-hook-form';
+
+import { Button } from '../ui/button';
+import { FormControl, FormField, FormItem } from '../ui/form';
+import { Input } from '../ui/input';
+
+import FormMessage from './form-message';
 
 interface KeyValuePairFieldProps {
   label: string;
-  name: "headers" | "cookies";
+  name: 'headers' | 'cookies';
   handleKeyPress?: (e: React.KeyboardEvent) => void;
 }
 
-export default function KeyValuePairField({
-  label,
-  name,
-  handleKeyPress,
-}: KeyValuePairFieldProps) {
+export default function KeyValuePairField({ label, name, handleKeyPress }: KeyValuePairFieldProps) {
   const { control } = useFormContext();
   const { fields, append, remove } = useFieldArray({
     control,
@@ -27,24 +25,18 @@ export default function KeyValuePairField({
 
       <div className="space-y-2">
         {fields.length === 0 && (
-          <div className="text-xs text-muted-foreground">
-            No {label.toLowerCase()} added.
-          </div>
+          <div className="text-muted-foreground text-xs">No {label.toLowerCase()} added.</div>
         )}
 
         {fields.map((f, index) => (
-          <div key={f.id} className="flex gap-2 items-start">
+          <div key={f.id} className="flex items-start gap-2">
             <FormField
               control={control}
               name={`${name}.${index}.key`}
               render={({ field }) => (
                 <FormItem className="flex-1 gap-1">
                   <FormControl>
-                    <Input
-                      {...field}
-                      placeholder={`${label} name`}
-                      onKeyDown={handleKeyPress}
-                    />
+                    <Input {...field} placeholder={`${label} name`} onKeyDown={handleKeyPress} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -56,11 +48,7 @@ export default function KeyValuePairField({
               render={({ field }) => (
                 <FormItem className="flex-1 gap-1">
                   <FormControl>
-                    <Input
-                      {...field}
-                      placeholder={`${label} value`}
-                      onKeyDown={handleKeyPress}
-                    />
+                    <Input {...field} placeholder={`${label} value`} onKeyDown={handleKeyPress} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -73,7 +61,7 @@ export default function KeyValuePairField({
               onClick={() => remove(index)}
               aria-label={`Remove ${label}`}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         ))}
@@ -82,9 +70,9 @@ export default function KeyValuePairField({
           type="button"
           variant="outline"
           className="w-full"
-          onClick={() => append({ key: "", value: "" })}
+          onClick={() => append({ key: '', value: '' })}
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="mr-2 h-4 w-4" />
           Add {label}
         </Button>
       </div>

@@ -10,7 +10,7 @@ dist/
 *.tsbuildinfo
 
 # Tauri build artifacts
-src-tauri/target/
+src-tauri/
 
 # Logs
 *.log

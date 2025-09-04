@@ -1,43 +1,38 @@
-"use client";
+'use client';
 
-import type React from "react";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { invoke } from '@tauri-apps/api/core';
+import { DownloadIcon, MoreHorizontal } from 'lucide-react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { DownloadIcon, MoreHorizontal } from "lucide-react";
-import { DownloadType } from "./types";
-import { useForm } from "react-hook-form";
-
-import { Form } from "./ui/form";
-
-import { urlFormSchema } from "@/lib/validation";
-import { z } from "zod";
-import { FormControl, FormField, FormItem } from "./ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
 interface DownloadBarProps {
   setIsModalOpen: (open: boolean) => void;
   url: string;
   setUrl: (url: string) => void;
 }
-import { Loading } from "./ui/loading";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { urlFormSchema } from '@/lib/validation';
+
+import { Form, FormControl, FormField, FormItem } from './ui/form';
+import { Loading } from './ui/loading';
+
+import type React from 'react';
+import type { z } from 'zod';
 
 type UrlFormData = z.infer<typeof urlFormSchema>;
 
-export default function DownloadBar({
-  setIsModalOpen,
-  setUrl,
-  url,
-}: DownloadBarProps) {
+export default function DownloadBar({ setIsModalOpen, setUrl, url }: DownloadBarProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UrlFormData>({
     resolver: zodResolver(urlFormSchema),
     defaultValues: { url },
-    mode: "onChange",
+    mode: 'onChange',
   });
 
   const urlError = form.formState.errors.url;
@@ -47,14 +42,14 @@ export default function DownloadBar({
 
     setIsLoading(true);
     try {
-      await invoke("add_new_download", {
+      await invoke('add_new_download', {
         url: value.url,
         options: {
           chunk_count: 5,
         },
       });
-      form.setValue("url", "");
-      setUrl("");
+      form.setValue('url', '');
+      setUrl('');
     } catch (error) {
       toast.error(`${error}`);
     } finally {
@@ -64,24 +59,24 @@ export default function DownloadBar({
 
   const handleUrlFieldChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
     if (urlError) {
-      form.clearErrors("url");
+      form.clearErrors('url');
     }
     setUrl(ev.target.value);
-    form.setValue("url", ev.target.value, { shouldValidate: false });
+    form.setValue('url', ev.target.value, { shouldValidate: false });
   };
 
   return (
     <div
       className={cn(
-        "flex items-start gap-2 justify-between py-1 pl-1 pr-3 bg-card border-b border-b-transparent",
+        'bg-card flex items-start justify-between gap-2 border-b border-b-transparent py-1 pr-3 pl-1',
         {
-          "border-b border-b-red-600/30": urlError,
-        }
+          'border-b border-b-red-600/30': urlError,
+        },
       )}
     >
       <Form {...form}>
         <form
-          className="flex gap-2 w-full"
+          className="flex w-full gap-2"
           onSubmit={form.handleSubmit(handleSubmit, (errors) => {
             if (errors.url?.message) {
               toast.error(errors.url.message);
@@ -100,24 +95,15 @@ export default function DownloadBar({
                     {...field}
                     onChange={handleUrlFieldChange}
                     className={cn(
-                      "w-full border-none !bg-inherit focus-visible:ring-0 shadow-none"
+                      'w-full border-none !bg-inherit shadow-none focus-visible:ring-0',
                     )}
                   />
                 </FormControl>
               </FormItem>
             )}
           />
-          <Button
-            variant="ghost"
-            type="submit"
-            disabled={isLoading}
-            className="flex items-center"
-          >
-            {isLoading ? (
-              <Loading className="w-4 h-4" />
-            ) : (
-              <DownloadIcon className="w-4 h-4" />
-            )}
+          <Button variant="ghost" type="submit" disabled={isLoading} className="flex items-center">
+            {isLoading ? <Loading className="h-4 w-4" /> : <DownloadIcon className="h-4 w-4" />}
           </Button>
         </form>
       </Form>
@@ -134,7 +120,7 @@ export default function DownloadBar({
         spellCheck={false}
         autoCapitalize="none"
       >
-        <MoreHorizontal className="w-4 h-4" />
+        <MoreHorizontal className="h-4 w-4" />
       </Button>
     </div>
   );

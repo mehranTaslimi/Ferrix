@@ -1,10 +1,13 @@
-"use client";
+'use client';
 
-import { FormControl, FormField, FormItem, FormLabel } from "../ui/form";
-import { Slider } from "../ui/slider";
-import { useFormContext, UseFormReturn } from "react-hook-form";
-import { DownloadFormData } from "./download-setting-sheet";
-import FormMessage from "./form-message";
+import { useFormContext } from 'react-hook-form';
+
+import { FormControl, FormField, FormItem, FormLabel } from '../ui/form';
+import { Slider } from '../ui/slider';
+
+import FormMessage from './form-message';
+
+import type { DownloadFormData } from './download-setting-sheet';
 
 interface PositiveNumberFieldProps {
   name: keyof DownloadFormData;
@@ -30,12 +33,12 @@ export default function PositiveNumberField({
       control={control}
       name={name}
       render={({ field }) => {
-        const v = typeof field.value === "number" ? field.value : defaultValue;
+        const v = typeof field.value === 'number' ? field.value : defaultValue;
         return (
-          <FormItem className="gap-1 flex-col">
+          <FormItem className="flex-col gap-1">
             <div className="flex items-center justify-between">
               <FormLabel htmlFor={String(name)}>{label}</FormLabel>
-              <span className="text-xs text-muted-foreground">{v}</span>
+              <span className="text-muted-foreground text-xs">{v}</span>
             </div>
             <FormControl>
               <Slider

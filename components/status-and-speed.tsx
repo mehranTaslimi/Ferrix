@@ -1,12 +1,14 @@
-"use client";
+'use client';
 
-import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { Progress } from "@/components/ui/progress";
-import { Clock, Download, HardDrive } from "lucide-react";
-import { Status } from "./types";
-import clsx from "clsx";
-import { SpeedChart, type SpeedPoint } from "./speed-chart";
+import { listen } from '@tauri-apps/api/event';
+import clsx from 'clsx';
+import { Clock, Download, HardDrive } from 'lucide-react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+
+import { Progress } from '@/components/ui/progress';
+
+import { SpeedChart, type SpeedPoint } from './speed-chart';
+import { Status } from './types';
 
 interface SpeedAndRemaining {
   speed: number;
@@ -29,29 +31,52 @@ function fmtRemaining(s: number) {
   const min = Math.round(s / 60);
   const hr = Math.round(s / 3600);
   const day = Math.round(s / 86400);
-  if (day >= 1) return day > 1 ? `${day} days` : "1 day";
-  if (hr >= 1) return hr > 1 ? `${hr} hours` : "1 hour";
-  if (min >= 1) return min > 1 ? `${min} minutes` : "1 minute";
-  return sec > 1 ? `${sec} seconds` : "1 second";
+  if (day >= 1) return day > 1 ? `${day} days` : '1 day';
+  if (hr >= 1) return hr > 1 ? `${hr} hours` : '1 hour';
+  if (min >= 1) return min > 1 ? `${min} minutes` : '1 minute';
+  return sec > 1 ? `${sec} seconds` : '1 second';
 }
 
-function StatusPill({ status, errorMessage }: { status: Status, errorMessage: string }) {
+function StatusPill({ status, errorMessage }: { status: Status; errorMessage: string }) {
   const map: Record<Status, { label: string; cls: string }> = useMemo(() => {
     return {
-      [Status.Downloading]: { label: "Downloading", cls: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-      [Status.Writing]: { label: "Writing", cls: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
-      [Status.Paused]: { label: "Paused", cls: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" },
-      [Status.Queued]: { label: "Queued", cls: "bg-muted text-foreground/70 border-transparent" },
-      [Status.Completed]: { label: "Completed", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
-      [Status.Failed]: { label: `Download Failed ${errorMessage}`, cls: "bg-red-500/10 text-red-500 border-red-500/20" },
-      [Status.Trying]: { label: `Trying ${errorMessage}`, cls: "bg-red-400/10 text-red-400 border-red-400/20" },
-    }
+      [Status.Downloading]: {
+        label: 'Downloading',
+        cls: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+      },
+      [Status.Writing]: {
+        label: 'Writing',
+        cls: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+      },
+      [Status.Paused]: {
+        label: 'Paused',
+        cls: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
+      },
+      [Status.Queued]: { label: 'Queued', cls: 'bg-muted text-foreground/70 border-transparent' },
+      [Status.Completed]: {
+        label: 'Completed',
+        cls: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+      },
+      [Status.Failed]: {
+        label: `Download Failed ${errorMessage}`,
+        cls: 'bg-red-500/10 text-red-500 border-red-500/20',
+      },
+      [Status.Trying]: {
+        label: `Trying ${errorMessage}`,
+        cls: 'bg-red-400/10 text-red-400 border-red-400/20',
+      },
+    };
   }, [errorMessage]);
 
   const { label, cls } = map[status];
 
   return (
-    <span className={clsx("inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium", cls)}>
+    <span
+      className={clsx(
+        'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium',
+        cls,
+      )}
+    >
       {label}
     </span>
   );
@@ -68,12 +93,11 @@ function StatusAndSpeed({
   totalBytes: number;
   status: Status;
   downloadedBytes: number;
-  errorMessage: string
+  errorMessage: string;
 }) {
   const [downloadedBytes, setDownloadedBytes] = useState(initialDownloadedBytes);
   const [wroteBytes, setWroteBytes] = useState(initialDownloadedBytes);
   const [sr, setSr] = useState<SpeedAndRemaining>({ speed: 0, diskSpeed: 0, remaining_time: 0 });
-
 
   const [series, setSeries] = useState<SpeedPoint[]>([]);
   const tRef = useRef(0);
@@ -84,7 +108,6 @@ function StatusAndSpeed({
     const un1 = listen<number>(`downloaded_bytes_${id}`, (ev) => {
       setDownloadedBytes(ev.payload);
     });
-
 
     const un2 = listen<SpeedAndRemaining>(`speed_and_remaining_${id}`, (ev) => {
       const net = Math.max(0, ev.payload.speed ?? 0);
@@ -100,7 +123,6 @@ function StatusAndSpeed({
         return next;
       });
     });
-
 
     const un3 = listen<number>(`disk_speed_${id}`, (ev) => {
       const disk = Math.max(0, ev.payload ?? 0);
@@ -149,28 +171,26 @@ function StatusAndSpeed({
           <StatusPill status={status} errorMessage={errorMessage} />
           {isDownloading && (
             <>
-              <span className="text-xs text-muted-foreground">•</span>
+              <span className="text-muted-foreground text-xs">•</span>
               <span className="inline-flex items-center gap-1 text-xs">
-                <Download className="w-3 h-3" />
+                <Download className="h-3 w-3" />
                 {fmtThroughputKB(sr.speed)}
               </span>
-              <span className="text-xs text-muted-foreground">/</span>
+              <span className="text-muted-foreground text-xs">/</span>
               <span className="inline-flex items-center gap-1 text-xs">
-                <HardDrive className="w-3 h-3" />
+                <HardDrive className="h-3 w-3" />
                 {fmtThroughputKB(sr.diskSpeed)}
               </span>
-              <span className="text-xs text-muted-foreground">•</span>
+              <span className="text-muted-foreground text-xs">•</span>
               <span className="inline-flex items-center gap-1 text-xs">
-                <Clock className="w-3 h-3" />
+                <Clock className="h-3 w-3" />
                 {fmtRemaining(sr.remaining_time)}
               </span>
             </>
           )}
-          {isWriting && (
-            <span className="ml-2 text-xs text-purple-500">Writing to disk…</span>
-          )}
+          {isWriting && <span className="ml-2 text-xs text-purple-500">Writing to disk…</span>}
         </div>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-muted-foreground text-xs">
           {((isWriting ? wroteBytes : downloadedBytes) / (1024 * 1024)).toFixed(1)} MB
         </span>
       </div>
@@ -179,11 +199,11 @@ function StatusAndSpeed({
         <Progress
           value={progress}
           className={clsx(
-            "h-2 bg-muted/30 overflow-hidden",
-            "[&>div]:transition-all [&>div]:duration-300",
+            'bg-muted/30 h-2 overflow-hidden',
+            '[&>div]:transition-all [&>div]:duration-300',
             isWriting
-              ? "[&>div]:bg-gradient-to-r [&>div]:from-purple-500 [&>div]:to-purple-400"
-              : "[&>div]:bg-gradient-to-r [&>div]:from-blue-500 [&>div]:to-cyan-400"
+              ? '[&>div]:bg-gradient-to-r [&>div]:from-purple-500 [&>div]:to-purple-400'
+              : '[&>div]:bg-gradient-to-r [&>div]:from-blue-500 [&>div]:to-cyan-400',
           )}
         />
         <div className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-30" />

@@ -1,7 +1,7 @@
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { FlatCompat } from '@eslint/eslintrc';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,7 +10,6 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
-// Base Next.js + TypeScript configs
 const base = compat.extends(
   'next/core-web-vitals',
   'next/typescript',
@@ -22,25 +21,46 @@ const base = compat.extends(
 );
 
 export default [
+  {
+    ignores: [
+      'components/ui/',
+      'node_modules/',
+      '.pnp/',
+      '.next/',
+      'out/',
+      'dist/',
+      'src-tauri/',
+      '*.log',
+      '.env',
+      '.env*.local',
+      'coverage/',
+      '*.lcov',
+      '.vscode/',
+      '.idea/',
+      '*.bak',
+      '*.tmp',
+    ],
+  },
   ...base,
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
+    settings: {
+      'import/resolver': {
+        typescript: { project: true },
+        node: true,
+      },
+    },
     rules: {
-      /* General best practices */
       eqeqeq: ['error', 'smart'],
       curly: ['error', 'all'],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-else-return': 'error',
       'prefer-const': 'error',
-
-      /* TypeScript */
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
-
-      /* Imports */
       'import/no-unresolved': 'error',
       'import/no-duplicates': 'error',
       'import/order': [
@@ -52,8 +72,6 @@ export default [
         },
       ],
       'import/newline-after-import': ['error', { count: 1 }],
-
-      /* React hooks */
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
     },

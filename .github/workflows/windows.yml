@@ -51,11 +51,11 @@ jobs:
         with:
           projectPath: .
           tagName: v${{ steps.version.outputs.version }}
-          releaseName: "Ferrix v${{ steps.version.outputs.version }}"
-          releaseBody: "See the assets to download this version and install."
+          releaseName: 'Ferrix v${{ steps.version.outputs.version }}'
+          releaseBody: 'See the assets to download this version and install.'
           releaseDraft: false
           prerelease: false
-          args: ""
+          args: ''
 
       - name: List built files (debug)
         run: |

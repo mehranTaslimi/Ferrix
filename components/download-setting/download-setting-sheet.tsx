@@ -1,26 +1,23 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { invoke } from '@tauri-apps/api/core';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 
-import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
-import BasicTab from "./basic-tab";
-import AdvancedTab from "./advanced-tab";
-import { downloadFormSchema } from "@/lib/validation";
-import { toast } from "sonner";
-import { Loading } from "../ui/loading";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "../ui/sheet";
+import { Button } from '@/components/ui/button';
+import { Form } from '@/components/ui/form';
+import { downloadFormSchema } from '@/lib/validation';
+
+import { Loading } from '../ui/loading';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../ui/sheet';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+
+import AdvancedTab from './advanced-tab';
+import BasicTab from './basic-tab';
+
+import type { z } from 'zod';
 
 export type DownloadFormData = z.infer<typeof downloadFormSchema>;
 
@@ -38,9 +35,9 @@ const getDefaultFormValues = (url: string): DownloadFormData => ({
   chunk: 5,
   headers: [],
   cookies: [],
-  auth: { type: "None" },
-  proxy: { type: "system" },
-  filePath: "",
+  auth: { type: 'None' },
+  proxy: { type: 'system' },
+  filePath: '',
 });
 
 export default function DownloadSettingSheet({
@@ -53,19 +50,19 @@ export default function DownloadSettingSheet({
   const form = useForm<DownloadFormData>({
     resolver: zodResolver(downloadFormSchema),
     defaultValues: getDefaultFormValues(url),
-    mode: "onBlur",
+    mode: 'onBlur',
   });
 
   useEffect(() => {
     if (open) {
-      form.setValue("url", url.trim());
+      form.setValue('url', url.trim());
     }
   }, [open]);
 
   const handleSubmit = async (values: DownloadFormData) => {
-    console.log("Submitting form with values:", values);
+    console.log('Submitting form with values:', values);
     if (!values.url?.trim()) {
-      form.setError("url", { type: "manual", message: "URL is required" });
+      form.setError('url', { type: 'manual', message: 'URL is required' });
       return;
     }
 
@@ -76,7 +73,7 @@ export default function DownloadSettingSheet({
       }, {});
 
     const proxy =
-      values.proxy?.type !== "none" && values.proxy?.type !== "system"
+      values.proxy?.type !== 'none' && values.proxy?.type !== 'system'
         ? {
             type: values.proxy.type.toLowerCase(),
             host: values.proxy.host,
@@ -90,12 +87,12 @@ export default function DownloadSettingSheet({
 
     setIsLoading(true);
     try {
-      await invoke("add_new_download", {
+      await invoke('add_new_download', {
         url: values.url.trim(),
         options: {
           proxy,
           ...(values.auth &&
-            values.auth?.type !== "None" && {
+            values.auth?.type !== 'None' && {
               auth: { ...values.auth, type: values.auth.type.toLowerCase() },
             }),
           headers: Object.keys(headers).length ? headers : undefined,
@@ -111,18 +108,18 @@ export default function DownloadSettingSheet({
         },
       });
 
-      toast.success("Download added");
+      toast.success('Download added');
       onOpenChange(false);
-      setUrl("");
-      form.reset(getDefaultFormValues(""));
+      setUrl('');
+      form.reset(getDefaultFormValues(''));
     } catch (err: unknown) {
       const error = err as Error;
-      console.error("Failed to add download:", err);
-      toast.error("Failed to add download", {
+      console.error('Failed to add download:', err);
+      toast.error('Failed to add download', {
         description:
-          typeof error?.message === "string"
+          typeof error?.message === 'string'
             ? error.message
-            : "Please check the URL or settings and try again.",
+            : 'Please check the URL or settings and try again.',
       });
     } finally {
       setIsLoading(false);
@@ -130,14 +127,14 @@ export default function DownloadSettingSheet({
   };
 
   const onKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       form.handleSubmit(handleSubmit)();
     }
   };
   return (
     <Sheet open={open} onOpenChange={(v) => !isLoading && onOpenChange(v)}>
-      <SheetContent className="sm:max-w-md p-2 h-full">
+      <SheetContent className="h-full p-2 sm:max-w-md">
         <SheetHeader className="px-1">
           <SheetTitle>New download</SheetTitle>
           <SheetDescription>Paste a URL, tweak options, done.</SheetDescription>
@@ -146,10 +143,10 @@ export default function DownloadSettingSheet({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="h-full flex flex-col gap-2 overflow-y-auto"
+            className="flex h-full flex-col gap-2 overflow-y-auto"
           >
             <Tabs defaultValue="basic" className="flex-1">
-              <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10 dark:bg-neutral-900 bg-neutral-200">
+              <TabsList className="sticky top-0 z-10 grid w-full grid-cols-2 bg-neutral-200 dark:bg-neutral-900">
                 <TabsTrigger value="basic">Basic</TabsTrigger>
                 <TabsTrigger value="advanced">Advanced</TabsTrigger>
               </TabsList>
@@ -159,7 +156,7 @@ export default function DownloadSettingSheet({
               <AdvancedTab handleKeyPress={onKeyPress} />
             </Tabs>
 
-            <div className="flex gap-2 pt-4 pb-2 sticky bottom-0 bg-background">
+            <div className="bg-background sticky bottom-0 flex gap-2 pt-4 pb-2">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
@@ -170,7 +167,7 @@ export default function DownloadSettingSheet({
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading} className="flex-1">
-                {isLoading ? <Loading /> : "Start Download"}
+                {isLoading ? <Loading /> : 'Start Download'}
               </Button>
             </div>
           </form>
