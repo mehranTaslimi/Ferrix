@@ -1,26 +1,23 @@
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { useFormContext } from 'react-hook-form';
+
+import { FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { useFormContext } from "react-hook-form";
-import FormMessage from "./form-message";
+} from '@/components/ui/select';
+
+import FormMessage from './form-message';
 
 export default function AuthField() {
   const { control, watch } = useFormContext();
-  const authType = watch("auth.type") || "None";
+  const authType = watch('auth.type') || 'None';
 
   return (
-    <div className="rounded-lg space-y-4 border p-2">
+    <div className="space-y-4 rounded-lg border p-2">
       <FormField
         control={control}
         name="auth.type"
@@ -47,7 +44,7 @@ export default function AuthField() {
         )}
       />
 
-      {authType === "Basic" && (
+      {authType === 'Basic' && (
         <div className="space-y-2">
           <FormField
             control={control}
@@ -78,7 +75,7 @@ export default function AuthField() {
         </div>
       )}
 
-      {authType === "Bearer" && (
+      {authType === 'Bearer' && (
         <div>
           <FormField
             control={control}
@@ -96,7 +93,7 @@ export default function AuthField() {
         </div>
       )}
 
-      {authType === "CustomToken" && (
+      {authType === 'CustomToken' && (
         <div className="space-y-2">
           <FormField
             control={control}
@@ -127,7 +124,7 @@ export default function AuthField() {
         </div>
       )}
 
-      {authType === "ApiKeyHeader" && (
+      {authType === 'ApiKeyHeader' && (
         <div className="space-y-2">
           <FormField
             control={control}
@@ -158,7 +155,7 @@ export default function AuthField() {
         </div>
       )}
 
-      {authType === "ApiKeyQuery" && (
+      {authType === 'ApiKeyQuery' && (
         <div className="space-y-2">
           <FormField
             control={control}
@@ -189,7 +186,7 @@ export default function AuthField() {
         </div>
       )}
 
-      {authType === "Cookie" && (
+      {authType === 'Cookie' && (
         <div>
           <FormField
             control={control}

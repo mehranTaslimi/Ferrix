@@ -1,15 +1,16 @@
-"use client";
+'use client';
 
-import React, { useCallback, useState } from "react";
-import { Button } from "./ui/button";
-import { Pause, Play, X, Folder, RotateCw } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import { RemoveDownloadDialog } from "./confirm-modal";
-import { useDownloads } from "./download-context";
-import { Status } from "./types";
+import { invoke } from '@tauri-apps/api/core';
+import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import { Pause, Play, X, Folder, RotateCw } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
 
-const buttonClassName = "h-9 w-9 font-medium transition-all duration-200";
+import { RemoveDownloadDialog } from './confirm-modal';
+import { useDownloads } from './download-context';
+import { Status } from './types';
+import { Button } from './ui/button';
+
+const buttonClassName = 'h-9 w-9 font-medium transition-all duration-200';
 
 interface ActionButtonsProps {
   status: Status;
@@ -33,13 +34,13 @@ export default function ActionButtons({
   const canToggle = status !== Status.Completed && status !== Status.Failed;
   const canRemove = status !== Status.Downloading && status !== Status.Writing;
   const canReveal = status === Status.Completed && fileExist;
-  const canRetry = status === Status.Failed
+  const canRetry = status === Status.Failed;
 
   const handleToggleDownload = useCallback(async () => {
     if (status === Status.Paused || status === Status.Failed) {
-      await invoke("resume_download", { id: downloadId });
+      await invoke('resume_download', { id: downloadId });
     } else {
-      await invoke("pause_download", { id: downloadId });
+      await invoke('pause_download', { id: downloadId });
     }
   }, [status, downloadId]);
 
@@ -48,14 +49,14 @@ export default function ActionButtons({
       await removeDownload(downloadId, !!removeFile);
       setConfirmOpen(false);
     },
-    [removeDownload, downloadId]
+    [removeDownload, downloadId],
   );
 
   const handleOpenFile = useCallback(async () => {
     try {
       await revealItemInDir(filePath);
     } catch (e) {
-      console.error("Failed to reveal in folder:", e);
+      console.error('Failed to reveal in folder:', e);
     }
   }, [filePath]);
 
@@ -77,31 +78,29 @@ export default function ActionButtons({
             size="sm"
             className={buttonClassName}
             disabled={isResumeDisabled}
-            aria-label={status === Status.Paused ? "Resume" : "Pause"}
-            title={status === Status.Paused ? "Resume" : "Pause"}
+            aria-label={status === Status.Paused ? 'Resume' : 'Pause'}
+            title={status === Status.Paused ? 'Resume' : 'Pause'}
           >
             {status === Status.Paused ? (
-              <Play className="w-4 h-4" />
+              <Play className="h-4 w-4" />
             ) : (
-              <Pause className="w-4 h-4" />
+              <Pause className="h-4 w-4" />
             )}
           </Button>
         )}
 
-        {
-          canRetry && (
-            <Button
-              onClick={handleToggleDownload}
-              variant="outline"
-              size="sm"
-              className={buttonClassName}
-              aria-label="Retry"
-              title="Retry"
-            >
-              <RotateCw className="w-4 h-4" />
-            </Button>
-          )
-        }
+        {canRetry && (
+          <Button
+            onClick={handleToggleDownload}
+            variant="outline"
+            size="sm"
+            className={buttonClassName}
+            aria-label="Retry"
+            title="Retry"
+          >
+            <RotateCw className="h-4 w-4" />
+          </Button>
+        )}
 
         {canRemove && (
           <Button
@@ -112,7 +111,7 @@ export default function ActionButtons({
             aria-label="Remove"
             title="Remove"
           >
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
           </Button>
         )}
 
@@ -125,10 +124,10 @@ export default function ActionButtons({
             aria-label="Show in folder"
             title="Show in folder"
           >
-            <Folder className="w-4 h-4" />
+            <Folder className="h-4 w-4" />
           </Button>
         )}
-      </div >
+      </div>
     </>
   );
 }
