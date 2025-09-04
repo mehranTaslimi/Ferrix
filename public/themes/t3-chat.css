@@ -24,6 +24,7 @@
   --chart-4: #e8c468;
   --chart-5: #f4a462;
   --sidebar: #f3e4f6;
+  --background-secondary: #f3e4f6;
   --sidebar-foreground: #ac1668;
   --sidebar-primary: #454554;
   --sidebar-primary-foreground: #faf1f7;
@@ -59,6 +60,7 @@
   --chart-4: #af57db;
   --chart-5: #e23670;
   --sidebar: #181117;
+  --background-secondary: #181117;
   --sidebar-foreground: #e0cad6;
   --sidebar-primary: #1d4ed8;
   --sidebar-primary-foreground: #ffffff;

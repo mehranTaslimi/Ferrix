@@ -1,5 +1,6 @@
 .theme-supabase {
   --background: #fcfcfc;
+  --background-secondary: #fcfcfc;
   --foreground: #171717;
   --card: #fcfcfc;
   --card-foreground: #171717;
@@ -46,6 +47,7 @@
 
 .dark .theme-supabase {
   --background: #121212;
+  --background-secondary: #121212;
   --foreground: #e2e8f0;
   --card: #171717;
   --card-foreground: #e2e8f0;

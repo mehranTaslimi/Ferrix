@@ -1,5 +1,6 @@
 .theme-neo-brutalism {
   --background: #ffffff;
+  --background-secondary: #f0f0f0;
   --foreground: #000000;
   --card: #ffffff;
   --card-foreground: #000000;
@@ -44,6 +45,7 @@
 
 .dark .theme-neo-brutalism {
   --background: #000000;
+  --background-secondary: #000000;
   --foreground: #ffffff;
   --card: #333333;
   --card-foreground: #ffffff;

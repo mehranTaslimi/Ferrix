@@ -1,5 +1,6 @@
 :root {
   --background: #fff9f5;
+  --background-secondary: #fff0eb;
   --foreground: #3d3436;
   --card: #ffffff;
   --card-foreground: #3d3436;
@@ -44,6 +45,7 @@
 }
 .dark {
   --background: #2a2024;
+  --background-secondary: #2a2024;
   --foreground: #f2e9e4;
   --card: #392f35;
   --card-foreground: #f2e9e4;

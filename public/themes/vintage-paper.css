@@ -25,6 +25,7 @@
   --chart-5: #c0a080;
   --radius: 0.25rem;
   --sidebar: #ece5d8;
+  --background-secondary: #ece5d8;
   --sidebar-foreground: #4a3f35;
   --sidebar-primary: #a67c52;
   --sidebar-primary-foreground: #ffffff;
@@ -69,6 +70,7 @@
   --chart-5: #735a3a;
   --radius: 0.25rem;
   --sidebar: #2d2621;
+  --background-secondary: #2d2621;
   --sidebar-foreground: #ece5d8;
   --sidebar-primary: #c0a080;
   --sidebar-primary-foreground: #2d2621;

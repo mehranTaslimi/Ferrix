@@ -1,5 +1,6 @@
 :root {
   --background: #e4d7b0;
+  --background-secondary: #e2d1a2;
   --foreground: #5c4b3e;
   --card: #e7dbbf;
   --card-foreground: #5c4b3e;
@@ -68,6 +69,7 @@
   --chart-4: #a18f5c;
   --chart-5: #5e6e58;
   --sidebar: #3a3529;
+  --background-secondary: #3a3529;
   --sidebar-foreground: #ede4d4;
   --sidebar-primary: #8a9f7b;
   --sidebar-primary-foreground: #2a2521;
