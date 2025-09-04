@@ -52,7 +52,7 @@ export function PresetThemes() {
     >
       <form>
         <DialogTrigger asChild>
-          <Button variant="outline">Preset</Button>
+          <Button variant="outline">Change Preset</Button>
         </DialogTrigger>
         <DialogContent className="flex h-[500px] flex-col justify-between gap-4 sm:max-w-[425px]">
           <div>
@@ -71,7 +71,7 @@ export function PresetThemes() {
                   placeholder="Search presets..."
                 />
               </div>
-              <div className="h-[320px] space-y-2 overflow-y-auto">
+              <div className="h-[300px] space-y-2 overflow-y-auto">
                 {filteredPresets.map(([key, value]) => (
                   <div
                     key={key}

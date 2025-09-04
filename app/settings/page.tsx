@@ -68,7 +68,7 @@ export default function SettingsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="presets">Change preset</Label>
+              <Label htmlFor="presets">Presets</Label>
               <PresetThemes />
             </div>
           </AccordionContent>
