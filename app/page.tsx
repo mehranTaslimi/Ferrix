@@ -74,6 +74,7 @@ export default function Page() {
   if (isLoading) {
     return (
       <div className="container mx-auto max-w-4xl">
+        <div className="bg-card sticky top-0 z-20 mb-3 h-[45px]"></div>
         <div className="flex h-64 items-center justify-center">
           <div className="text-center">
             <DownloadIcon className="mx-auto mb-2 h-8 w-8 animate-pulse" />
