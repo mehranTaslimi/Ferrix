@@ -1,35 +1,12 @@
-use crate::registry::actions::TaskStatus;
+use crate::dispatch;
 
-use super::actions::{DownloadActions, ReportActions, SystemActions};
+use super::actions::{
+    ActionKind, DownloadActions, EventName, EventsActions, RegistryAction, ReportActions,
+    SystemActions,
+};
 
 use anyhow::Context;
 use std::sync::Arc;
-
-#[derive(Debug)]
-pub enum RegistryAction {
-    NewDownload(/*Download ID */ i64),
-    CheckAvailablePermit,
-    UpdateNetworkReport(/*Download ID */ i64, /*Bytes len*/ u64),
-    UpdateDiskReport(
-        /* Download ID */ i64,
-        /* Chunk Index */ i64,
-        /* Bytes len */ u64,
-    ),
-    CleanDownloadedItemData(/* Download ID */ i64),
-    PauseDownload(/* Download ID */ i64),
-    ResumeDownload(/* Download ID */ i64),
-    RecoverDownloads,
-    RemoveDownload(/* Download ID */ i64, /* Remove File */ bool),
-    CloseRequested,
-    PrepareDownloadData(/* Download ID */ i64),
-    UpdateChunkBufferReport(
-        /* Download ID */ i64,
-        /* Chunk Index */ i64,
-        /* Bytes */ Vec<u8>,
-    ),
-    AddTask(u64, String),
-    ChangeTaskStatus(u64, TaskStatus),
-}
 
 impl super::Registry {
     pub fn dispatch(action: RegistryAction) -> anyhow::Result<()> {
@@ -41,6 +18,39 @@ impl super::Registry {
 
     pub(super) async fn reducer(action: RegistryAction) -> anyhow::Result<()> {
         use RegistryAction::*;
+
+        let event_name = EventName::from(&action);
+
+        let registered_events = Arc::clone(&Self::get_state().registered_events);
+        let is_event_registered = registered_events.contains_key(&event_name);
+
+        if is_event_registered {
+            let completed_events = Arc::clone(&Self::get_state().completed_events);
+            let running_events = Arc::clone(&Self::get_state().running_events);
+
+            let action_kind = ActionKind::from(&action);
+
+            let running = running_events.contains_key(&action_kind);
+            let completed = completed_events.read().await.contains(&action_kind);
+
+            match (running, completed) {
+                (false, true) => {
+                    completed_events.write().await.remove(&action_kind);
+                }
+                (false, false) => {
+                    dispatch!(
+                        registry,
+                        RunEventJob,
+                        (event_name, action_kind, Box::new(action.clone()))
+                    )?;
+                    return Ok(());
+                }
+                (true, false) => {
+                    return Err(anyhow::anyhow!("the event is already running"));
+                }
+                _ => {}
+            }
+        }
 
         match action {
             // Download
@@ -70,6 +80,14 @@ impl super::Registry {
             CloseRequested => Self::close_request().await,
             AddTask(task_id, task_name) => Self::add_task(task_id, task_name).await,
             ChangeTaskStatus(task_id, status) => Self::change_task_status(task_id, status).await,
+
+            // Event
+            RegisterEvent(event_name, id) => Self::register_event(event_name, id).await,
+            UnRegisterEvent(event_name, id) => Self::unregister_event(event_name, id).await,
+            RunEventJob(event_name, action_kind, action) => {
+                Self::run_event_job(event_name, action_kind, action).await
+            }
+            EventJobCompleted(action_kind, id) => Self::event_job_completed(action_kind, id).await,
         }
     }
 }
