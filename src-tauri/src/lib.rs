@@ -37,7 +37,10 @@ pub async fn run() {
             command::get_download_list,
             command::resume_download,
             command::pause_download,
-            command::remove_download
+            command::remove_download,
+            command::plugin::event_job_completed,
+            command::plugin::register_event,
+            command::plugin::unregister_event,
         ])
         .setup(move |app| {
             let app_handle = app.app_handle().clone();

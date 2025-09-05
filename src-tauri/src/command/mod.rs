@@ -5,6 +5,8 @@ use crate::{
     repository::download::DownloadRepository,
 };
 
+pub mod plugin;
+
 #[tauri::command]
 pub async fn add_new_download(url: String, options: DownloadOptions) -> Result<(), String> {
     DownloadsManager::add_new_download(url, options).await

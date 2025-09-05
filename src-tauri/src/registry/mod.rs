@@ -5,7 +5,7 @@ use log::debug;
 use once_cell::sync::OnceCell;
 use sqlx::SqlitePool;
 use std::{
-    collections::VecDeque,
+    collections::{HashSet, VecDeque},
     sync::{
         atomic::{AtomicBool, AtomicU64, AtomicUsize},
         Arc,
@@ -23,8 +23,7 @@ mod actions;
 mod event;
 mod pool;
 
-pub use actions::TaskStatus;
-pub use event::RegistryAction;
+pub use actions::{ActionKind, EventName, RegistryAction, TaskStatus};
 
 #[derive(Debug)]
 pub struct Buffer {
@@ -67,6 +66,11 @@ pub struct State {
     queue_listener_running: Arc<AtomicBool>,
     mpsc_sender: Arc<mpsc::UnboundedSender<RegistryAction>>,
     manager: OnceCell<Arc<DownloadsManager>>,
+
+    // Events
+    pub registered_events: Arc<DashMap<EventName, HashSet<String>>>,
+    pub running_events: Arc<DashMap<ActionKind, HashSet<String>>>,
+    pub completed_events: Arc<RwLock<HashSet<ActionKind>>>,
 }
 
 static STATE: OnceCell<Arc<State>> = OnceCell::new();
@@ -93,6 +97,9 @@ impl Registry {
         let download_speed = Arc::new(AtomicF64::new(0.0));
         let tasks = Arc::new(DashMap::new());
         let task_id = Arc::new(AtomicU64::new(0));
+        let registered_events = Arc::new(DashMap::new());
+        let running_events = Arc::new(DashMap::new());
+        let completed_events = Arc::new(RwLock::new(HashSet::new()));
 
         let state = Arc::new(State {
             pool,
@@ -111,6 +118,9 @@ impl Registry {
             available_permits,
             queue_listener_running,
             spawn_cancellation_token,
+            registered_events,
+            completed_events,
+            running_events,
         });
 
         STATE.set(state).unwrap();

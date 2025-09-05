@@ -3,8 +3,7 @@ use std::{
     time::Instant,
 };
 
-use log::debug;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     dispatch, emitter::Emitter, file::File, queue_spawn, repository::download::DownloadRepository,
@@ -20,7 +19,7 @@ pub struct Task {
     pub start_time: Instant,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Eq, Hash, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskStatus {
     Completed,
@@ -118,11 +117,6 @@ impl SystemActions for Registry {
             },
         );
 
-        for task in tasks.iter() {
-            debug!("{}. {}", task.key(), task.name)
-        }
-        debug!("--- --- --- ---");
-
         Ok(())
     }
 
@@ -135,11 +129,6 @@ impl SystemActions for Registry {
             }
             _ => {}
         };
-
-        for task in tasks.iter() {
-            debug!("{}. {}", task.key(), task.name)
-        }
-        debug!("--- --- --- ---");
 
         Ok(())
     }

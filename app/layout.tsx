@@ -2,7 +2,7 @@
 
 import { type } from '@tauri-apps/plugin-os';
 import { clsx } from 'clsx';
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 
 import { DownloadProvider } from '@/components/download-context';
 import AppSidebar from '@/components/sidebar';
@@ -12,6 +12,7 @@ import { Toaster } from '@/components/ui/sonner';
 
 import type { OsType } from '@tauri-apps/plugin-os';
 import type React from 'react';
+import './plugin';
 
 import './globals.css';
 
@@ -24,6 +25,23 @@ export default function RootLayout({
 
   useLayoutEffect(() => {
     setOS(type());
+  }, []);
+
+  useEffect(() => {
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    window.ferrix.on('new-download', async () => {
+      console.log('1');
+      await wait(1000);
+    });
+    window.ferrix.on('new-download', async () => {
+      console.log('2');
+      await wait(1000);
+    });
+    window.ferrix.on('new-download', async () => {
+      console.log('3');
+      await wait(1000);
+    });
   }, []);
 
   return (
