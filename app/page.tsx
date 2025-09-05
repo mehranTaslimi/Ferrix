@@ -47,9 +47,9 @@ export default function Page() {
       const prev = prevStatus.current.get(d.id);
       if (prev && prev !== Status.Downloading && d.status === Status.Downloading) {
         setJustPromotedId(d.id);
-        // const t = setTimeout(() => {
-        //   setJustPromotedId((x) => (x === d.id ? null : x));
-        // }, 1200);
+        setTimeout(() => {
+          setJustPromotedId((x) => (x === d.id ? null : x));
+        }, 1200);
       }
     }
     for (const d of filteredDownloads) {
