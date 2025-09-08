@@ -73,7 +73,7 @@ export default function Page() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-4xl">
+      <div className="w-full">
         <div className="bg-card sticky top-0 z-20 mb-3 h-[45px]"></div>
         <div className="flex h-64 items-center justify-center">
           <div className="text-center">
@@ -86,12 +86,12 @@ export default function Page() {
   }
 
   return (
-    <div className="container mx-auto max-w-5xl">
+    <div className="w-full">
       <div className="bg-background sticky top-0 z-20 mb-3">
         <DownloadBar setUrl={setUrl} url={url} setIsModalOpen={setIsModalOpen} />
       </div>
 
-      <div className="space-y-4 px-3">
+      <div className="container mx-auto max-w-4xl space-y-4 px-3">
         {ordered.length === 0 ? (
           <EmptyDownloadsIntro />
         ) : (
