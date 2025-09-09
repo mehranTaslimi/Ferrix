@@ -34,7 +34,6 @@ export const presetCollection: Record<string, ThemePreset> = {
 
   'violet-bloom': {
     label: 'Violet Bloom',
-    createdAt: '2025-06-26',
     styles: {
       light: {
         primary: '#7033ff',
@@ -51,7 +50,6 @@ export const presetCollection: Record<string, ThemePreset> = {
 
   't3-chat': {
     label: 'T3 Chat',
-    createdAt: '2025-04-19',
     styles: {
       light: {
         primary: '#a84370',
@@ -68,7 +66,6 @@ export const presetCollection: Record<string, ThemePreset> = {
 
   twitter: {
     label: 'Twitter',
-    createdAt: '2025-04-24',
     styles: {
       light: {
         primary: '#1e9df1',
@@ -85,7 +82,6 @@ export const presetCollection: Record<string, ThemePreset> = {
 
   'mocha-mousse': {
     label: 'Mocha Mousse',
-    createdAt: '2025-04-24',
     styles: {
       light: {
         primary: '#A37764',
@@ -99,10 +95,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   bubblegum: {
     label: 'Bubblegum',
-    createdAt: '2025-04-18',
     styles: {
       light: {
         primary: '#d04f99',
@@ -116,10 +110,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   'amethyst-haze': {
     label: 'Amethyst Haze',
-    createdAt: '2025-05-08',
     styles: {
       light: {
         primary: '#8a79ab',
@@ -133,10 +125,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   notebook: {
     label: 'Notebook',
-    createdAt: '2025-05-10',
     styles: {
       light: {
         primary: '#606060',
@@ -150,10 +140,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   'doom-64': {
     label: 'Doom 64',
-    createdAt: '2025-04-28',
     styles: {
       light: {
         primary: '#b71c1c',
@@ -167,10 +155,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   catppuccin: {
     label: 'Catppuccin',
-    createdAt: '2025-04-18',
     styles: {
       light: {
         primary: '#8839ef',
@@ -184,10 +170,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   graphite: {
     label: 'Graphite',
-    createdAt: '2025-04-17',
     styles: {
       light: {
         primary: '#606060',
@@ -201,10 +185,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   perpetuity: {
     label: 'Perpetuity',
-    createdAt: '2025-04-01',
     styles: {
       light: {
         primary: '#06858e',
@@ -233,10 +215,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   'cosmic-night': {
     label: 'Cosmic Night',
-    createdAt: '2025-04-04',
     styles: {
       light: {
         primary: '#6e56cf',
@@ -250,10 +230,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   tangerine: {
     label: 'Tangerine',
-    createdAt: '2025-04-09',
     styles: {
       light: {
         primary: '#e05d38',
@@ -267,10 +245,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   'quantum-rose': {
     label: 'Quantum Rose',
-    createdAt: '2025-04-03',
     styles: {
       light: {
         primary: '#e6067a',
@@ -284,7 +260,6 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   nature: {
     label: 'Nature',
     styles: {
@@ -300,7 +275,6 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   'bold-tech': {
     label: 'Bold Tech',
     styles: {
@@ -316,7 +290,6 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   'elegant-luxury': {
     label: 'Elegant Luxury',
     styles: {
@@ -332,10 +305,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   'amber-minimal': {
     label: 'Amber Minimal',
-    createdAt: '2025-04-27',
     styles: {
       light: {
         primary: '#f59e0b',
@@ -349,10 +320,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   supabase: {
     label: 'Supabase',
-    createdAt: '2025-04-27',
     styles: {
       light: {
         primary: '#72e3ad',
@@ -366,7 +335,6 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   'neo-brutalism': {
     label: 'Neo Brutalism',
     styles: {
@@ -382,10 +350,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   'solar-dusk': {
     label: 'Solar Dusk',
-    createdAt: '2025-04-12',
     styles: {
       light: {
         primary: '#B45309',
@@ -399,7 +365,6 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   claymorphism: {
     label: 'Claymorphism',
     styles: {
@@ -415,7 +380,6 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   cyberpunk: {
     label: 'Cyberpunk',
     styles: {
@@ -446,7 +410,6 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   'clean-slate': {
     label: 'Clean Slate',
     styles: {
@@ -462,7 +425,6 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   caffeine: {
     label: 'Caffeine',
     styles: {
@@ -508,7 +470,6 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   'midnight-bloom': {
     label: 'Midnight Bloom',
     styles: {
@@ -584,10 +545,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   'starry-night': {
     label: 'Starry Night',
-    createdAt: '2025-04-16',
     styles: {
       light: {
         primary: '#3a5ba0',
@@ -601,7 +560,6 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   claude: {
     label: 'Claude',
     styles: {
@@ -617,10 +575,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   vercel: {
     label: 'Vercel',
-    createdAt: '2025-04-13',
     styles: {
       light: {
         primary: 'oklch(0 0 0)',
@@ -635,10 +591,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   darkmatter: {
     label: 'Darkmatter',
-    createdAt: '2025-08-23',
     styles: {
       light: {
         primary: '#d87943',
@@ -652,10 +606,8 @@ export const presetCollection: Record<string, ThemePreset> = {
       },
     },
   },
-
   mono: {
     label: 'Mono',
-    createdAt: '2025-04-20',
     styles: {
       light: {
         primary: '#737373',
@@ -671,7 +623,6 @@ export const presetCollection: Record<string, ThemePreset> = {
   },
   'soft-pop': {
     label: 'Soft Pop',
-    createdAt: '2025-07-08',
     styles: {
       light: {
         primary: '#4f46e5',
