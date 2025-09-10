@@ -3,32 +3,87 @@ mod events;
 mod report;
 mod system;
 
-pub use download::DownloadActions;
+pub use download::{DownloadActions, DownloadOptions};
 pub use events::EventsActions;
 pub use report::ReportActions;
 use serde::{Deserialize, Serialize};
 pub use system::{SystemActions, Task, TaskStatus};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "event", content = "payload", rename_all = "kebab-case")]
 pub enum RegistryAction {
-    NewDownload(i64),
+    NewDownload {
+        opt_id: String,
+        url: String,
+        options: DownloadOptions,
+    },
+    ProbeDownload {
+        opt_id: String,
+        url: String,
+        options: DownloadOptions,
+    },
+    AddDownloadToQueue {
+        download_id: i64,
+    },
     CheckAvailablePermit,
-    UpdateNetworkReport(i64, u64),
-    UpdateDiskReport(i64, i64, u64),
-    CleanDownloadedItemData(i64),
-    PauseDownload(i64),
-    ResumeDownload(i64),
+    UpdateNetworkReport {
+        download_id: i64,
+        bytes_len: u64,
+    },
+    UpdateDiskReport {
+        download_id: i64,
+        chunk_index: i64,
+        bytes_len: u64,
+    },
+    CleanDownloadedItemData {
+        download_id: i64,
+    },
+    PauseDownload {
+        download_id: i64,
+    },
+    ResumeDownload {
+        download_id: i64,
+    },
     RecoverDownloads,
-    RemoveDownload(i64, bool),
+    RemoveDownload {
+        download_id: i64,
+        remove_file: bool,
+    },
     CloseRequested,
-    PrepareDownloadData(i64),
-    UpdateChunkBufferReport(i64, i64, Vec<u8>),
-    AddTask(u64, String),
-    ChangeTaskStatus(u64, TaskStatus),
-    RegisterEvent(EventName, String),
-    UnRegisterEvent(EventName, String),
-    EventJobCompleted(ActionKind, String),
-    RunEventJob(EventName, ActionKind, Box<RegistryAction>),
+    PrepareDownloadData {
+        download_id: i64,
+    },
+    UpdateChunkBufferReport {
+        download_id: i64,
+        chunk_index: i64,
+        bytes: Vec<u8>,
+    },
+    AddTask {
+        task_id: u64,
+        task_name: String,
+    },
+    ChangeTaskStatus {
+        task_id: u64,
+        task_status: TaskStatus,
+    },
+    RegisterEvent {
+        event_name: EventName,
+        event_id: String,
+    },
+    UnRegisterEvent {
+        event_name: EventName,
+        event_id: String,
+    },
+    EventJobCompleted {
+        action_key: ActionKey,
+        event_id: String,
+        muted_action: Option<Box<RegistryAction>>,
+    },
+    RunEventJob {
+        event_name: EventName,
+        action_key: ActionKey,
+        internal_action: Box<RegistryAction>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -36,6 +91,8 @@ pub enum RegistryAction {
 pub enum EventName {
     NewDownload,
     CheckAvailablePermit,
+    AddDownloadToQueue,
+    ProbeDownload,
     UpdateNetworkReport,
     UpdateDiskReport,
     CleanDownloadedItemData,
@@ -54,10 +111,12 @@ pub enum EventName {
     RunEventJob,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(tag = "kind", content = "data", rename_all = "kebab-case")]
-pub enum ActionKind {
-    NewDownload(i64),
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(tag = "event", content = "id", rename_all = "kebab-case")]
+pub enum ActionKey {
+    NewDownload(String),
+    AddDownloadToQueue(i64),
+    ProbeDownload(String),
     CheckAvailablePermit,
     UpdateNetworkReport(i64),
     UpdateDiskReport(i64),
@@ -77,28 +136,34 @@ pub enum ActionKind {
     RunEventJob,
 }
 
-impl From<&RegistryAction> for ActionKind {
+impl From<&RegistryAction> for ActionKey {
     fn from(action: &RegistryAction) -> Self {
         use RegistryAction::*;
         match action {
-            NewDownload(id) => ActionKind::NewDownload(*id),
-            CheckAvailablePermit => ActionKind::CheckAvailablePermit,
-            UpdateNetworkReport(id, _) => ActionKind::UpdateNetworkReport(*id),
-            UpdateDiskReport(id, _, _) => ActionKind::UpdateDiskReport(*id),
-            CleanDownloadedItemData(id) => ActionKind::CleanDownloadedItemData(*id),
-            PauseDownload(id) => ActionKind::PauseDownload(*id),
-            ResumeDownload(id) => ActionKind::ResumeDownload(*id),
-            RecoverDownloads => ActionKind::RecoverDownloads,
-            RemoveDownload(id, _) => ActionKind::RemoveDownload(*id),
-            CloseRequested => ActionKind::CloseRequested,
-            PrepareDownloadData(id) => ActionKind::PrepareDownloadData(*id),
-            UpdateChunkBufferReport(id, _, _) => ActionKind::UpdateChunkBufferReport(*id),
-            AddTask(_, _) => ActionKind::AddTask,
-            ChangeTaskStatus(_, _) => ActionKind::ChangeTaskStatus,
-            RegisterEvent(_, _) => ActionKind::RegisterEvent,
-            UnRegisterEvent(_, _) => ActionKind::UnRegisterEvent,
-            EventJobCompleted(_, _) => ActionKind::EventJobCompleted,
-            RunEventJob(_, _, _) => ActionKind::RunEventJob,
+            NewDownload { opt_id, .. } => ActionKey::NewDownload(opt_id.clone()),
+            ProbeDownload { opt_id, .. } => ActionKey::ProbeDownload(opt_id.clone()),
+            AddDownloadToQueue { download_id } => ActionKey::AddDownloadToQueue(*download_id),
+            CheckAvailablePermit => ActionKey::CheckAvailablePermit,
+            UpdateNetworkReport { download_id, .. } => ActionKey::UpdateNetworkReport(*download_id),
+            UpdateDiskReport { download_id, .. } => ActionKey::UpdateDiskReport(*download_id),
+            CleanDownloadedItemData { download_id } => {
+                ActionKey::CleanDownloadedItemData(*download_id)
+            }
+            PauseDownload { download_id } => ActionKey::PauseDownload(*download_id),
+            ResumeDownload { download_id } => ActionKey::ResumeDownload(*download_id),
+            RecoverDownloads => ActionKey::RecoverDownloads,
+            RemoveDownload { download_id, .. } => ActionKey::RemoveDownload(*download_id),
+            CloseRequested => ActionKey::CloseRequested,
+            PrepareDownloadData { download_id } => ActionKey::PrepareDownloadData(*download_id),
+            UpdateChunkBufferReport { download_id, .. } => {
+                ActionKey::UpdateChunkBufferReport(*download_id)
+            }
+            AddTask { .. } => ActionKey::AddTask,
+            ChangeTaskStatus { .. } => ActionKey::ChangeTaskStatus,
+            RegisterEvent { .. } => ActionKey::RegisterEvent,
+            UnRegisterEvent { .. } => ActionKey::UnRegisterEvent,
+            EventJobCompleted { .. } => ActionKey::EventJobCompleted,
+            RunEventJob { .. } => ActionKey::RunEventJob,
         }
     }
 }
@@ -106,24 +171,26 @@ impl From<&RegistryAction> for ActionKind {
 impl From<&RegistryAction> for EventName {
     fn from(value: &RegistryAction) -> Self {
         match value {
-            RegistryAction::NewDownload(_) => EventName::NewDownload,
+            RegistryAction::NewDownload { .. } => EventName::NewDownload,
             RegistryAction::CheckAvailablePermit => EventName::CheckAvailablePermit,
-            RegistryAction::UpdateNetworkReport(_, _) => EventName::UpdateNetworkReport,
-            RegistryAction::UpdateDiskReport(_, _, _) => EventName::UpdateDiskReport,
-            RegistryAction::CleanDownloadedItemData(_) => EventName::CleanDownloadedItemData,
-            RegistryAction::PauseDownload(_) => EventName::PauseDownload,
-            RegistryAction::ResumeDownload(_) => EventName::ResumeDownload,
+            RegistryAction::UpdateNetworkReport { .. } => EventName::UpdateNetworkReport,
+            RegistryAction::UpdateDiskReport { .. } => EventName::UpdateDiskReport,
+            RegistryAction::CleanDownloadedItemData { .. } => EventName::CleanDownloadedItemData,
+            RegistryAction::PauseDownload { .. } => EventName::PauseDownload,
+            RegistryAction::ResumeDownload { .. } => EventName::ResumeDownload,
             RegistryAction::RecoverDownloads => EventName::RecoverDownloads,
-            RegistryAction::RemoveDownload(_, _) => EventName::RemoveDownload,
+            RegistryAction::RemoveDownload { .. } => EventName::RemoveDownload,
             RegistryAction::CloseRequested => EventName::CloseRequested,
-            RegistryAction::PrepareDownloadData(_) => EventName::PrepareDownloadData,
-            RegistryAction::UpdateChunkBufferReport(_, _, _) => EventName::UpdateChunkBufferReport,
-            RegistryAction::AddTask(_, _) => EventName::AddTask,
-            RegistryAction::ChangeTaskStatus(_, _) => EventName::ChangeTaskStatus,
-            RegistryAction::RegisterEvent(_, _) => EventName::RegisterEvent,
-            RegistryAction::UnRegisterEvent(_, _) => EventName::UnRegisterEvent,
-            RegistryAction::EventJobCompleted(_, _) => EventName::EventJobCompleted,
-            RegistryAction::RunEventJob(_, _, _) => EventName::RunEventJob,
+            RegistryAction::PrepareDownloadData { .. } => EventName::PrepareDownloadData,
+            RegistryAction::UpdateChunkBufferReport { .. } => EventName::UpdateChunkBufferReport,
+            RegistryAction::AddTask { .. } => EventName::AddTask,
+            RegistryAction::ChangeTaskStatus { .. } => EventName::ChangeTaskStatus,
+            RegistryAction::RegisterEvent { .. } => EventName::RegisterEvent,
+            RegistryAction::UnRegisterEvent { .. } => EventName::UnRegisterEvent,
+            RegistryAction::EventJobCompleted { .. } => EventName::EventJobCompleted,
+            RegistryAction::RunEventJob { .. } => EventName::RunEventJob,
+            RegistryAction::AddDownloadToQueue { .. } => EventName::AddDownloadToQueue,
+            RegistryAction::ProbeDownload { .. } => EventName::ProbeDownload,
         }
     }
 }

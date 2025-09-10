@@ -5,21 +5,15 @@ use tokio::fs;
 use crate::registry::Registry;
 
 impl super::File {
-    pub async fn get_default_path(file_name: &str) -> Result<String, String> {
-        let home_dir = Registry::get_state()
-            .app_handle
-            .path()
-            .home_dir()
-            .map_err(|e| e.to_string())?;
+    pub async fn get_default_path(file_name: &str) -> anyhow::Result<String> {
+        let home_dir = Registry::get_state().app_handle.path().home_dir()?;
 
         let mut download_dir = home_dir
             .join("Downloads".to_string())
             .join("ferrix".to_string());
 
         if fs::metadata(&download_dir).await.is_err() {
-            fs::create_dir_all(&download_dir)
-                .await
-                .map_err(|e| e.to_string())?;
+            fs::create_dir_all(&download_dir).await?
         }
 
         download_dir.push(file_name);
@@ -29,16 +23,16 @@ impl super::File {
         Ok(result)
     }
 
-    pub fn get_file_name(file_path: &str) -> Result<String, String> {
+    pub fn get_file_name(file_path: &str) -> anyhow::Result<String> {
         let path = Path::new(file_path);
         let file_name = path
             .file_name()
-            .ok_or("cannot get filename from full path")?;
+            .ok_or_else(|| anyhow::anyhow!("cannot get filename from full path"))?;
 
         Ok(file_name.to_string_lossy().into_owned())
     }
 
-    pub async fn get_available_filename(full_path: &str) -> Result<String, String> {
+    pub async fn get_available_filename(full_path: &str) -> anyhow::Result<String> {
         let path = Path::new(full_path);
 
         if fs::metadata(path).await.is_err() {
@@ -62,6 +56,6 @@ impl super::File {
             }
         }
 
-        Err("cannot available filename".to_string())
+        Err(anyhow::anyhow!("cannot find available filename"))
     }
 }

@@ -184,7 +184,13 @@ impl DownloadWorker {
 
                     downloaded_bytes += bytes_len as i64;
 
-                    dispatch!(registry, UpdateNetworkReport, (self.download_id, bytes_len));
+                    dispatch!(
+                        registry,
+                        UpdateNetworkReport {
+                            download_id: self.download_id,
+                            bytes_len
+                        }
+                    );
                 }
                 Ok(Some(Err(err))) => {
                     return Err(err);

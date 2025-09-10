@@ -1,4 +1,4 @@
-use tauri::Manager;
+use tauri::{Manager, WindowEvent};
 use tokio::spawn;
 
 mod client;
@@ -38,9 +38,7 @@ pub async fn run() {
             command::resume_download,
             command::pause_download,
             command::remove_download,
-            command::plugin::event_job_completed,
-            command::plugin::register_event,
-            command::plugin::unregister_event,
+            command::dispatch,
         ])
         .setup(move |app| {
             let app_handle = app.app_handle().clone();
@@ -52,10 +50,13 @@ pub async fn run() {
             Ok(())
         })
         .on_window_event(|_, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                dispatch!(registry, CloseRequested);
-            }
+            match event {
+                WindowEvent::CloseRequested { api, .. } => {
+                    api.prevent_close();
+                    dispatch!(registry, CloseRequested);
+                }
+                _ => {}
+            };
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

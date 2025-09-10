@@ -3,6 +3,7 @@ use atomic_float::AtomicF64;
 use dashmap::DashMap;
 use log::debug;
 use once_cell::sync::OnceCell;
+use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::{
     collections::{HashSet, VecDeque},
@@ -23,12 +24,17 @@ mod actions;
 mod event;
 mod pool;
 
-pub use actions::{ActionKind, EventName, RegistryAction, TaskStatus};
+pub use actions::{ActionKey, DownloadOptions, EventName, RegistryAction, TaskStatus};
 
 #[derive(Debug)]
 pub struct Buffer {
     pub first: BytesMut,
     pub last: BytesMut,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EventResult {
+    muted_action: Option<Box<RegistryAction>>,
 }
 
 #[derive(Debug)]
@@ -69,8 +75,9 @@ pub struct State {
 
     // Events
     pub registered_events: Arc<DashMap<EventName, HashSet<String>>>,
-    pub running_events: Arc<DashMap<ActionKind, HashSet<String>>>,
-    pub completed_events: Arc<RwLock<HashSet<ActionKind>>>,
+    pub running_events: Arc<DashMap<ActionKey, HashSet<String>>>,
+    pub completed_events: Arc<RwLock<HashSet<ActionKey>>>,
+    pub event_results: Arc<DashMap<ActionKey, EventResult>>,
 }
 
 static STATE: OnceCell<Arc<State>> = OnceCell::new();
@@ -100,6 +107,7 @@ impl Registry {
         let registered_events = Arc::new(DashMap::new());
         let running_events = Arc::new(DashMap::new());
         let completed_events = Arc::new(RwLock::new(HashSet::new()));
+        let event_results = Arc::new(DashMap::new());
 
         let state = Arc::new(State {
             pool,
@@ -112,15 +120,16 @@ impl Registry {
             mpsc_sender,
             current_tasks,
             pending_queue,
+            event_results,
+            running_events,
             download_speed,
             monitor_running,
             bandwidth_limit,
+            completed_events,
+            registered_events,
             available_permits,
             queue_listener_running,
             spawn_cancellation_token,
-            registered_events,
-            completed_events,
-            running_events,
         });
 
         STATE.set(state).unwrap();

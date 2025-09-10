@@ -80,7 +80,7 @@ impl SystemActions for Registry {
 
                         if permit_available {
                             pending_queue.lock().await.pop_front();
-                            dispatch!(registry, PrepareDownloadData, (download_id));
+                            dispatch!(registry, PrepareDownloadData { download_id });
                         }
                     }
                     Err(_) => {

@@ -13,7 +13,13 @@ macro_rules! spawn {
 
             let task_id = task_id.fetch_add(1, ::std::sync::atomic::Ordering::SeqCst);
 
-            $crate::dispatch!(registry, AddTask, (task_id, $name.into()));
+            $crate::dispatch!(
+                registry,
+                AddTask {
+                    task_id,
+                    task_name: $name.into()
+                }
+            );
 
             available_permits.swap(
                 permit.available_permits(),
@@ -33,8 +39,10 @@ macro_rules! spawn {
             );
             $crate::dispatch!(
                 registry,
-                ChangeTaskStatus,
-                (task_id, $crate::registry::TaskStatus::Completed)
+                ChangeTaskStatus {
+                    task_id,
+                    task_status: $crate::registry::TaskStatus::Completed
+                }
             );
         });
     }};

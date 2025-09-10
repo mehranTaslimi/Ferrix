@@ -1,130 +1,21 @@
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    },
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
 };
 
 use anyhow::{anyhow, Context};
 use futures_util::future::join_all;
-use serde::Deserialize;
 
 use crate::{
-    client::{AuthType, Client, ProxyType},
     dispatch,
     emitter::Emitter,
-    file::File,
-    models::{NewDownload, UpdateChunk, UpdateDownload},
+    models::{UpdateChunk, UpdateDownload},
     registry::Registry,
     repository::{chunk::ChunkRepository, download::DownloadRepository},
     worker::{DownloadStatus, DownloadWorker},
 };
 
-#[derive(Debug, Deserialize)]
-pub struct DownloadOptions {
-    file_path: Option<String>,
-    chunk_count: i64,
-    proxy: Option<ProxyType>,
-    auth: Option<AuthType>,
-    headers: Option<HashMap<String, String>>,
-    cookies: Option<HashMap<String, String>>,
-    speed_limit: Option<i64>,
-    max_retries: Option<i64>,
-    delay_secs: Option<f64>,
-    backoff_factor: Option<f64>,
-    timeout_secs: Option<f64>,
-}
-
 impl super::DownloadsManager {
-    pub async fn add_new_download(url: String, options: DownloadOptions) -> Result<(), String> {
-        let client = Client::new(
-            &url,
-            &options.auth,
-            &options.proxy,
-            &options.headers,
-            &options.cookies,
-        )
-        .map_err(|e| e.to_string())?;
-
-        let response = client.inspect().await.map_err(|e| e.to_string())?;
-
-        let file_path = match options.file_path {
-            Some(path) => {
-                let mut path_buf = PathBuf::from(path);
-                path_buf.push(&response.file_name);
-                path_buf.to_string_lossy().into_owned()
-            }
-            None => {
-                let default_path = File::get_default_path(&response.file_name).await?;
-                File::get_available_filename(&default_path).await?
-            }
-        };
-
-        let file_name = File::get_file_name(&file_path)?;
-
-        let chunk_count = if response.supports_range {
-            options.chunk_count.clamp(1, 5) as i64
-        } else {
-            1
-        };
-
-        let supports_range = if response.supports_range { 1 } else { 0 };
-
-        let new_download = NewDownload {
-            auth: match &options.auth {
-                Some(val) => serde_json::to_string(&val).ok(),
-                None => None,
-            },
-            backoff_factor: options.backoff_factor,
-            chunk_count,
-            content_type: response.content_type,
-            cookies: match &options.cookies {
-                Some(val) => serde_json::to_string(val).ok(),
-                None => None,
-            },
-            delay_secs: options.delay_secs,
-            extension: response.extension,
-            file_name,
-            file_path,
-            headers: match &options.headers {
-                Some(val) => serde_json::to_string(val).ok(),
-                None => None,
-            },
-            max_retries: options.max_retries,
-            proxy: match &options.proxy {
-                Some(val) => serde_json::to_string(&val).ok(),
-                None => None,
-            },
-            speed_limit: options.speed_limit,
-            status: "queued".to_string(),
-            timeout_secs: options.timeout_secs,
-            total_bytes: response.content_length as i64,
-            url: response.url,
-            supports_range,
-        };
-
-        let download_id = DownloadRepository::add(new_download)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        let range = Self::get_chunk_ranges(response.content_length, chunk_count as u64);
-
-        ChunkRepository::create_all(download_id, range)
-            .await
-            .map_err(|e| {
-                e.iter()
-                    .map(|f| f.to_string())
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            })?;
-
-        dispatch!(registry, NewDownload, (download_id));
-
-        Ok(())
-    }
-
     pub(super) async fn start_download_action(
         self: &Arc<Self>,
         download_id: i64,
@@ -243,7 +134,7 @@ impl super::DownloadsManager {
         }
 
         if clean_after_update {
-            dispatch!(registry, CleanDownloadedItemData, (download_id));
+            dispatch!(registry, CleanDownloadedItemData { download_id });
         }
 
         Ok(())

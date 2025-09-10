@@ -87,6 +87,7 @@ export default function DownloadSettingSheet({
     setIsLoading(true);
     try {
       await invoke('add_new_download', {
+        optId: crypto.randomUUID(),
         url: values.url.trim(),
         options: {
           proxy,
