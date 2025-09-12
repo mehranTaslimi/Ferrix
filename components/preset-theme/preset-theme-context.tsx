@@ -1,5 +1,6 @@
 'use client';
 
+import { type } from '@tauri-apps/plugin-os';
 import {
   createContext,
   useContext,
@@ -15,9 +16,9 @@ import { loadTheme, type ThemeName, themeNames } from './themes/index';
 import type { ThemePreset } from '@/lib/validation';
 
 interface CustomThemeContextType {
-  preset: string;
+  preset: ThemeName;
   setPreset: (preset: ThemeName) => void;
-  tempPreset: string;
+  tempPreset: ThemeName | null;
   removeTempPreset: () => void;
   addTempPreset: (preset: ThemeName) => void;
   applyTempPreset: (preset: ThemeName) => void;
@@ -38,12 +39,15 @@ const tempStyleTagId = 'temp-theme-preset-style';
 
 function applyCss(css: string, tagId: string) {
   let styleTag = document.getElementById(tagId) as HTMLStyleElement | null;
+
   if (!styleTag) {
     styleTag = document.createElement('style');
     styleTag.id = tagId;
+    styleTag.textContent = css;
     document.head.appendChild(styleTag);
+  } else {
+    styleTag.textContent = css;
   }
-  styleTag.innerHTML = css;
 }
 
 export function PresetsThemeProvider({ children }: { children: React.ReactNode }) {
@@ -58,7 +62,7 @@ export function PresetsThemeProvider({ children }: { children: React.ReactNode }
     return 'default';
   };
   const [preset, setPreset] = useState<ThemeName>(getLocalPreset);
-  const [tempPreset, setTempPreset] = useState('');
+  const [tempPreset, setTempPreset] = useState<ThemeName | null>(null);
   const latestRequest = useRef<string | null>(null);
 
   useLayoutEffect(() => {
@@ -87,7 +91,7 @@ export function PresetsThemeProvider({ children }: { children: React.ReactNode }
     if (styleTag) {
       styleTag.remove();
     }
-    setTempPreset('');
+    setTempPreset(null);
   }, []);
 
   const applyTempPreset = useCallback(
@@ -101,7 +105,7 @@ export function PresetsThemeProvider({ children }: { children: React.ReactNode }
   );
 
   const addTempPreset = useCallback(async (presetName: ThemeName) => {
-    if (!presetName) return;
+    if (!presetName || presetName === tempPreset) return;
     setTempPreset(presetName);
     latestRequest.current = presetName;
 
@@ -132,13 +136,24 @@ export function PresetsThemeProvider({ children }: { children: React.ReactNode }
 
 export function themePresetToCss(preset: ThemePreset) {
   const { light, dark } = preset.styles;
+  const isMacos = type() === 'macos';
 
   const lightVars = Object.entries(light)
-    .map(([key, value]) => `  --${key}: ${value};`)
+    .map(([key, value]) => {
+      if (key === 'sidebar' && isMacos) {
+        return `  --${key}: transparent;`;
+      }
+      return `  --${key}: ${value};`;
+    })
     .join('\n');
 
   const darkVars = Object.entries(dark)
-    .map(([key, value]) => `  --${key}: ${value};`)
+    .map(([key, value]) => {
+      if (key === 'sidebar' && isMacos) {
+        return `  --${key}: transparent;`;
+      }
+      return `  --${key}: ${value};`;
+    })
     .join('\n');
 
   return `

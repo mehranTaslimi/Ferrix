@@ -19,6 +19,7 @@ import { Input } from '../ui/input';
 
 import { presetCollection } from './preset-collection';
 import { useThemePreset } from './preset-theme-context';
+import { type ThemeName } from './themes';
 
 export function PresetThemes() {
   const { preset, tempPreset, addTempPreset, removeTempPreset, applyTempPreset } = useThemePreset();
@@ -40,7 +41,7 @@ export function PresetThemes() {
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, search]);
+  }, [isOpen]);
 
   return (
     <Dialog
@@ -50,75 +51,68 @@ export function PresetThemes() {
         if (!open) removeTempPreset();
       }}
     >
-      <form>
-        <DialogTrigger asChild>
-          <Button variant="outline">Change Preset</Button>
-        </DialogTrigger>
-        <DialogContent className="flex h-[500px] flex-col justify-between gap-4 sm:max-w-[425px]">
-          <div>
-            <DialogHeader>
-              <DialogTitle>Change your preset</DialogTitle>
-            </DialogHeader>
-            <div className="mt-4 grid gap-4">
-              <div className="focus-within:ring-ring flex items-center gap-2 rounded-lg border px-2 transition focus-within:ring-2">
-                <Search className="text-muted-foreground h-4 w-4" />
-                <Input
-                  className="border-0 bg-transparent! px-0 focus-visible:ring-0"
-                  id="search_presets"
-                  name="search_presets"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search presets..."
-                />
-              </div>
-              <div className="h-[300px] space-y-2 overflow-y-auto">
-                {filteredPresets.map(([key, value]) => (
-                  <div
-                    key={key}
-                    ref={(ref) => {
-                      if (key === preset && ref) {
-                        activePresetRef.current = ref;
-                      }
-                    }}
-                    className={clsx(
-                      'hover:bg-muted flex items-center justify-between rounded-lg p-2',
-                      {
-                        'bg-muted': tempPreset === key,
-                      },
-                    )}
-                    onClick={() => addTempPreset(key)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        addTempPreset(key);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <div className="flex items-center gap-4">
-                      {getColorPalette(key)}
-                      <span aria-label={value.label}>{value.label}</span>
-                    </div>
-                    {preset === key && <Check className="text-muted-foreground h-4 w-4" />}
-                  </div>
-                ))}
-              </div>
-            </div>
+      <DialogTrigger asChild>
+        <Button variant="outline">Change Preset</Button>
+      </DialogTrigger>
+      <DialogContent className="flex h-[500px] flex-col justify-between gap-4 sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Change your preset</DialogTitle>
+        </DialogHeader>
+        <div className="mt-4 grid gap-4">
+          <div className="focus-within:ring-ring flex items-center gap-2 rounded-lg border px-2 transition focus-within:ring-2">
+            <Search className="text-muted-foreground h-4 w-4" />
+            <Input
+              className="border-0 bg-transparent! px-0 focus-visible:ring-0"
+              id="search_presets"
+              name="search_presets"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search presets..."
+            />
           </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline" onClick={removeTempPreset}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <DialogClose asChild>
-              <Button type="submit" onClick={() => applyTempPreset(tempPreset)}>
-                Save changes
-              </Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </form>
+          <div className="h-[300px] space-y-2 overflow-y-auto">
+            {filteredPresets.map(([key, value]) => (
+              <div
+                key={key}
+                ref={(ref) => {
+                  if (key === preset && ref) {
+                    activePresetRef.current = ref;
+                  }
+                }}
+                className={clsx('hover:bg-muted flex items-center justify-between rounded-lg p-2', {
+                  'bg-muted': tempPreset === key,
+                })}
+                onClick={() => addTempPreset(key as ThemeName)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    addTempPreset(key as ThemeName);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="flex items-center gap-4">
+                  {getColorPalette(key)}
+                  <span aria-label={value.label}>{value.label}</span>
+                </div>
+                {preset === key && <Check className="text-muted-foreground h-4 w-4" />}
+              </div>
+            ))}
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline" onClick={removeTempPreset}>
+              Cancel
+            </Button>
+          </DialogClose>
+          <DialogClose asChild>
+            <Button type="submit" onClick={() => tempPreset && applyTempPreset(tempPreset)}>
+              Save changes
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
     </Dialog>
   );
 }
