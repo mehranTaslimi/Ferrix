@@ -66,14 +66,19 @@ impl DownloadActions for Registry {
         url: String,
         options: DownloadOptions,
     ) -> anyhow::Result<()> {
-        dispatch!(
-            registry,
-            ProbeDownload {
-                opt_id,
-                url,
-                options
-            }
-        );
+        let url: Vec<&str> = url.split("\n").collect();
+
+        for u in url {
+            dispatch!(
+                registry,
+                ProbeDownload {
+                    opt_id: opt_id.clone(),
+                    url: u.to_string(),
+                    options: options.clone()
+                }
+            );
+        }
+
         Ok(())
     }
 

@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 
+import Api from './api';
 import Event from './event';
 
 import type { EventCallbackFunction } from './event';
@@ -7,6 +8,7 @@ import type { InvokeArgs } from '@tauri-apps/api/core';
 
 class Ferrix {
   #registeredEvents: Array<Event> = [];
+  api = new Api();
 
   on = (eventName: string, cb: EventCallbackFunction): VoidFunction => {
     const ev = new Event(eventName, cb);

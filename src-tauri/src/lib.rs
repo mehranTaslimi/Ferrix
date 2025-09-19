@@ -39,6 +39,7 @@ pub async fn run() {
             command::pause_download,
             command::remove_download,
             command::dispatch,
+            command::plugin::http::api_http_head,
         ])
         .setup(move |app| {
             let app_handle = app.app_handle().clone();

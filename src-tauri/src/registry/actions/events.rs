@@ -96,16 +96,15 @@ impl EventsActions for Registry {
 
             let event_results = Arc::clone(&Registry::get_state().event_results);
 
-            let to_dispatch: RegistryAction =
-                if let Some(mut er) = event_results.get_mut(&action_key) {
-                    if let Some(muted) = er.muted_action.take() {
-                        *muted
-                    } else {
-                        *action
-                    }
+            let to_dispatch = if let Some(mut er) = event_results.get_mut(&action_key) {
+                if let Some(muted) = er.muted_action.take() {
+                    *muted
                 } else {
                     *action
-                };
+                }
+            } else {
+                *action
+            };
 
             dispatch!(registry, ::to_dispatch);
         });
@@ -135,6 +134,3 @@ impl EventsActions for Registry {
         Ok(())
     }
 }
-
-// Running -> prevent to run again and check can emit next event
-// Completed -> prevent to emit and run same event again

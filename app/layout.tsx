@@ -66,7 +66,7 @@ export default function RootLayout({
             </div>
           </DownloadProvider>
         </ThemeProvider>
-        <Script src="/index.js" strategy="afterInteractive" />
+        <Script src="/batch-download.js" strategy="afterInteractive" />
       </body>
     </html>
   );

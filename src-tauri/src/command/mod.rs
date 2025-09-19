@@ -1,3 +1,5 @@
+pub mod plugin;
+
 use crate::{
     dispatch,
     models::Download,
