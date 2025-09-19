@@ -43,7 +43,8 @@ export default function DownloadBar({ setIsModalOpen, setUrl, url }: DownloadBar
     setIsLoading(true);
     try {
       await invoke('add_new_download', {
-        url: value.url,
+        optId: crypto.randomUUID(),
+        url: value.url.trim(),
         options: {
           chunk_count: 5,
         },

@@ -1,4 +1,14 @@
 #[macro_export]
+macro_rules! __dispatch_helper {
+    ($field:ident, $value:expr) => {
+        $value
+    };
+    ($field:ident) => {
+        $field
+    };
+}
+
+#[macro_export]
 macro_rules! dispatch {
     (manager, $event:ident, ($($data:expr),* $(,)?)) => {{
         let manager = $crate::registry::Registry::get_manager();
@@ -8,10 +18,19 @@ macro_rules! dispatch {
         let manager = $crate::registry::Registry::get_manager();
         manager.dispatch($crate::manager::ManagerAction::$event)
     }};
-    (registry, $event:ident, ($($data:expr),* $(,)?)) => {{
-        $crate::registry::Registry::dispatch($crate::registry::RegistryAction::$event($($data),*))
-    }};
     (registry, $event:ident) => {{
         $crate::registry::Registry::dispatch($crate::registry::RegistryAction::$event)
+    }};
+    (registry, $event:ident { $($key:ident $(: $value:expr)?),* }) => {{
+        $crate::registry::Registry::dispatch(
+            $crate::registry::RegistryAction::$event {
+                $(
+                    $key: $crate::__dispatch_helper!($key $(, $value)?)
+                ),*
+            }
+        )
+    }};
+    (registry, ::$action:expr) => {{
+        $crate::registry::Registry::dispatch($action)
     }};
 }

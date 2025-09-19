@@ -1,7 +1,10 @@
 'use client';
 
+import '@/lib/plugin';
+
 import { type } from '@tauri-apps/plugin-os';
 import { clsx } from 'clsx';
+import Script from 'next/script';
 import { useLayoutEffect, useState } from 'react';
 
 import { DownloadProvider } from '@/components/download-context';
@@ -63,6 +66,7 @@ export default function RootLayout({
             </div>
           </DownloadProvider>
         </ThemeProvider>
+        <Script src="/batch-download.js" strategy="afterInteractive" />
       </body>
     </html>
   );

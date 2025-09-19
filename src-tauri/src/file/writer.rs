@@ -37,14 +37,20 @@ impl super::File {
 
                 dispatch!(
                     registry,
-                    UpdateDiskReport,
-                    (download_id, chunk_index, downloaded_bytes)
+                    UpdateDiskReport {
+                        download_id,
+                        chunk_index,
+                        bytes_len: downloaded_bytes
+                    }
                 );
 
                 dispatch!(
                     registry,
-                    UpdateChunkBufferReport,
-                    (download_id, chunk_index, bytes)
+                    UpdateChunkBufferReport {
+                        download_id,
+                        chunk_index,
+                        bytes
+                    }
                 );
             }
         });

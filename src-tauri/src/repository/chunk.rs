@@ -17,10 +17,7 @@ impl ChunkRepository {
         .await
     }
 
-    pub async fn create_all(
-        download_id: i64,
-        ranges: Vec<(u64, u64)>,
-    ) -> Result<(), Vec<sqlx::Error>> {
+    pub async fn create_all(download_id: i64, ranges: Vec<(u64, u64)>) -> anyhow::Result<()> {
         let mut errors = Vec::new();
 
         for (index, range) in ranges.iter().enumerate() {
@@ -36,14 +33,16 @@ impl ChunkRepository {
             return Ok(());
         }
 
-        Err(errors)
+        let msg = errors
+            .into_iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()
+            .join("; ");
+
+        Err(anyhow::anyhow!(msg))
     }
 
-    pub async fn create(
-        download_id: i64,
-        index: i64,
-        range: (i64, i64),
-    ) -> Result<(), sqlx::Error> {
+    pub async fn create(download_id: i64, index: i64, range: (i64, i64)) -> anyhow::Result<()> {
         let pool = Registry::get_pool();
 
         let (start, end) = range;
@@ -59,8 +58,9 @@ impl ChunkRepository {
             end
         )
         .execute(pool)
-        .await
-        .map(|_| ())
+        .await?;
+
+        Ok(())
     }
 
     pub async fn update_all(

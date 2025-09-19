@@ -3,9 +3,10 @@ use atomic_float::AtomicF64;
 use dashmap::DashMap;
 use log::debug;
 use once_cell::sync::OnceCell;
+use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::{
-    collections::VecDeque,
+    collections::{HashSet, VecDeque},
     sync::{
         atomic::{AtomicBool, AtomicU64, AtomicUsize},
         Arc,
@@ -23,13 +24,17 @@ mod actions;
 mod event;
 mod pool;
 
-pub use actions::TaskStatus;
-pub use event::RegistryAction;
+pub use actions::{ActionKey, DownloadOptions, EventName, RegistryAction, TaskStatus};
 
 #[derive(Debug)]
 pub struct Buffer {
     pub first: BytesMut,
     pub last: BytesMut,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EventResult {
+    muted_action: Option<Box<RegistryAction>>,
 }
 
 #[derive(Debug)]
@@ -67,6 +72,12 @@ pub struct State {
     queue_listener_running: Arc<AtomicBool>,
     mpsc_sender: Arc<mpsc::UnboundedSender<RegistryAction>>,
     manager: OnceCell<Arc<DownloadsManager>>,
+
+    // Events
+    pub registered_events: Arc<DashMap<EventName, HashSet<String>>>,
+    pub running_events: Arc<DashMap<ActionKey, HashSet<String>>>,
+    pub completed_events: Arc<RwLock<HashSet<ActionKey>>>,
+    pub event_results: Arc<DashMap<ActionKey, EventResult>>,
 }
 
 static STATE: OnceCell<Arc<State>> = OnceCell::new();
@@ -93,6 +104,10 @@ impl Registry {
         let download_speed = Arc::new(AtomicF64::new(0.0));
         let tasks = Arc::new(DashMap::new());
         let task_id = Arc::new(AtomicU64::new(0));
+        let registered_events = Arc::new(DashMap::new());
+        let running_events = Arc::new(DashMap::new());
+        let completed_events = Arc::new(RwLock::new(HashSet::new()));
+        let event_results = Arc::new(DashMap::new());
 
         let state = Arc::new(State {
             pool,
@@ -105,9 +120,13 @@ impl Registry {
             mpsc_sender,
             current_tasks,
             pending_queue,
+            event_results,
+            running_events,
             download_speed,
             monitor_running,
             bandwidth_limit,
+            completed_events,
+            registered_events,
             available_permits,
             queue_listener_running,
             spawn_cancellation_token,

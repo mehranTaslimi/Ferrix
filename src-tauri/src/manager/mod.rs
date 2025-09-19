@@ -9,7 +9,6 @@ mod event;
 mod monitor;
 mod reports;
 
-pub use actions::DownloadOptions;
 pub use event::ManagerAction;
 
 use crate::{emitter::Emitter, spawn};
