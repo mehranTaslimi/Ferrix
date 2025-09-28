@@ -1,13 +1,16 @@
-mod download;
 mod events;
+mod http;
 mod report;
 mod system;
+mod torrent;
 
-pub use download::{DownloadActions, DownloadOptions};
 pub use events::EventsActions;
+pub use http::{DownloadActions, DownloadOptions};
 pub use report::ReportActions;
-use serde::{Deserialize, Serialize};
 pub use system::{SystemActions, Task, TaskStatus};
+pub use torrent::TorrentActions;
+
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "event", content = "payload", rename_all = "kebab-case")]
@@ -17,7 +20,12 @@ pub enum RegistryAction {
         url: String,
         options: DownloadOptions,
     },
-    ProbeDownload {
+    ProbeHttpDownload {
+        opt_id: String,
+        url: String,
+        options: DownloadOptions,
+    },
+    DecodeTorrentFile {
         opt_id: String,
         url: String,
         options: DownloadOptions,
@@ -92,7 +100,8 @@ pub enum EventName {
     NewDownload,
     CheckAvailablePermit,
     AddDownloadToQueue,
-    ProbeDownload,
+    ProbeHttpDownload,
+    DecodeTorrentFile,
     UpdateNetworkReport,
     UpdateDiskReport,
     CleanDownloadedItemData,
@@ -116,7 +125,8 @@ pub enum EventName {
 pub enum ActionKey {
     NewDownload(String),
     AddDownloadToQueue(i64),
-    ProbeDownload(String),
+    DecodeTorrentFile(String),
+    ProbeHttpDownload(String),
     CheckAvailablePermit,
     UpdateNetworkReport(i64),
     UpdateDiskReport(i64),
@@ -141,7 +151,8 @@ impl From<&RegistryAction> for ActionKey {
         use RegistryAction::*;
         match action {
             NewDownload { opt_id, .. } => ActionKey::NewDownload(opt_id.clone()),
-            ProbeDownload { opt_id, .. } => ActionKey::ProbeDownload(opt_id.clone()),
+            ProbeHttpDownload { opt_id, .. } => ActionKey::ProbeHttpDownload(opt_id.clone()),
+            DecodeTorrentFile { opt_id, .. } => ActionKey::DecodeTorrentFile(opt_id.clone()),
             AddDownloadToQueue { download_id } => ActionKey::AddDownloadToQueue(*download_id),
             CheckAvailablePermit => ActionKey::CheckAvailablePermit,
             UpdateNetworkReport { download_id, .. } => ActionKey::UpdateNetworkReport(*download_id),
@@ -190,7 +201,8 @@ impl From<&RegistryAction> for EventName {
             RegistryAction::EventJobCompleted { .. } => EventName::EventJobCompleted,
             RegistryAction::RunEventJob { .. } => EventName::RunEventJob,
             RegistryAction::AddDownloadToQueue { .. } => EventName::AddDownloadToQueue,
-            RegistryAction::ProbeDownload { .. } => EventName::ProbeDownload,
+            RegistryAction::DecodeTorrentFile { .. } => EventName::DecodeTorrentFile,
+            RegistryAction::ProbeHttpDownload { .. } => EventName::ProbeHttpDownload,
         }
     }
 }
