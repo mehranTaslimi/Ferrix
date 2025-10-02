@@ -8,6 +8,7 @@ pub use events::EventsActions;
 pub use http::{DownloadActions, DownloadOptions};
 pub use report::ReportActions;
 pub use system::{SystemActions, Task, TaskStatus};
+use tokio_util::bytes::Bytes;
 pub use torrent::TorrentActions;
 
 use serde::{Deserialize, Serialize};
@@ -25,10 +26,17 @@ pub enum RegistryAction {
         url: String,
         options: DownloadOptions,
     },
-    DecodeTorrentFile {
+    LoadTorrent {
         opt_id: String,
         url: String,
         options: DownloadOptions,
+    },
+    DecodeTorrent {
+        opt_id: String,
+        bytes: Vec<u8>,
+    },
+    SendAnnounceRequest {
+        torrent_id: i64,
     },
     AddDownloadToQueue {
         download_id: i64,
@@ -101,7 +109,6 @@ pub enum EventName {
     CheckAvailablePermit,
     AddDownloadToQueue,
     ProbeHttpDownload,
-    DecodeTorrentFile,
     UpdateNetworkReport,
     UpdateDiskReport,
     CleanDownloadedItemData,
@@ -118,6 +125,9 @@ pub enum EventName {
     UnRegisterEvent,
     EventJobCompleted,
     RunEventJob,
+    DecodeTorrent,
+    LoadTorrent,
+    SendAnnounceRequest(i64),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -135,9 +145,12 @@ pub enum ActionKey {
     ResumeDownload(i64),
     RecoverDownloads,
     RemoveDownload(i64),
-    CloseRequested,
     PrepareDownloadData(i64),
     UpdateChunkBufferReport(i64),
+    SendAnnounceRequest(i64),
+    LoadTorrent(String),
+    DecodeTorrent(String),
+    CloseRequested,
     AddTask,
     ChangeTaskStatus,
     RegisterEvent,
@@ -152,7 +165,7 @@ impl From<&RegistryAction> for ActionKey {
         match action {
             NewDownload { opt_id, .. } => ActionKey::NewDownload(opt_id.clone()),
             ProbeHttpDownload { opt_id, .. } => ActionKey::ProbeHttpDownload(opt_id.clone()),
-            DecodeTorrentFile { opt_id, .. } => ActionKey::DecodeTorrentFile(opt_id.clone()),
+            DecodeTorrent { opt_id, .. } => ActionKey::DecodeTorrent(opt_id.clone()),
             AddDownloadToQueue { download_id } => ActionKey::AddDownloadToQueue(*download_id),
             CheckAvailablePermit => ActionKey::CheckAvailablePermit,
             UpdateNetworkReport { download_id, .. } => ActionKey::UpdateNetworkReport(*download_id),
@@ -175,6 +188,8 @@ impl From<&RegistryAction> for ActionKey {
             UnRegisterEvent { .. } => ActionKey::UnRegisterEvent,
             EventJobCompleted { .. } => ActionKey::EventJobCompleted,
             RunEventJob { .. } => ActionKey::RunEventJob,
+            LoadTorrent { opt_id, .. } => ActionKey::LoadTorrent(opt_id.clone()),
+            SendAnnounceRequest { torrent_id } => ActionKey::SendAnnounceRequest(*torrent_id),
         }
     }
 }
@@ -201,8 +216,12 @@ impl From<&RegistryAction> for EventName {
             RegistryAction::EventJobCompleted { .. } => EventName::EventJobCompleted,
             RegistryAction::RunEventJob { .. } => EventName::RunEventJob,
             RegistryAction::AddDownloadToQueue { .. } => EventName::AddDownloadToQueue,
-            RegistryAction::DecodeTorrentFile { .. } => EventName::DecodeTorrentFile,
+            RegistryAction::DecodeTorrent { .. } => EventName::DecodeTorrent,
+            RegistryAction::LoadTorrent { .. } => EventName::LoadTorrent,
             RegistryAction::ProbeHttpDownload { .. } => EventName::ProbeHttpDownload,
+            RegistryAction::SendAnnounceRequest { torrent_id } => {
+                EventName::SendAnnounceRequest(*torrent_id)
+            }
         }
     }
 }

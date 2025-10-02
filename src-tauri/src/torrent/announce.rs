@@ -1,7 +1,9 @@
-use std::sync::Arc;
+use std::{borrow::Cow, collections::HashMap, sync::Arc};
 
 use crate::registry::Registry;
+use anyhow::{anyhow, Context};
 use rand::{rngs::OsRng, TryRngCore};
+use tauri_plugin_http::reqwest::Client as ReqwestClient;
 use urlencoding::encode_binary;
 
 use super::*;
@@ -50,13 +52,43 @@ impl Torrent {
     }
 
     pub async fn http_announce(&self) -> anyhow::Result<()> {
+        println!("{:?}", self.info.files);
+
         let peer_id = Self::generate_peer_id().await?;
 
         let encoded_info_hash = encode_binary(&self.info_hash);
         let encoded_peer_id = encode_binary(&peer_id);
 
-        println!("{:?}", encoded_info_hash);
-        println!("{:?}", encoded_peer_id);
+        let base = self
+            .announce
+            .clone()
+            .ok_or(anyhow!("missing announce url"))?;
+
+        let length = self.info.length.ok_or(anyhow!("missing announce url"))?;
+
+        let client = ReqwestClient::new();
+
+        let sep = if base.contains('?') { '&' } else { '?' };
+
+        let url = format!("{base}{sep}info_hash={ih}&peer_id={pid}&port=6881&uploaded=0&downloaded=0&left={left}&compact=1&event=started",
+                base = base,
+                sep = sep,
+                ih = encoded_info_hash,
+                pid = encoded_peer_id,
+                left = length
+            );
+
+        let response = client.get(url).send().await?;
+        let status = response.status();
+        let body = response.bytes().await?;
+
+        if !status.is_success() {
+            return Err(anyhow!("tracker http error: {}", status));
+        }
+
+        let tracker = self.decode_tracker_response(&body)?;
+
+        println!("{:?}", tracker);
 
         Ok(())
     }

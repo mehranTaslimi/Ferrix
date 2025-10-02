@@ -1,21 +1,57 @@
-use bendy::decoding::{Decoder, FromBencode};
+use bendy::decoding::{Decoder, Error as BendyError, FromBencode, Object};
 use sha1::{Digest, Sha1};
 
 mod announce;
+mod decode;
 
-// #[derive(Debug)]
-// pub struct FileInfo {
-//     pub length: i64,
-//     pub path: Vec<String>,
-// }
+#[derive(Debug, Clone)]
+pub struct FileInfo {
+    pub length: i64,
+    pub path: Vec<String>,
+}
 
-#[derive(Debug)]
+impl FromBencode for FileInfo {
+    fn decode_bencode_object(object: Object) -> Result<Self, BendyError>
+    where
+        Self: Sized,
+    {
+        let mut dict = object.try_into_dictionary()?;
+
+        let mut length = None;
+        let mut path = None;
+
+        while let Some((key, object)) = dict.next_pair()? {
+            match key {
+                b"length" => {
+                    length = i64::decode_bencode_object(object).map(Some)?;
+                }
+                b"path" => {
+                    let mut list = object.try_into_list()?;
+                    let mut out = vec![];
+                    while let Some(l) = list.next_object()? {
+                        out.push(String::decode_bencode_object(l)?);
+                    }
+
+                    path = Some(out);
+                }
+                _ => {}
+            }
+        }
+
+        Ok(FileInfo {
+            length: length.ok_or_else(|| BendyError::missing_field("length"))?,
+            path: path.ok_or_else(|| BendyError::missing_field("path"))?,
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Info {
-    pub name: String,
-    pub piece_length: i64,
-    pub pieces: Vec<u8>,
+    pub name: Option<String>,
+    pub piece_length: Option<i64>,
+    pub pieces: Option<Vec<u8>>,
     pub length: Option<i64>,
-    pub files: Vec<String>,
+    pub files: Option<Vec<FileInfo>>,
 }
 
 #[derive(Debug)]
@@ -24,7 +60,7 @@ pub struct Torrent {
     pub announce_list: Option<Vec<Vec<String>>>,
     pub creation_date: Option<i64>,
     pub created_by: Option<String>,
-    pub info: Option<Info>,
+    pub info: Info,
     pub comment: Option<String>,
     pub info_hash: [u8; 20],
 }
@@ -47,7 +83,13 @@ impl Torrent {
             creation_date: None,
             comment: None,
             info_hash,
-            info: None,
+            info: Info {
+                name: None,
+                piece_length: None,
+                pieces: None,
+                length: None,
+                files: None,
+            },
         };
 
         while let Some((key, object)) = dict.next_pair()? {
@@ -87,42 +129,34 @@ impl Torrent {
                 b"info" => {
                     let mut dict = object.try_into_dictionary()?;
 
-                    let mut name = None;
-                    let mut piece_length = None;
-                    let mut pieces = None;
-                    let mut length = None;
-                    let mut files = None;
-
                     while let Some((key, object)) = dict.next_pair()? {
                         match key {
                             b"length" => {
-                                length = i64::decode_bencode_object(object).map(Some)?;
+                                s.info.length = i64::decode_bencode_object(object).map(Some)?;
                             }
                             b"name" => {
-                                name = String::decode_bencode_object(object).map(Some)?;
+                                s.info.name = String::decode_bencode_object(object).map(Some)?;
                             }
                             b"piece length" => {
-                                piece_length = i64::decode_bencode_object(object).map(Some)?;
+                                s.info.piece_length =
+                                    i64::decode_bencode_object(object).map(Some)?;
                             }
                             b"files" => {
-                                files = Vec::decode_bencode_object(object).map(Some)?;
+                                if let Ok(mut list) = object.try_into_list() {
+                                    let mut out = vec![];
+                                    while let Ok(Some(next)) = list.next_object() {
+                                        out.push(FileInfo::decode_bencode_object(next)?)
+                                    }
+                                    s.info.files = Some(out);
+                                }
                             }
                             b"pieces" => {
                                 let bytes = object.try_into_bytes()?;
-                                pieces = Some(bytes.to_vec())
+                                s.info.pieces = Some(bytes.to_vec())
                             }
                             _ => {}
                         }
                     }
-
-                    s.info = Some(Info {
-                        name: name.ok_or_else(|| anyhow::anyhow!("missing field 'name'"))?,
-                        piece_length: piece_length
-                            .ok_or_else(|| anyhow::anyhow!("missing field 'piece length'"))?,
-                        pieces: pieces.ok_or_else(|| anyhow::anyhow!("missing field 'pieces'"))?,
-                        files: files.unwrap_or_default(),
-                        length,
-                    });
                 }
                 _ => {}
             }

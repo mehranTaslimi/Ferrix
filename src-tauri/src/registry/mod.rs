@@ -22,6 +22,7 @@ use tokio_util::{bytes::BytesMut, sync::CancellationToken};
 
 mod actions;
 mod event;
+mod peer;
 mod pool;
 
 pub use actions::{ActionKey, DownloadOptions, EventName, RegistryAction, TaskStatus};

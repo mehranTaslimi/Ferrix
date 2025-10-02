@@ -85,7 +85,7 @@ impl DownloadActions for Registry {
                     LinkKind::Torrent => {
                         dispatch!(
                             registry,
-                            DecodeTorrentFile {
+                            LoadTorrent {
                                 opt_id: opt_id.clone(),
                                 url: url.to_string(),
                                 options: options.clone()

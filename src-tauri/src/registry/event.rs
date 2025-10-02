@@ -72,11 +72,13 @@ impl super::Registry {
                 url,
                 options,
             } => Self::probe_http_download(opt_id, url, options).await,
-            DecodeTorrentFile {
+            DecodeTorrent { opt_id, bytes } => Self::decode_torrent(opt_id, bytes).await,
+            LoadTorrent {
                 opt_id,
                 url,
                 options,
-            } => Self::decode_torrent_file(opt_id, url, options).await,
+            } => Self::load_torrent(opt_id, url, options).await,
+            SendAnnounceRequest { torrent_id } => Self::send_announce_request(torrent_id).await,
             AddDownloadToQueue { download_id } => Self::add_download_to_queue(download_id).await,
             RecoverDownloads => Self::recover_downloads().await,
             PrepareDownloadData { download_id } => Self::prepare_download_data(download_id).await,
