@@ -1,8 +1,12 @@
+use std::sync::Arc;
+
 use bendy::decoding::{Decoder, Error as BendyError, FromBencode, Object};
 use sha1::{Digest, Sha1};
 
 mod announce;
-mod decode;
+mod handshake;
+mod ip;
+mod tracker;
 
 #[derive(Debug, Clone)]
 pub struct FileInfo {
@@ -66,7 +70,7 @@ pub struct Torrent {
 }
 
 impl Torrent {
-    pub fn from_bytes(bytes: &[u8]) -> anyhow::Result<Self> {
+    pub fn from_bytes(bytes: &[u8]) -> anyhow::Result<Arc<Self>> {
         let mut dec = Decoder::new(&bytes);
 
         let info_hash = Self::get_info_hash(&bytes)?;
@@ -162,10 +166,8 @@ impl Torrent {
             }
         }
 
-        Ok(s)
+        Ok(Arc::new(s))
     }
-
-    pub fn from_db(torrent_id: i64) {}
 
     fn get_info_hash(bytes: &[u8]) -> anyhow::Result<[u8; 20]> {
         let mut dec = Decoder::new(bytes);

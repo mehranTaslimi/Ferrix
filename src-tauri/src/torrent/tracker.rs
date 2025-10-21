@@ -1,3 +1,5 @@
+use std::net::{SocketAddrV4, SocketAddrV6};
+
 use anyhow::anyhow;
 use bendy::decoding::{Error as BendyError, Object};
 
@@ -12,7 +14,7 @@ pub struct PeerDict {
 
 #[derive(Debug, Clone)]
 pub enum Peers {
-    CompactV4(Vec<u8>),
+    CompactV4(SocketAddrV4),
     Dict(Vec<PeerDict>),
 }
 
@@ -25,7 +27,7 @@ pub struct Tracker {
     pub incomplete: Option<u64>,
     pub downloaded: Option<u64>,
     pub peers: Option<Peers>,
-    pub peers6: Option<Vec<u8>>,
+    pub peers6: Option<SocketAddrV6>,
     pub failure_reason: Option<String>,
     pub warning_message: Option<String>,
 }
@@ -65,7 +67,7 @@ impl FromBencode for PeerDict {
 }
 
 impl Torrent {
-    pub(super) fn decode_tracker_response(&self, bytes: &[u8]) -> anyhow::Result<Tracker> {
+    pub(super) fn decode_tracker(&self, bytes: &[u8]) -> anyhow::Result<Tracker> {
         let mut dec = Decoder::new(&bytes);
 
         let mut dict = dec
@@ -121,15 +123,17 @@ impl Torrent {
                             }
                             tracker.peers = Some(Peers::Dict(out));
                         }
-                        Object::Bytes(items) => {
-                            tracker.peers = Some(Peers::CompactV4(items.to_vec()))
+                        Object::Bytes(bytes) => {
+                            if let Some(addr) = self.bytes_to_ipv4(bytes) {
+                                tracker.peers = Some(Peers::CompactV4(addr))
+                            }
                         }
                         _ => {}
                     };
                 }
                 b"peers6" => {
-                    let peers = object.try_into_bytes().map(|op| op.to_vec()).map(Some)?;
-                    tracker.peers6 = peers
+                    let bytes = object.try_into_bytes().map(|op| op.to_vec())?;
+                    tracker.peers6 = self.bytes_to_ipv6(&bytes);
                 }
                 b"failure reason" => {
                     let failure_reason = String::decode_bencode_object(object).map(Some)?;
@@ -144,5 +148,35 @@ impl Torrent {
         }
 
         Ok(tracker)
+    }
+
+    pub async fn get_tracker(self: &Arc<Self>) -> anyhow::Result<()> {
+        let self_clone = Arc::clone(&self);
+        match (&self.announce, &self.announce_list) {
+            (Some(announce), Some(_)) | (Some(announce), None) => {
+                let len = self.info.length.unwrap_or(0);
+                let bytes = self_clone.http_announce(&announce, len).await?;
+                let tracker = self.decode_tracker(&bytes)?;
+
+                match tracker.peers {
+                    Some(peer) => match peer {
+                        Peers::CompactV4(addr) => {
+                            let pid = &self.generate_peer_id().await?;
+                            self.handshake(addr, &self.info_hash, pid).await?;
+                        }
+                        Peers::Dict(dict) => {
+                            println!("{:?}", dict);
+                        }
+                    },
+                    None => {}
+                }
+            }
+            (None, Some(announce_list)) => {
+                println!("{:?}", announce_list)
+            }
+            (None, None) => return Err(anyhow!("missing field `announce` and `announce list`")),
+        };
+
+        Ok(())
     }
 }

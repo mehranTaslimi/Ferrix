@@ -19,7 +19,7 @@ impl TorrentActions for Registry {
     async fn decode_torrent(opt_id: String, bytes: Vec<u8>) -> anyhow::Result<()> {
         let t = Torrent::from_bytes(&bytes)?;
 
-        t.http_announce().await?;
+        t.get_tracker().await?;
 
         // println!("{:?}", t);
 

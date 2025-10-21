@@ -1,9 +1,10 @@
-use std::{borrow::Cow, collections::HashMap, sync::Arc};
-
 use crate::registry::Registry;
-use anyhow::{anyhow, Context};
+
+use anyhow::anyhow;
 use rand::{rngs::OsRng, TryRngCore};
-use tauri_plugin_http::reqwest::Client as ReqwestClient;
+use std::sync::Arc;
+use tauri_plugin_http::reqwest::Client;
+use tokio_util::bytes::Bytes;
 use urlencoding::encode_binary;
 
 use super::*;
@@ -25,7 +26,7 @@ impl Torrent {
         format!("{major}{:02}{patch}", minor)
     }
 
-    async fn generate_peer_id() -> anyhow::Result<[u8; 20]> {
+    pub(super) async fn generate_peer_id(&self) -> anyhow::Result<[u8; 20]> {
         let peer_id_arc = Arc::clone(&Registry::get_state().peer_id);
         let mut maybe_peer_id_lock = peer_id_arc.lock().await;
 
@@ -51,27 +52,22 @@ impl Torrent {
         }
     }
 
-    pub async fn http_announce(&self) -> anyhow::Result<()> {
-        println!("{:?}", self.info.files);
-
-        let peer_id = Self::generate_peer_id().await?;
+    pub async fn http_announce(
+        self: &Arc<Self>,
+        announce_url: &str,
+        length: i64,
+    ) -> anyhow::Result<Bytes> {
+        let peer_id = self.generate_peer_id().await?;
 
         let encoded_info_hash = encode_binary(&self.info_hash);
         let encoded_peer_id = encode_binary(&peer_id);
 
-        let base = self
-            .announce
-            .clone()
-            .ok_or(anyhow!("missing announce url"))?;
+        let client = Client::new();
 
-        let length = self.info.length.ok_or(anyhow!("missing announce url"))?;
-
-        let client = ReqwestClient::new();
-
-        let sep = if base.contains('?') { '&' } else { '?' };
+        let sep = if announce_url.contains('?') { '&' } else { '?' };
 
         let url = format!("{base}{sep}info_hash={ih}&peer_id={pid}&port=6881&uploaded=0&downloaded=0&left={left}&compact=1&event=started",
-                base = base,
+                base = announce_url,
                 sep = sep,
                 ih = encoded_info_hash,
                 pid = encoded_peer_id,
@@ -86,10 +82,6 @@ impl Torrent {
             return Err(anyhow!("tracker http error: {}", status));
         }
 
-        let tracker = self.decode_tracker_response(&body)?;
-
-        println!("{:?}", tracker);
-
-        Ok(())
+        Ok(body)
     }
 }
