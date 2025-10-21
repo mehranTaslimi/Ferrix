@@ -22,6 +22,7 @@ use tokio_util::{bytes::BytesMut, sync::CancellationToken};
 
 mod actions;
 mod event;
+mod peer;
 mod pool;
 
 pub use actions::{ActionKey, DownloadOptions, EventName, RegistryAction, TaskStatus};
@@ -69,6 +70,7 @@ pub struct State {
     pub bandwidth_limit: Arc<AtomicF64>,
     pub download_speed: Arc<AtomicF64>,
     pub spawn_cancellation_token: Arc<CancellationToken>,
+    pub peer_id: Arc<Mutex<Option<[u8; 20]>>>,
     queue_listener_running: Arc<AtomicBool>,
     mpsc_sender: Arc<mpsc::UnboundedSender<RegistryAction>>,
     manager: OnceCell<Arc<DownloadsManager>>,
@@ -108,6 +110,7 @@ impl Registry {
         let running_events = Arc::new(DashMap::new());
         let completed_events = Arc::new(RwLock::new(HashSet::new()));
         let event_results = Arc::new(DashMap::new());
+        let peer_id = Arc::new(Mutex::new(None));
 
         let state = Arc::new(State {
             pool,
@@ -130,6 +133,7 @@ impl Registry {
             available_permits,
             queue_listener_running,
             spawn_cancellation_token,
+            peer_id,
         });
 
         STATE.set(state).unwrap();

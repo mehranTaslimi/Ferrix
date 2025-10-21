@@ -5,10 +5,12 @@ mod client;
 mod command;
 mod emitter;
 mod file;
+mod link;
 mod manager;
 mod models;
 mod registry;
 mod repository;
+mod torrent;
 mod worker;
 
 #[macro_use]

@@ -4,6 +4,7 @@ mod auth;
 mod builder;
 mod cookies;
 mod error;
+mod fetch;
 mod headers;
 mod inspect;
 mod proxy;

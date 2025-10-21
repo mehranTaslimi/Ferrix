@@ -2,7 +2,7 @@ use crate::dispatch;
 
 use super::actions::{
     ActionKey, DownloadActions, EventName, EventsActions, RegistryAction, ReportActions,
-    SystemActions,
+    SystemActions, TorrentActions,
 };
 
 use anyhow::Context;
@@ -67,11 +67,18 @@ impl super::Registry {
                 url,
                 options,
             } => Self::new_download(opt_id, url, options).await,
-            ProbeDownload {
+            ProbeHttpDownload {
                 opt_id,
                 url,
                 options,
-            } => Self::probe_download(opt_id, url, options).await,
+            } => Self::probe_http_download(opt_id, url, options).await,
+            DecodeTorrent { opt_id, bytes } => Self::decode_torrent(opt_id, bytes).await,
+            LoadTorrent {
+                opt_id,
+                url,
+                options,
+            } => Self::load_torrent(opt_id, url, options).await,
+            SendAnnounceRequest { torrent_id } => Self::send_announce_request(torrent_id).await,
             AddDownloadToQueue { download_id } => Self::add_download_to_queue(download_id).await,
             RecoverDownloads => Self::recover_downloads().await,
             PrepareDownloadData { download_id } => Self::prepare_download_data(download_id).await,

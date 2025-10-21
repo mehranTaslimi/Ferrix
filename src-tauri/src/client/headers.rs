@@ -1,14 +1,17 @@
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, sync::Arc};
 
 use tauri::http::{header::USER_AGENT, HeaderMap, HeaderName, HeaderValue};
 
-use crate::emitter::Emitter;
+use crate::{emitter::Emitter, registry::Registry};
 
 impl super::Client {
     fn default_user_agent() -> String {
+        let app_handle = Arc::clone(&Registry::get_state().app_handle);
+        let version = app_handle.package_info().version.to_string();
+
         format!(
             "Ferrix/{version} ({os} {arch}; +https://github.com/mehranTaslimi/Ferrix)",
-            version = env!("CARGO_PKG_VERSION"),
+            version = version,
             os = env::consts::OS,
             arch = env::consts::ARCH,
         )

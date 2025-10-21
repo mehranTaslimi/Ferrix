@@ -20,6 +20,7 @@ use crate::{
     dispatch,
     emitter::Emitter,
     file::File,
+    link::{Link, LinkKind},
     models::NewDownload,
     repository::{chunk::ChunkRepository, download::DownloadRepository},
     worker::Worker,
@@ -27,17 +28,17 @@ use crate::{
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DownloadOptions {
-    file_path: Option<String>,
-    chunk_count: i64,
-    proxy: Option<ProxyType>,
-    auth: Option<AuthType>,
-    headers: Option<HashMap<String, String>>,
-    cookies: Option<HashMap<String, String>>,
-    speed_limit: Option<i64>,
-    max_retries: Option<i64>,
-    delay_secs: Option<f64>,
-    backoff_factor: Option<f64>,
-    timeout_secs: Option<f64>,
+    pub file_path: Option<String>,
+    pub chunk_count: i64,
+    pub proxy: Option<ProxyType>,
+    pub auth: Option<AuthType>,
+    pub headers: Option<HashMap<String, String>>,
+    pub cookies: Option<HashMap<String, String>>,
+    pub speed_limit: Option<i64>,
+    pub max_retries: Option<i64>,
+    pub delay_secs: Option<f64>,
+    pub backoff_factor: Option<f64>,
+    pub timeout_secs: Option<f64>,
 }
 
 pub trait DownloadActions {
@@ -47,7 +48,7 @@ pub trait DownloadActions {
         url: String,
         options: DownloadOptions,
     ) -> anyhow::Result<()>;
-    async fn probe_download(
+    async fn probe_http_download(
         opt_id: String,
         url: String,
         options: DownloadOptions,
@@ -66,23 +67,43 @@ impl DownloadActions for Registry {
         url: String,
         options: DownloadOptions,
     ) -> anyhow::Result<()> {
-        let url: Vec<&str> = url.split("\n").collect();
+        let urls: Vec<&str> = url.split("\n").collect();
 
-        for u in url {
-            dispatch!(
-                registry,
-                ProbeDownload {
-                    opt_id: opt_id.clone(),
-                    url: u.to_string(),
-                    options: options.clone()
+        for url in urls {
+            match Link::detect_url_lind(url) {
+                Ok(kind) => match kind {
+                    LinkKind::Http => {
+                        dispatch!(
+                            registry,
+                            ProbeHttpDownload {
+                                opt_id: opt_id.clone(),
+                                url: url.to_string(),
+                                options: options.clone()
+                            }
+                        );
+                    }
+                    LinkKind::Torrent => {
+                        dispatch!(
+                            registry,
+                            LoadTorrent {
+                                opt_id: opt_id.clone(),
+                                url: url.to_string(),
+                                options: options.clone()
+                            }
+                        );
+                    }
+                    _ => return Err(anyhow::anyhow!("unsupported protocol")),
+                },
+                Err(e) => {
+                    return Err(e);
                 }
-            );
+            }
         }
 
         Ok(())
     }
 
-    async fn probe_download(
+    async fn probe_http_download(
         opt_id: String,
         url: String,
         options: DownloadOptions,
