@@ -1,15 +1,16 @@
 use crate::registry::Registry;
 
 use std::{
-    sync::{atomic::Ordering, Arc},
+    sync::atomic::Ordering,
     time::{Duration, Instant},
 };
 use tokio::time::sleep;
 
 impl super::DownloadWorker {
     pub async fn limiter(&self, bytes_len: u64) {
-        let bandwidth_limit =
-            Arc::clone(&Registry::get_state().bandwidth_limit).load(Ordering::Relaxed);
+        let bandwidth_limit = Registry::get_state_ref()
+            .bandwidth_limit
+            .load(Ordering::Relaxed);
 
         if bandwidth_limit == 0.0 {
             return;

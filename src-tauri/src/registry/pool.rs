@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 impl super::Registry {
     pub fn get_pool() -> &'static SqlitePool {
-        &Self::get_state().pool
+        &Self::get_state_ref().pool
     }
 
     pub(super) async fn init_db(path: &Result<PathBuf, tauri::Error>) -> SqlitePool {

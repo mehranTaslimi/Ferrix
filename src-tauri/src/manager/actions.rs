@@ -125,10 +125,7 @@ impl super::DownloadsManager {
         Ok(())
     }
 
-    pub(super) async fn start_download_action(
-        self: &Arc<Self>,
-        download_id: i64,
-    ) -> anyhow::Result<()> {
+    pub(super) async fn start_download_action(download_id: i64) -> anyhow::Result<()> {
         Self::start_monitoring();
         let download_worker = DownloadWorker::new(download_id).await?;
 
@@ -138,7 +135,6 @@ impl super::DownloadsManager {
     }
 
     pub(super) async fn update_download_status_action(
-        self: &Arc<Self>,
         status: DownloadStatus,
         error_message: Option<String>,
         download_id: i64,
@@ -179,12 +175,9 @@ impl super::DownloadsManager {
         Ok(())
     }
 
-    pub(super) async fn pause_download_action(
-        self: &Arc<Self>,
-        download_id: i64,
-    ) -> anyhow::Result<()> {
-        let workers = Arc::clone(&Registry::get_state().workers);
-        let worker = workers.get(&download_id).ok_or(anyhow!(
+    pub(super) async fn pause_download_action(download_id: i64) -> anyhow::Result<()> {
+        let state = Registry::get_state();
+        let worker = state.workers.get(&download_id).ok_or(anyhow!(
             "pause download error: cannot find worker with download id {}",
             download_id
         ))?;
@@ -196,22 +189,20 @@ impl super::DownloadsManager {
     }
 
     pub(super) async fn update_chunks_action(
-        self: &Arc<Self>,
         download_id: i64,
         clean_after_update: bool,
     ) -> anyhow::Result<()> {
-        let workers = Arc::clone(&Registry::get_state().workers);
-        let worker = workers.get(&download_id).context(anyhow!(
+        let state = Registry::get_state();
+        let worker = state.workers.get(&download_id).context(anyhow!(
             "update chunk error: cannot find worker with download id {}",
             download_id
         ))?;
 
-        let reports = Arc::clone(&Registry::get_state().reports);
-
         let worker = worker.write().await;
         let update_chunks_futures = worker.chunks.iter().map(|chunk| {
             let chunk_index = chunk.chunk_index;
-            let wrote_bytes = reports
+            let wrote_bytes = state
+                .reports
                 .get(&download_id)
                 .and_then(|r| {
                     r.chunks_wrote_bytes
@@ -250,7 +241,6 @@ impl super::DownloadsManager {
     }
 
     pub(super) async fn reset_chunk_action(
-        self: &Arc<Self>,
         download_id: i64,
         chunk_index: i64,
     ) -> anyhow::Result<()> {
@@ -264,9 +254,9 @@ impl super::DownloadsManager {
         )
         .await?;
 
-        let reports = Arc::clone(&Registry::get_state().reports);
+        let state = Registry::get_state();
 
-        let report = reports.get(&download_id).context(anyhow!(
+        let report = state.reports.get(&download_id).context(anyhow!(
             "reset chunk error: cannot find report with download id {}",
             download_id
         ))?;

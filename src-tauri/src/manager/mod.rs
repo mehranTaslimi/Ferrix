@@ -1,5 +1,4 @@
 use log::debug;
-use std::sync::Arc;
 use tokio::sync::mpsc;
 
 mod actions;
@@ -14,28 +13,24 @@ pub use event::ManagerAction;
 
 use crate::{emitter::Emitter, spawn};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DownloadsManager {
-    mpsc_sender: Arc<mpsc::UnboundedSender<ManagerAction>>,
+    mpsc_sender: mpsc::UnboundedSender<ManagerAction>,
 }
 
 impl DownloadsManager {
-    pub fn new() -> Arc<Self> {
+    pub fn new() -> Self {
         let (tx, rx) = mpsc::unbounded_channel::<ManagerAction>();
-        let manager = Arc::new(Self {
-            mpsc_sender: Arc::new(tx),
-        });
+        let manager = Self { mpsc_sender: tx };
 
-        Self::initialize_mpsc_action(manager.clone(), rx);
+        Self::initialize_mpsc_action(&manager, rx);
         manager
     }
 
-    fn initialize_mpsc_action(self: Arc<Self>, mut rx: mpsc::UnboundedReceiver<ManagerAction>) {
-        let self_clone = Arc::clone(&self);
-
+    fn initialize_mpsc_action(&self, mut rx: mpsc::UnboundedReceiver<ManagerAction>) {
         spawn!("manager_mpsc", {
             while let Some(action) = rx.recv().await {
-                if let Err(err) = self_clone.reducer(action).await {
+                if let Err(err) = Self::reducer(action).await {
                     debug!("{}", err.to_string());
                     Emitter::emit_error(err.to_string());
                 }

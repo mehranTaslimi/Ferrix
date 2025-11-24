@@ -52,21 +52,21 @@ pub struct Report {
 #[derive(Debug)]
 pub struct State {
     pub pool: SqlitePool,
-    pub current_tasks: Arc<Semaphore>,
-    pub tasks: Arc<DashMap<u64, actions::Task>>,
-    pub task_id: Arc<AtomicU64>,
-    pub app_handle: Arc<AppHandle>,
-    pub available_permits: Arc<AtomicUsize>,
-    pub pending_queue: Arc<Mutex<VecDeque<i64>>>,
-    pub workers: Arc<DashMap<i64, Arc<RwLock<Worker>>>>,
-    pub reports: Arc<DashMap<i64, Arc<Report>>>,
-    pub monitor_running: Arc<AtomicBool>,
-    pub bandwidth_limit: Arc<AtomicF64>,
-    pub download_speed: Arc<AtomicF64>,
-    pub spawn_cancellation_token: Arc<CancellationToken>,
-    queue_listener_running: Arc<AtomicBool>,
-    mpsc_sender: Arc<mpsc::UnboundedSender<RegistryAction>>,
-    manager: OnceCell<Arc<DownloadsManager>>,
+    pub current_tasks: Semaphore,
+    pub tasks: DashMap<u64, actions::Task>,
+    pub task_id: AtomicU64,
+    pub app_handle: AppHandle,
+    pub available_permits: AtomicUsize,
+    pub pending_queue: Mutex<VecDeque<i64>>,
+    pub workers: DashMap<i64, Arc<RwLock<Worker>>>,
+    pub reports: DashMap<i64, Arc<Report>>,
+    pub monitor_running: AtomicBool,
+    pub bandwidth_limit: AtomicF64,
+    pub download_speed: AtomicF64,
+    pub spawn_cancellation_token: CancellationToken,
+    queue_listener_running: AtomicBool,
+    mpsc_sender: mpsc::UnboundedSender<RegistryAction>,
+    manager: OnceCell<DownloadsManager>,
 }
 
 static STATE: OnceCell<Arc<State>> = OnceCell::new();
@@ -76,23 +76,23 @@ pub struct Registry;
 impl Registry {
     pub async fn new(app_handle: AppHandle) {
         let max_concurrent_tasks = Self::detect_max_concurrent_tasks();
-        let current_tasks = Arc::new(Semaphore::new(max_concurrent_tasks));
-        let available_permits = Arc::new(AtomicUsize::new(0));
-        let pending_queue = Arc::new(Mutex::new(VecDeque::new()));
-        let workers = Arc::new(DashMap::new());
-        let app_handle = Arc::new(app_handle);
+        let current_tasks = Semaphore::new(max_concurrent_tasks);
+        let available_permits = AtomicUsize::new(0);
+        let pending_queue = Mutex::new(VecDeque::new());
+        let workers = DashMap::new();
+        let app_handle = app_handle;
         let pool = Self::init_db(&app_handle.path().app_data_dir()).await;
-        let reports = Arc::new(DashMap::new());
+        let reports = DashMap::new();
         let (tx, rx) = mpsc::unbounded_channel::<RegistryAction>();
-        let mpsc_sender = Arc::new(tx);
-        let queue_listener_running = Arc::new(AtomicBool::new(false));
+        let mpsc_sender = tx;
+        let queue_listener_running = AtomicBool::new(false);
         let manager = OnceCell::new();
-        let monitor_running = Arc::new(AtomicBool::new(false));
-        let bandwidth_limit = Arc::new(AtomicF64::new(0.0));
-        let spawn_cancellation_token = Arc::new(CancellationToken::new());
-        let download_speed = Arc::new(AtomicF64::new(0.0));
-        let tasks = Arc::new(DashMap::new());
-        let task_id = Arc::new(AtomicU64::new(0));
+        let monitor_running = AtomicBool::new(false);
+        let bandwidth_limit = AtomicF64::new(0.0);
+        let spawn_cancellation_token = CancellationToken::new();
+        let download_speed = AtomicF64::new(0.0);
+        let tasks = DashMap::new();
+        let task_id = AtomicU64::new(0);
 
         let state = Arc::new(State {
             pool,
@@ -133,20 +133,25 @@ impl Registry {
 
     fn initialize_manager() {
         let manager = DownloadsManager::new();
-        if let Err(_) = Self::get_state().manager.set(manager) {
+        if let Err(_) = Self::get_state_ref().manager.set(manager) {
             Emitter::emit_error("manager is already initialized");
         }
     }
 
-    pub fn get_state() -> &'static Arc<State> {
+    pub fn get_state_ref() -> &'static Arc<State> {
         STATE.get().expect("STATE not initialized")
     }
 
-    pub fn get_manager() -> &'static Arc<DownloadsManager> {
-        Self::get_state()
+    pub fn get_state() -> Arc<State> {
+        Arc::clone(Self::get_state_ref())
+    }
+
+    pub fn get_manager() -> DownloadsManager {
+        Self::get_state_ref()
             .manager
             .get()
             .expect("manager not initialized")
+            .clone()
     }
 
     fn detect_max_concurrent_tasks() -> usize {

@@ -12,9 +12,9 @@ struct SpeedAndRemaining {
 
 impl DownloadsManager {
     pub(super) fn report_downloaded_bytes() {
-        let reports = Arc::clone(&Registry::get_state().reports);
+        let state = Registry::get_state();
 
-        reports.iter().for_each(|report| {
+        state.reports.iter().for_each(|report| {
             let download_id = report.key();
             let event = format!("downloaded_bytes_{}", download_id);
             Emitter::emit_event(
@@ -25,9 +25,9 @@ impl DownloadsManager {
     }
 
     pub(super) async fn report_network_speed() {
-        let reports = Arc::clone(&Registry::get_state().reports);
+        let state = Registry::get_state();
 
-        for report in reports.iter() {
+        for report in state.reports.iter() {
             let download_id = report.key();
 
             let mut history = report.download_history.lock().await;
@@ -69,9 +69,9 @@ impl DownloadsManager {
     }
 
     pub(super) async fn report_disk_speed() {
-        let reports = Arc::clone(&Registry::get_state().reports);
+        let state = Registry::get_state();
 
-        for report in reports.iter() {
+        for report in state.reports.iter() {
             let download_id = report.key();
 
             let mut history = report.wrote_history.lock().await;

@@ -15,8 +15,9 @@ impl File {
     pub async fn get_chunks_bytes_from_file(
         download_id: i64,
     ) -> anyhow::Result<DashMap<i64, Arc<Mutex<Buffer>>>> {
-        let workers = Arc::clone(&Registry::get_state().workers);
-        let worker = workers
+        let state = Registry::get_state();
+        let worker = state
+            .workers
             .get(&download_id)
             .with_context(|| format!("worker not found for download id {}", download_id))?;
         let worker_lock = worker.read().await;

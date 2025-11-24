@@ -40,7 +40,7 @@ pub struct DownloadWorker {
 impl DownloadWorker {
     pub async fn new(download_id: i64) -> anyhow::Result<Arc<Self>> {
         let chunks_status = Arc::new(DashMap::new());
-        let state = Registry::get_state();
+        let state = Registry::get_state_ref();
         let worker = state
             .workers
             .get(&download_id)

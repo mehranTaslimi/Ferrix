@@ -1,7 +1,4 @@
-use std::{
-    sync::{atomic::Ordering, Arc},
-    time::Instant,
-};
+use std::{sync::atomic::Ordering, time::Instant};
 
 use log::debug;
 use serde::Serialize;
@@ -37,11 +34,10 @@ pub trait SystemActions {
 impl SystemActions for Registry {
     async fn check_available_permit() -> anyhow::Result<()> {
         queue_spawn!("check_available_permit_action", {
-            let state = Arc::clone(&Self::get_state());
-            let pending_queue = Arc::clone(&state.pending_queue);
+            let state = Registry::get_state();
 
             let download_id = {
-                let pending_queue = pending_queue.lock().await;
+                let pending_queue = state.pending_queue.lock().await;
                 pending_queue.front().cloned()
             };
 
@@ -52,8 +48,9 @@ impl SystemActions for Registry {
                     Ok(download) => {
                         let chunk_count = download.chunk_count as usize;
 
-                        let available_permits =
-                            Self::get_state().available_permits.load(Ordering::SeqCst);
+                        let available_permits = Self::get_state_ref()
+                            .available_permits
+                            .load(Ordering::SeqCst);
                         /*
                             The app reserves 10 permits for other operations.
                             Before starting a download, we check if available permits
@@ -80,7 +77,7 @@ impl SystemActions for Registry {
                             && (available_permits >= 10 && available_permits - 5 >= chunk_count);
 
                         if permit_available {
-                            pending_queue.lock().await.pop_front();
+                            state.pending_queue.lock().await.pop_front();
                             dispatch!(registry, PrepareDownloadData, (download_id));
                         }
                     }
@@ -90,7 +87,7 @@ impl SystemActions for Registry {
                             The ID is removed from the queued list, and in the next loop iteration,
                             if the queue is empty, the loop will break and the listener will stop.
                         */
-                        pending_queue.lock().await.pop_front();
+                        state.pending_queue.lock().await.pop_front();
                     }
                 }
             }
@@ -100,16 +97,16 @@ impl SystemActions for Registry {
     }
 
     async fn close_request() -> anyhow::Result<()> {
-        Self::get_state().spawn_cancellation_token.cancel();
-        let app_handle = Arc::clone(&Self::get_state().app_handle);
-        app_handle.exit(0);
+        Self::get_state_ref().spawn_cancellation_token.cancel();
+        let state = Registry::get_state();
+        state.app_handle.exit(0);
         Ok(())
     }
 
     async fn add_task(task_id: u64, task_name: impl Into<String>) -> anyhow::Result<()> {
-        let tasks = Arc::clone(&Self::get_state().tasks);
+        let state = Registry::get_state();
         let now = Instant::now();
-        tasks.insert(
+        state.tasks.insert(
             task_id,
             Task {
                 name: task_name.into(),
@@ -118,7 +115,7 @@ impl SystemActions for Registry {
             },
         );
 
-        for task in tasks.iter() {
+        for task in state.tasks.iter() {
             debug!("{}. {}", task.key(), task.name)
         }
         debug!("--- --- --- ---");
@@ -127,16 +124,16 @@ impl SystemActions for Registry {
     }
 
     async fn change_task_status(task_id: u64, status: TaskStatus) -> anyhow::Result<()> {
-        let tasks = Arc::clone(&Self::get_state().tasks);
+        let state = Registry::get_state();
 
         match status {
             TaskStatus::Completed => {
-                tasks.remove(&task_id);
+                state.tasks.remove(&task_id);
             }
             _ => {}
         };
 
-        for task in tasks.iter() {
+        for task in state.tasks.iter() {
             debug!("{}. {}", task.key(), task.name)
         }
         debug!("--- --- --- ---");
