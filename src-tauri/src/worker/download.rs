@@ -25,10 +25,9 @@ impl DownloadWorker {
         let worker = self.data.read().await;
 
         let chunks = worker.chunks.clone();
-        let cancel_token = Arc::clone(&worker.cancel_token);
         let max_retries = worker.download.max_retries;
 
-        let cancelable_sleep = async move |d: Duration, c: Arc<CancellationToken>| {
+        let cancelable_sleep = async move |d: Duration, c: CancellationToken| {
             select! {
                 _ = sleep(d) => true,
                 _ = c.cancelled() => false,
@@ -37,7 +36,7 @@ impl DownloadWorker {
 
         for mut chunk in chunks {
             let worker_clone = Arc::clone(self);
-            let cancel_token = Arc::clone(&cancel_token);
+            let cancel_token = worker.cancel_token.clone();
 
             spawn!("download_chunk", {
                 let max_retries = max_retries;
@@ -98,7 +97,7 @@ impl DownloadWorker {
                                 retries += 1;
 
                                 let delay = worker_clone.backoff_delay(retries).await;
-                                let cancel_clone = Arc::clone(&cancel_token);
+                                let cancel_clone = cancel_token.clone();
 
                                 if !cancelable_sleep(delay, cancel_clone).await {
                                     set(Paused).await;
@@ -157,11 +156,9 @@ impl DownloadWorker {
                 }
             };
 
-            let file = Arc::clone(&w.file);
-
             let timeout_secs = w.download.timeout_secs;
 
-            (client, range, timeout_secs, file)
+            (client, range, timeout_secs, w.file.clone())
         };
 
         let mut stream = client.stream(range).await?;

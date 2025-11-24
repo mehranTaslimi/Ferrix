@@ -1,40 +1,38 @@
-use std::sync::{atomic::Ordering, Arc};
+use std::sync::atomic::Ordering;
 
 use crate::registry::Registry;
 
 impl super::DownloadsManager {
     pub(super) async fn monitor_download_speed() {
-        let reports = Arc::clone(&Registry::get_state().reports);
-        let bandwidth_limit = Arc::clone(&Registry::get_state().bandwidth_limit);
-
-        let download_len = reports.len().max(1) as u64;
+        let state = Registry::get_state();
+        let download_len = state.reports.len().max(1) as u64;
 
         if download_len == 1 {
-            if bandwidth_limit.load(Ordering::Relaxed) > 0.0 {
-                bandwidth_limit.store(0.0, Ordering::Relaxed);
+            if state.bandwidth_limit.load(Ordering::Relaxed) > 0.0 {
+                state.bandwidth_limit.store(0.0, Ordering::Relaxed);
             }
             return;
         }
 
-        let all_stable_speed = reports
+        let all_stable_speed = state
+            .reports
             .iter()
             .all(|r| r.stable_speed.load(Ordering::Relaxed));
 
         if !all_stable_speed {
-            if bandwidth_limit.load(Ordering::Relaxed) > 0.0 {
-                bandwidth_limit.store(0.0, Ordering::Relaxed);
+            if state.bandwidth_limit.load(Ordering::Relaxed) > 0.0 {
+                state.bandwidth_limit.store(0.0, Ordering::Relaxed);
             }
             return;
         }
 
-        let download_speed = Arc::clone(&Registry::get_state().download_speed);
-
-        let current_speed = reports
+        let current_speed = state
+            .reports
             .iter()
             .map(|r| r.speed_bps.load(Ordering::Relaxed))
             .sum::<u64>() as f64;
 
-        let mut last_speed = download_speed.load(Ordering::Relaxed);
+        let mut last_speed = state.download_speed.load(Ordering::Relaxed);
 
         if current_speed > last_speed {
             last_speed = current_speed as f64;
@@ -42,7 +40,9 @@ impl super::DownloadsManager {
             last_speed = current_speed * 1.1;
         }
 
-        download_speed.store(last_speed, Ordering::Relaxed);
-        bandwidth_limit.store(current_speed / download_len as f64, Ordering::Relaxed);
+        state.download_speed.store(last_speed, Ordering::Relaxed);
+        state
+            .bandwidth_limit
+            .store(current_speed / download_len as f64, Ordering::Relaxed);
     }
 }

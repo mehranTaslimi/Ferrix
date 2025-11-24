@@ -34,9 +34,9 @@ impl super::DownloadsManager {
     }
 
     pub(super) async fn update_chunks_monitor() {
-        let reports = Arc::clone(&Registry::get_state().reports);
+        let state = Registry::get_state();
 
-        for r in reports.iter() {
+        for r in state.reports.iter() {
             let total_downloaded_bytes = r.total_downloaded_bytes.load(Ordering::Relaxed);
             let last_update_downloaded_bytes =
                 r.last_update_downloaded_bytes.load(Ordering::Relaxed);
@@ -64,9 +64,10 @@ impl super::DownloadsManager {
     }
 
     pub async fn hash_chunk(download_id: i64, chunk_index: i64) -> Result<Hash> {
-        let reports = Arc::clone(&Registry::get_state().reports);
+        let state = Registry::get_state();
 
-        let report = reports
+        let report = state
+            .reports
             .get(&download_id)
             .with_context(|| format!("report not found for download id {}", download_id))?;
 

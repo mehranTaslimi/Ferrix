@@ -3,7 +3,6 @@ use crate::registry::actions::TaskStatus;
 use super::actions::{DownloadActions, ReportActions, SystemActions};
 
 use anyhow::Context;
-use std::sync::Arc;
 
 #[derive(Debug)]
 pub enum RegistryAction {
@@ -33,7 +32,7 @@ pub enum RegistryAction {
 
 impl super::Registry {
     pub fn dispatch(action: RegistryAction) -> anyhow::Result<()> {
-        let mpsc_sender = Arc::clone(&Self::get_state().mpsc_sender);
+        let mpsc_sender = &Self::get_state_ref().mpsc_sender.clone();
         mpsc_sender
             .send(action)
             .context("failed to dispatch registry action: receiver might be closed")

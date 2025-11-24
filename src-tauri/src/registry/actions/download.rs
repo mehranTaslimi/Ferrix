@@ -48,9 +48,8 @@ impl DownloadActions for Registry {
     }
 
     async fn new_download(download_id: i64) -> anyhow::Result<()> {
-        let pending_queue = Arc::clone(&Self::get_state().pending_queue);
-        let mut pending_queue = pending_queue.lock().await;
-        pending_queue.push_back(download_id);
+        let state = Registry::get_state();
+        state.pending_queue.lock().await.push_back(download_id);
 
         let download = DownloadRepository::find(download_id).await?;
         Emitter::emit_event("download_item", download);
@@ -77,8 +76,7 @@ impl DownloadActions for Registry {
     }
 
     async fn prepare_download_data(download_id: i64) -> anyhow::Result<()> {
-        let workers = Arc::clone(&Self::get_state().workers);
-        let reports = Arc::clone(&Self::get_state().reports);
+        let state = Registry::get_state();
 
         let download = DownloadRepository::find(download_id).await?;
         let chunks = ChunkRepository::find_all(download_id).await?;
@@ -95,13 +93,13 @@ impl DownloadActions for Registry {
         )
         .await?;
 
-        workers.insert(
+        state.workers.insert(
             download.id,
             Arc::new(RwLock::new(Worker {
                 download: download.clone(),
                 chunks: not_downloaded_chunks.clone(),
-                cancel_token: Arc::new(CancellationToken::new()),
-                file: Arc::new(file),
+                cancel_token: CancellationToken::new(),
+                file,
             })),
         );
 
@@ -112,7 +110,7 @@ impl DownloadActions for Registry {
 
         let buffer = File::get_chunks_bytes_from_file(download.id).await?;
 
-        reports.insert(
+        state.reports.insert(
             download.id,
             Arc::new(Report {
                 total_downloaded_bytes: AtomicU64::new(download.downloaded_bytes as u64),
@@ -137,11 +135,10 @@ impl DownloadActions for Registry {
     }
 
     async fn clean_download_data(download_id: i64) -> anyhow::Result<()> {
-        let reports = Arc::clone(&Self::get_state().reports);
-        let workers = Arc::clone(&Self::get_state().workers);
+        let state = Registry::get_state();
 
-        reports.remove(&download_id);
-        workers.remove(&download_id);
+        state.reports.remove(&download_id);
+        state.workers.remove(&download_id);
 
         Ok(())
     }

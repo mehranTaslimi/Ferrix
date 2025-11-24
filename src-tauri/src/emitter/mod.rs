@@ -1,5 +1,4 @@
 use serde::Serialize;
-use std::sync::Arc;
 use tauri::Emitter as TauriEmmiter;
 use tauri_plugin_notification::NotificationExt;
 
@@ -12,21 +11,22 @@ impl Emitter {
     where
         S: Serialize + Clone,
     {
-        let app_handle = Arc::clone(&Registry::get_state().app_handle);
-        let _ = app_handle.emit("error", err);
+        let state = Registry::get_state();
+        let _ = state.app_handle.emit("error", err);
     }
 
     pub fn emit_event<S>(event: &str, payload: S)
     where
         S: Serialize + Clone,
     {
-        let app_handle = Arc::clone(&Registry::get_state().app_handle);
-        let _ = app_handle.emit(event, payload);
+        let state = Registry::get_state();
+        let _ = state.app_handle.emit(event, payload);
     }
 
     pub fn emit_notification(title: impl Into<String>, body: impl Into<String>) {
-        let app_handle = Arc::clone(&Registry::get_state().app_handle);
-        let _ = app_handle
+        let state = Registry::get_state();
+        let _ = state
+            .app_handle
             .notification()
             .builder()
             .title(title)

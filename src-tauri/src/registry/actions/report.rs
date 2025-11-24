@@ -1,10 +1,7 @@
 use super::super::Registry;
 use anyhow::anyhow;
 
-use std::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc,
-};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub trait ReportActions {
     async fn update_network_report(download_id: i64, bytes_len: u64) -> anyhow::Result<()>;
@@ -26,8 +23,8 @@ impl ReportActions for Registry {
         chunk_index: i64,
         bytes_len: u64,
     ) -> anyhow::Result<()> {
-        let reports = Arc::clone(&Self::get_state().reports);
-        let maybe_report = reports.get(&download_id);
+        let state = Registry::get_state();
+        let maybe_report = state.reports.get(&download_id);
         if let Some(report) = maybe_report {
             report
                 .chunks_wrote_bytes
@@ -48,8 +45,8 @@ impl ReportActions for Registry {
     }
 
     async fn update_network_report(download_id: i64, bytes_len: u64) -> anyhow::Result<()> {
-        let reports = Arc::clone(&Self::get_state().reports);
-        let maybe_report = reports.get(&download_id);
+        let state = Registry::get_state();
+        let maybe_report = state.reports.get(&download_id);
         if let Some(report) = maybe_report {
             report
                 .total_downloaded_bytes
@@ -68,8 +65,8 @@ impl ReportActions for Registry {
         chunk_index: i64,
         bytes: Vec<u8>,
     ) -> anyhow::Result<()> {
-        let reports = Arc::clone(&Self::get_state().reports);
-        let report = reports.get(&download_id).ok_or_else(|| {
+        let state = Registry::get_state();
+        let report = state.reports.get(&download_id).ok_or_else(|| {
             anyhow!(
                 "update chunk buffer error: cannot find report with download id {}",
                 download_id
