@@ -38,15 +38,13 @@ pub enum ChunkDownloadStatus {
 
 impl DownloadWorker {
     async fn update_worker_status(&self) {
-        let chunks_status = Arc::clone(&self.chunks_status);
-
-        let status_snapshot = chunks_status
+        let status_snapshot = self
+            .chunks_status
             .iter()
             .map(|s| s.value().clone())
             .collect::<Vec<_>>();
 
-        let last_status = Arc::clone(&self.last_worker_status);
-        let mut last_status_lock = last_status.lock().await;
+        let mut last_status_lock = self.last_worker_status.lock().await;
 
         let (st, msg) = self.calculate_worker_status(&status_snapshot).await;
 

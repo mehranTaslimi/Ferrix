@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::Context;
 
 use crate::worker::DownloadStatus;

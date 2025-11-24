@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::*;
 use crate::{emitter::Emitter, registry::Registry};
-use std::sync::{atomic::Ordering, Arc};
+use std::sync::atomic::Ordering;
 
 #[derive(Clone, Serialize, Deserialize)]
 struct SpeedAndRemaining {

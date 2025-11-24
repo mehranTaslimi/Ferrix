@@ -18,29 +18,29 @@ mod validation;
 
 pub use status::DownloadStatus;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Worker {
     pub download: Download,
     pub chunks: Vec<DownloadChunk>,
-    pub cancel_token: Arc<CancellationToken>,
-    pub file: Arc<UnboundedSender<WriteMessage>>,
+    pub cancel_token: CancellationToken,
+    pub file: UnboundedSender<WriteMessage>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DownloadWorker {
     pub download_id: i64,
     data: Arc<RwLock<Worker>>,
     report: Arc<Report>,
-    chunks_status: Arc<DashMap<i64, status::ChunkDownloadStatus>>,
-    stream_duration: Arc<Mutex<Option<Instant>>>,
-    received_bytes: Arc<Mutex<u64>>,
-    last_worker_status: Arc<Mutex<DownloadStatus>>,
+    chunks_status: DashMap<i64, status::ChunkDownloadStatus>,
+    stream_duration: Mutex<Option<Instant>>,
+    received_bytes: Mutex<u64>,
+    last_worker_status: Mutex<DownloadStatus>,
 }
 
 impl DownloadWorker {
     pub async fn new(download_id: i64) -> anyhow::Result<Arc<Self>> {
-        let chunks_status = Arc::new(DashMap::new());
-        let state = Registry::get_state_ref();
+        let chunks_status = DashMap::new();
+        let state = Registry::get_state();
         let worker = state
             .workers
             .get(&download_id)
@@ -49,9 +49,9 @@ impl DownloadWorker {
             .reports
             .get(&download_id)
             .context(anyhow!("cannot find report with id {}", download_id))?;
-        let stream_duration = Arc::new(Mutex::new(None));
-        let received_bytes = Arc::new(Mutex::new(0));
-        let last_worker_status = Arc::new(Mutex::new(DownloadStatus::Unknown));
+        let stream_duration = Mutex::new(None);
+        let received_bytes = Mutex::new(0);
+        let last_worker_status = Mutex::new(DownloadStatus::Unknown);
 
         let w = Arc::new(Self {
             download_id,

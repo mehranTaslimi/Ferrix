@@ -98,8 +98,8 @@ impl DownloadActions for Registry {
             Arc::new(RwLock::new(Worker {
                 download: download.clone(),
                 chunks: not_downloaded_chunks.clone(),
-                cancel_token: Arc::new(CancellationToken::new()),
-                file: Arc::new(file),
+                cancel_token: CancellationToken::new(),
+                file,
             })),
         );
 

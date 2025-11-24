@@ -1,10 +1,7 @@
 use super::super::Registry;
 use anyhow::anyhow;
 
-use std::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc,
-};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub trait ReportActions {
     async fn update_network_report(download_id: i64, bytes_len: u64) -> anyhow::Result<()>;
